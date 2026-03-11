@@ -55,15 +55,15 @@ const SEED_COMPANIES = [
           {
             id:"a1", name:"James Okafor", email:"jokafor@raywhite.com", phone:"0412 111 222", properties:12,
             jobs:[
-              {id:"j1",ref:"JOB-1001",type:"Plumbing",address:"22 Oak St, Parramatta NSW",description:"Leaking tap in kitchen and bathroom",tech:"Jake Rivera",keyPickup:"Key in lockbox – code 4421",createdDate:"2026-03-01",status:"Open",closedDate:null,
+              {id:"j1",ref:"JOB-1001",type:"Plumbing",address:"22 Oak St, Parramatta NSW",description:"Leaking tap in kitchen and bathroom",tech:"Jake Rivera",keyMethod:"other",keyNotes:"Key in lockbox – code 4421",createdDate:"2026-03-01",status:"Open",closedDate:null,
                 tenants:[{id:"t1",name:"Wei & Fang Liu",email:"wliu@gmail.com",phone:"0400 111 333"}],
                 appliances:[{id:"ap1",appType:"Dishwasher",brand:"Bosch",model:"SMS46KI01A",serial:"BSH2024-001",condition:"Leaking from door seal"}],
                 additionalWorks:[{id:"aw1",description:"Add power point",custom:false,notes:"Behind dishwasher cavity"}]},
-              {id:"j2",ref:"JOB-1002",type:"Electrical",address:"7/15 Church St, Parramatta NSW",description:"Power point replacement x3",tech:"Tom Yuen",keyPickup:"Key at reception – ask for Maria",createdDate:"2026-02-10",status:"Closed",closedDate:"2026-02-20",
+              {id:"j2",ref:"JOB-1002",type:"Electrical",address:"7/15 Church St, Parramatta NSW",description:"Power point replacement x3",tech:"Tom Yuen",keyMethod:"office",keyNotes:"Ask for Maria at reception",createdDate:"2026-02-10",status:"Closed",closedDate:"2026-02-20",
                 tenants:[{id:"t2",name:"Priya Menon",email:"pmenon@hotmail.com",phone:"0400 222 444"}],
                 appliances:[],
                 additionalWorks:[{id:"aw2",description:"Replace cables",custom:false,notes:"3x double GPO"},{id:"aw3",description:"Update circuit breaker",custom:false,notes:""}]},
-              {id:"j3",ref:"JOB-1003",type:"HVAC",address:"22 Oak St, Parramatta NSW",description:"AC unit not cooling – full service",tech:"Maria Flores",keyPickup:"Tenant home – call 30 mins prior",createdDate:"2025-11-15",status:"Closed",closedDate:"2025-11-20",
+              {id:"j3",ref:"JOB-1003",type:"HVAC",address:"22 Oak St, Parramatta NSW",description:"AC unit not cooling – full service",tech:"Maria Flores",keyMethod:"tenant",keyNotes:"Call 30 mins prior, tenant home",createdDate:"2025-11-15",status:"Closed",closedDate:"2025-11-20",
                 tenants:[{id:"t1",name:"Wei & Fang Liu",email:"wliu@gmail.com",phone:"0400 111 333"},{id:"t2",name:"Priya Menon",email:"pmenon@hotmail.com",phone:"0400 222 444"}],
                 appliances:[{id:"ap2",appType:"Cooktop – Gas",brand:"Smeg",model:"SR264GH",serial:"SMG2022-887",condition:"One burner igniter faulty"},{id:"ap3",appType:"Oven",brand:"Smeg",model:"SF6341GVX",serial:"SMG2022-888",condition:"Good – general service"}],
                 additionalWorks:[]},
@@ -72,7 +72,7 @@ const SEED_COMPANIES = [
           {
             id:"a2", name:"Sofia Reyes", email:"sreyes@raywhite.com", phone:"0413 333 444", properties:8,
             jobs:[
-              {id:"j4",ref:"JOB-1004",type:"Plumbing",address:"3 Rose Ave, Parramatta NSW",description:"Hot water system replacement",tech:"Anita Shaw",keyPickup:"Key in agent office",createdDate:"2026-03-05",status:"Open",closedDate:null,
+              {id:"j4",ref:"JOB-1004",type:"Plumbing",address:"3 Rose Ave, Parramatta NSW",description:"Hot water system replacement",tech:"Anita Shaw",keyMethod:"office",keyNotes:"",createdDate:"2026-03-05",status:"Open",closedDate:null,
                 tenants:[{id:"t3",name:"Ahmed & Sara Hassan",email:"ahassan@gmail.com",phone:"0400 333 555"}],
                 appliances:[],
                 additionalWorks:[{id:"aw4",description:"Close off gas (gas shutdown)",custom:false,notes:"Old HWS – gas line to be capped"}]},
@@ -375,7 +375,7 @@ function JobsSection({agent, onUpdate, jobTypes, onJobTypesChange, technicians, 
   const [showJob, setShowJob] = useState(null);
   const [showAddJob, setShowAddJob] = useState(false);
   const [showAddTenant, setShowAddTenant] = useState(false);
-  const [newJob, setNewJob] = useState({ref:"",type:"",address:"",description:"",tech:"",keyPickup:"",status:"Open"});
+  const [newJob, setNewJob] = useState({ref:"",type:"",address:"",description:"",tech:"",keyMethod:"",keyNotes:"",status:"Open"});
   const [newTenant, setNewTenant] = useState({name:"",email:"",phone:""});
   const [applianceTypes, setApplianceTypes] = useState(DEFAULT_APPLIANCE_TYPES);
   const [workPresets, setWorkPresets] = useState(DEFAULT_WORK_PRESETS);
@@ -390,7 +390,7 @@ function JobsSection({agent, onUpdate, jobTypes, onJobTypesChange, technicians, 
     const type = newJob.type||jobTypes[0]||"";
     const j={...newJob,type,id:uid(),createdDate:new Date().toISOString().split("T")[0],closedDate:newJob.status==="Closed"?new Date().toISOString().split("T")[0]:null,tenants:[],appliances:[],additionalWorks:[]};
     onUpdate({...agent,jobs:[...jobs,j]});
-    setNewJob({ref:"",type:"",address:"",description:"",tech:"",keyPickup:"",status:"Open"});
+    setNewJob({ref:"",type:"",address:"",description:"",tech:"",keyMethod:"",keyNotes:"",status:"Open"});
     setShowAddJob(false);
   };
   const saveTenant = () => {
@@ -415,7 +415,9 @@ function JobsSection({agent, onUpdate, jobTypes, onJobTypesChange, technicians, 
             <Badge label={js} color={statusColor(js)}/>
           </div>
           <Field label="Type" value={showJob.type}/><Field label="Description" value={showJob.description||"—"}/>
-          <Field label="Technician" value={showJob.tech||"Unassigned"}/><Field label="Key Pickup" value={showJob.keyPickup||"—"}/>
+          <Field label="Technician" value={showJob.tech||"Unassigned"}/>
+          <Field label="Key Access" value={showJob.keyMethod==="tenant"?"🧑 Tenant to give access":showJob.keyMethod==="office"?"🏢 Collect from office":showJob.keyMethod==="other"?"🔑 Other":"—"}/>
+          {showJob.keyNotes&&<Field label="Key Notes" value={showJob.keyNotes}/>}
           <Field label="Created" value={showJob.createdDate}/>{showJob.closedDate&&<Field label="Closed" value={showJob.closedDate}/>}
           {showJob.status==="Open"&&<div style={{marginTop:14}}><Btn label="Mark as Closed" onClick={closeJob} color={C.orange} small/></div>}
         </Card>
@@ -448,7 +450,7 @@ function JobsSection({agent, onUpdate, jobTypes, onJobTypesChange, technicians, 
 
   return (
     <div>
-      <SectionHead title="Jobs" count={jobs.length} action={{label:"+ New Job",fn:()=>{setNewJob({ref:"",type:jobTypes[0]||"",address:"",description:"",tech:"",keyPickup:"",status:"Open"});setShowAddJob(true);}}}/>
+      <SectionHead title="Jobs" count={jobs.length} action={{label:"+ New Job",fn:()=>{      setNewJob({ref:"",type:jobTypes[0]||"",address:"",description:"",tech:"",keyMethod:"",keyNotes:"",status:"Open"});setShowAddJob(true);}}}/>
       <div style={{display:"flex",gap:8,marginBottom:14,overflowX:"auto",paddingBottom:4}}>
         {["All","Open","Recently Closed","Old"].map(f=><Pill key={f} label={f} active={filter===f} onClick={()=>setFilter(f)}/>)}
       </div>
@@ -502,7 +504,22 @@ function JobsSection({agent, onUpdate, jobTypes, onJobTypesChange, technicians, 
               {technicians.map(t=><option key={t}>{t}</option>)}
             </select>
           </div>
-          <FF label="Key Pickup Details" value={newJob.keyPickup} onChange={v=>setNewJob({...newJob,keyPickup:v})} placeholder="e.g. Key in lockbox – code 4421"/>
+          <div style={{marginBottom:14}}>
+            <label style={{display:"block",color:C.sub,fontSize:12,fontWeight:600,textTransform:"uppercase",letterSpacing:0.5,marginBottom:5}}>Key Access</label>
+            <div style={{display:"flex",flexDirection:"column",gap:6}}>
+              {[{val:"tenant",label:"🧑 Tenant to give access"},{val:"office",label:"🏢 Collect from office"},{val:"other",label:"🔑 Other"}].map(opt=>(
+                <label key={opt.val} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px",borderRadius:8,border:`1.5px solid ${newJob.keyMethod===opt.val?C.accent:C.border}`,background:newJob.keyMethod===opt.val?"#eff6ff":"#fff",cursor:"pointer"}}>
+                  <input type="radio" name="keyMethod" checked={newJob.keyMethod===opt.val} onChange={()=>setNewJob({...newJob,keyMethod:opt.val})} style={{accentColor:C.accent}}/>
+                  <span style={{fontSize:13,fontWeight:newJob.keyMethod===opt.val?700:500,color:C.text}}>{opt.label}</span>
+                </label>
+              ))}
+            </div>
+            {newJob.keyMethod&&(
+              <textarea value={newJob.keyNotes||""} onChange={e=>setNewJob({...newJob,keyNotes:e.target.value})}
+                placeholder={newJob.keyMethod==="tenant"?"e.g. Call 30 mins prior, tenant home after 9am…":newJob.keyMethod==="office"?"e.g. Ask for Maria at front desk, key tagged #22…":"e.g. Lockbox on front gate – code 4421…"}
+                rows={2} style={{width:"100%",marginTop:8,background:C.raised,border:`1px solid ${C.border}`,borderRadius:8,padding:"9px 12px",color:C.text,fontSize:13,fontFamily:"inherit",resize:"vertical",boxSizing:"border-box"}}/>
+            )}
+          </div>
           <div style={{marginBottom:14}}>
             <label style={{display:"block",color:C.sub,fontSize:12,fontWeight:600,textTransform:"uppercase",letterSpacing:0.5,marginBottom:5}}>Status</label>
             <select value={newJob.status} onChange={e=>setNewJob({...newJob,status:e.target.value})}
