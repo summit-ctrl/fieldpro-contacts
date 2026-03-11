@@ -730,7 +730,7 @@ export default function App() {
         <div style={{position:"fixed",bottom:0,left:0,right:0,background:"#fff",borderTop:`1px solid ${C.border}`,display:"flex",zIndex:100,paddingBottom:"env(safe-area-inset-bottom)"}}>
           {MOBILE_NAV.map(n=>(
             <button key={n.id} onClick={()=>setTab(n.id)}
-              style={{flex:1,padding:"10px 4px 12px",border:"none",background:"none",display:"flex",flexDirection:"column",alignItems:"center",gap:4,cursor:"pointer",fontFamily:"inherit",borderTop:`2px solid ${tab===n.id||ALL_NAV.findIndex(x=>x.id===tab)>=ALL_NAV.findIndex(x=>x.id===n.id)&&ALL_NAV.findIndex(x=>x.id===tab)<ALL_NAV.findIndex(x=>x.id===MOBILE_NAV[MOBILE_NAV.indexOf(n)+1]||{id:"zzz"})?C.accent:"transparent":C.accent}`}}>
+              style={{flex:1,padding:"10px 4px 12px",border:"none",background:"none",display:"flex",flexDirection:"column",alignItems:"center",gap:4,cursor:"pointer",fontFamily:"inherit",borderTop:`2px solid ${tab===n.id?C.accent:"transparent"}`}}>
               <span style={{fontSize:20}}>{n.icon}</span>
               <span style={{fontSize:10,fontWeight:700,color:tab===n.id?C.accent:C.muted}}>{n.label}</span>
             </button>
