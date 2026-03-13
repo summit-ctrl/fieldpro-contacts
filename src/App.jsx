@@ -1117,126 +1117,222 @@ function QuickAssignPicker({companies,setCompanies,selCo,setSelCo,selBr,setSelBr
 ═══════════════════════════════════════════ */
 const VISIT_OUTCOMES = ["Completed","Parts Needed","Recall Required","No Access","Quote Required","Other"];
 
+const calcMins = (arrival, departure) => {
+  if(!arrival || !departure) return null;
+  const diff = new Date(departure) - new Date(arrival);
+  return diff > 0 ? Math.round(diff / 60000) : null;
+};
+const fmtDuration = mins => {
+  if(!mins) return null;
+  if(mins < 60) return `${mins}m`;
+  return `${Math.floor(mins/60)}h ${mins%60>0?mins%60+"m":""}`.trim();
+};
+
 function VisitsSection({job, onUpdate, fieldStaff}) {
   const visits = job.visits || [];
   const [adding, setAdding] = useState(false);
   const [editIdx, setEditIdx] = useState(null);
-  const [form, setForm] = useState({tech:"", date:"", outcome:"", notes:""});
+
+  const today = new Date().toISOString().split("T")[0];
+  const nowTime = new Date().toTimeString().slice(0,5);
+
+  const emptyForm = () => ({
+    date: today,
+    outcome: "",
+    notes: "",
+    techs: [], // [{techName, arrival, departure}]
+  });
+  const [form, setForm] = useState(emptyForm());
 
   const maxVisits = 5;
-  const visitLabels = ["1st Visit","2nd Visit","3rd Visit","4th Visit","5th Visit"];
+  const visitLabels = ["1st","2nd","3rd","4th","5th"];
   const outcomeColor = o => o==="Completed"?"green":o==="Parts Needed"?"orange":o==="Recall Required"?"red":o==="No Access"?"red":o==="Quote Required"?"blue":"gray";
 
-  const openAdd = () => {
-    setForm({tech:"", date:new Date().toISOString().split("T")[0], outcome:"", notes:""});
-    setEditIdx(null);
-    setAdding(true);
-  };
-  const openEdit = (i) => {
-    setForm({...visits[i]});
-    setEditIdx(i);
-    setAdding(true);
-  };
-  const save = () => {
-    if(!form.tech || !form.date) return;
-    const visitId = uid();
-    let updatedVisits;
-    if(editIdx !== null) {
-      updatedVisits = visits.map((v,i) => i===editIdx ? {...form, id:v.id} : v);
-    } else {
-      updatedVisits = [...visits, {...form, id:visitId}];
-    }
+  const activeTechs = fieldStaff.filter(f=>f.status==="Active");
 
-    // Auto-log diary entry for new visits (not edits)
-    // TODO: Field Service App integration — when a tech submits a site report,
-    // call ingestVisitFromFieldApp(jobId, visitData) which runs this same logic
-    // to create the visit record + diary entry from the app's form submission.
+  const toggleTech = name => {
+    const exists = form.techs.find(t=>t.techName===name);
+    if(exists) {
+      setForm({...form, techs: form.techs.filter(t=>t.techName!==name)});
+    } else {
+      setForm({...form, techs: [...form.techs, {techName:name, arrival:`${form.date}T08:00`, departure:`${form.date}T12:00`}]});
+    }
+  };
+
+  const updateTechTime = (name, field, val) => {
+    setForm({...form, techs: form.techs.map(t=>t.techName===name ? {...t, [field]:val} : t)});
+  };
+
+  const openAdd = () => { setForm(emptyForm()); setEditIdx(null); setAdding(true); };
+  const openEdit = i => { setForm({...visits[i], techs: visits[i].techs||[]}); setEditIdx(i); setAdding(true); };
+
+  const save = () => {
+    if(!form.date || form.techs.length===0) return;
+    const visitId = uid();
+    const entry = {...form, id: editIdx!==null ? visits[editIdx].id : visitId};
+    let updatedVisits = editIdx!==null
+      ? visits.map((v,i)=>i===editIdx?entry:v)
+      : [...visits, entry];
+
+    // Auto-log diary entry for new visits only
     let updatedDiary = job.diary || [];
     if(editIdx === null) {
-      const label = visitLabels[visits.length] || `Visit ${visits.length+1}`;
+      const label = `${visitLabels[visits.length]||""}  Visit`;
+      const techSummary = form.techs.map(t=>{
+        const mins = calcMins(t.arrival, t.departure);
+        return `${t.techName}${mins?` (${fmtDuration(mins)})` : ""}`;
+      }).join(", ");
       const diaryEntry = {
-        id: uid(),
-        type: "visit",
+        id: uid(), type:"visit",
         ts: new Date(`${form.date}T09:00:00`).toISOString(),
-        contact: form.tech,
+        contact: form.techs.map(t=>t.techName).join(", "),
         subject: `${label} — ${form.outcome||"Logged"}`,
-        notes: form.notes || "",
-        direction: "outbound",
-        files: [],
-        visitId, // link back to visit record
-        source: "manual", // will be "field_app" when synced from mobile
+        notes: [techSummary, form.notes].filter(Boolean).join("\n"),
+        direction:"outbound", files:[], visitId, source:"manual",
       };
       updatedDiary = [diaryEntry, ...updatedDiary];
     }
-
-    onUpdate({...job, visits: updatedVisits, diary: updatedDiary});
+    onUpdate({...job, visits:updatedVisits, diary:updatedDiary});
     setAdding(false);
   };
-  const remove = i => onUpdate({...job, visits: visits.filter((_,vi)=>vi!==i)});
 
-  const iSel = {width:"100%",background:"#fff",border:`1px solid ${C.border}`,borderRadius:7,padding:"7px 10px",color:C.text,fontSize:12,fontFamily:"inherit",boxSizing:"border-box"};
+  const remove = i => onUpdate({...job, visits:visits.filter((_,vi)=>vi!==i)});
+
+  const iSel = {width:"100%",background:"#fff",border:`1px solid ${C.border}`,borderRadius:7,padding:"6px 10px",color:C.text,fontSize:12,fontFamily:"inherit",boxSizing:"border-box"};
+
+  // Total hours per tech across all visits — for KPI summary
+  const techTotals = {};
+  visits.forEach(v=>(v.techs||[]).forEach(t=>{
+    const mins = calcMins(t.arrival, t.departure);
+    if(mins) techTotals[t.techName] = (techTotals[t.techName]||0) + mins;
+  }));
 
   return (
     <div style={{background:"#fff",border:`1px solid ${C.border}`,borderRadius:12,padding:"10px 14px",marginBottom:10}}>
       <SectionHead title="🔧 Site Visits" count={visits.length}
         action={visits.length < maxVisits ? {label:"+ Add Visit", fn:openAdd} : null}/>
 
-      {visits.length === 0 && !adding && (
-        <p style={{color:C.muted,fontSize:12,margin:"4px 0 8px"}}>No visits recorded yet.</p>
+      {/* KPI summary bar */}
+      {Object.keys(techTotals).length>0 && (
+        <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:10,padding:"8px 10px",background:"#f8fafc",borderRadius:8,border:`1px solid ${C.border}`}}>
+          <span style={{fontSize:10,color:C.sub,fontWeight:700,textTransform:"uppercase",letterSpacing:0.5,alignSelf:"center"}}>Total Hours:</span>
+          {Object.entries(techTotals).map(([name,mins])=>(
+            <div key={name} style={{background:"#eff6ff",border:`1px solid #bae6fd`,borderRadius:6,padding:"2px 8px",fontSize:11,fontWeight:700,color:C.accent}}>
+              {name.split(" ")[0]}: {fmtDuration(mins)}
+            </div>
+          ))}
+        </div>
       )}
 
+      {visits.length===0&&!adding&&<p style={{color:C.muted,fontSize:12,margin:"4px 0 8px"}}>No visits recorded yet.</p>}
+
       {/* Visit list */}
-      {visits.map((v,i) => (
-        <div key={v.id} style={{padding:"8px 0",borderBottom:`1px solid ${C.border}`,display:"flex",gap:10,alignItems:"flex-start"}}>
-          {/* Visit number badge */}
-          <div style={{background:"#eff6ff",color:C.accent,borderRadius:6,padding:"3px 8px",fontSize:10,fontWeight:800,whiteSpace:"nowrap",flexShrink:0,marginTop:2}}>
-            {visitLabels[i]||`Visit ${i+1}`}
-          </div>
-          <div style={{flex:1,minWidth:0}}>
-            <div style={{display:"flex",gap:6,alignItems:"center",flexWrap:"wrap"}}>
-              <span style={{color:C.text,fontWeight:700,fontSize:12}}>{v.tech}</span>
-              <span style={{color:C.muted,fontSize:11}}>·</span>
-              <span style={{color:C.sub,fontSize:11}}>{fmtDate(v.date)}</span>
-              {v.outcome && <Badge label={v.outcome} color={outcomeColor(v.outcome)}/>}
+      {visits.map((v,i)=>(
+        <div key={v.id} style={{padding:"8px 0",borderBottom:`1px solid ${C.border}`}}>
+          <div style={{display:"flex",gap:8,alignItems:"flex-start"}}>
+            <div style={{background:"#eff6ff",color:C.accent,borderRadius:6,padding:"3px 8px",fontSize:10,fontWeight:800,whiteSpace:"nowrap",flexShrink:0,marginTop:2}}>
+              {visitLabels[i]||`#${i+1}`} Visit
             </div>
-            {v.notes && <div style={{color:C.sub,fontSize:11,marginTop:3,lineHeight:1.4}}>{v.notes}</div>}
+            <div style={{flex:1,minWidth:0}}>
+              <div style={{display:"flex",gap:6,alignItems:"center",flexWrap:"wrap",marginBottom:4}}>
+                <span style={{color:C.sub,fontSize:11}}>{fmtDate(v.date)}</span>
+                {v.outcome&&<Badge label={v.outcome} color={outcomeColor(v.outcome)}/>}
+              </div>
+              {/* Per-tech time rows */}
+              {(v.techs||[]).map(t=>{
+                const mins = calcMins(t.arrival, t.departure);
+                return(
+                  <div key={t.techName} style={{display:"flex",gap:8,alignItems:"center",marginBottom:3,flexWrap:"wrap"}}>
+                    <span style={{fontSize:12,fontWeight:700,color:C.text,minWidth:90}}>{t.techName}</span>
+                    <span style={{fontSize:11,color:C.sub}}>{t.arrival?t.arrival.slice(11,16):""} → {t.departure?t.departure.slice(11,16):""}</span>
+                    {mins&&<span style={{background:"#f0fdf4",border:"1px solid #bbf7d0",borderRadius:99,padding:"1px 7px",fontSize:11,fontWeight:700,color:C.green}}>{fmtDuration(mins)}</span>}
+                  </div>
+                );
+              })}
+              {v.notes&&<div style={{color:C.sub,fontSize:11,marginTop:3,lineHeight:1.4}}>{v.notes}</div>}
+            </div>
+            <button onClick={()=>openEdit(i)} style={{background:"none",border:"none",color:C.muted,cursor:"pointer",fontSize:13,padding:"2px 4px",fontFamily:"inherit"}}>✎</button>
+            <button onClick={()=>remove(i)} style={{background:"none",border:"none",color:C.muted,cursor:"pointer",fontSize:14,padding:"2px 4px",fontFamily:"inherit"}}>×</button>
           </div>
-          <button onClick={()=>openEdit(i)} style={{background:"none",border:"none",color:C.muted,cursor:"pointer",fontSize:13,padding:"2px 4px",fontFamily:"inherit"}}>✎</button>
-          <button onClick={()=>remove(i)} style={{background:"none",border:"none",color:C.muted,cursor:"pointer",fontSize:13,padding:"2px 4px",fontFamily:"inherit"}}>×</button>
         </div>
       ))}
 
       {/* Add/edit form */}
-      {adding && (
+      {adding&&(
         <div style={{background:C.raised,borderRadius:10,padding:"12px",marginTop:10,border:`1px solid ${C.border}`}}>
           <div style={{fontWeight:700,fontSize:12,color:C.text,marginBottom:10}}>
-            {editIdx!==null ? `Edit ${visitLabels[editIdx]||"Visit"}` : `Log ${visitLabels[visits.length]||"Visit"}`}
+            {editIdx!==null?`Edit ${visitLabels[editIdx]||""} Visit`:`Log ${visitLabels[visits.length]||""} Visit`}
           </div>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}>
-            <div>
-              <label style={{display:"block",color:C.sub,fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:0.5,marginBottom:4}}>Technician *</label>
-              <select value={form.tech} onChange={e=>setForm({...form,tech:e.target.value})} style={iSel}>
-                <option value="">— Select —</option>
-                {fieldStaff.filter(f=>f.status==="Active").map(f=><option key={f.id} value={f.name}>{f.name}</option>)}
-              </select>
-            </div>
+
+          {/* Date + Outcome */}
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:10}}>
             <div>
               <label style={{display:"block",color:C.sub,fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:0.5,marginBottom:4}}>Date *</label>
               <input type="date" value={form.date} onChange={e=>setForm({...form,date:e.target.value})} style={iSel}/>
             </div>
+            <div>
+              <label style={{display:"block",color:C.sub,fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:0.5,marginBottom:4}}>Outcome</label>
+              <select value={form.outcome} onChange={e=>setForm({...form,outcome:e.target.value})} style={iSel}>
+                <option value="">— Select —</option>
+                {VISIT_OUTCOMES.map(o=><option key={o}>{o}</option>)}
+              </select>
+            </div>
           </div>
-          <div style={{marginBottom:8}}>
-            <label style={{display:"block",color:C.sub,fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:0.5,marginBottom:4}}>Outcome</label>
-            <select value={form.outcome} onChange={e=>setForm({...form,outcome:e.target.value})} style={iSel}>
-              <option value="">— Select outcome —</option>
-              {VISIT_OUTCOMES.map(o=><option key={o}>{o}</option>)}
-            </select>
+
+          {/* Tech selector */}
+          <div style={{marginBottom:10}}>
+            <label style={{display:"block",color:C.sub,fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:0.5,marginBottom:6}}>Technicians * (select all who attended)</label>
+            <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:8}}>
+              {activeTechs.map(f=>{
+                const selected = form.techs.find(t=>t.techName===f.name);
+                return(
+                  <button key={f.id} onClick={()=>toggleTech(f.name)}
+                    style={{padding:"5px 12px",borderRadius:99,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",
+                      border:`1.5px solid ${selected?C.accent:C.border}`,
+                      background:selected?"#eff6ff":"#fff",
+                      color:selected?C.accent:C.sub}}>
+                    {selected?"✓ ":""}{f.name}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Per-tech time inputs */}
+            {form.techs.length>0&&(
+              <div style={{background:"#fff",border:`1px solid ${C.border}`,borderRadius:8,overflow:"hidden"}}>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr auto",gap:0,background:C.raised,padding:"4px 10px",borderBottom:`1px solid ${C.border}`}}>
+                  <span style={{fontSize:10,fontWeight:700,color:C.sub,textTransform:"uppercase",letterSpacing:0.5}}>Technician</span>
+                  <span style={{fontSize:10,fontWeight:700,color:C.sub,textTransform:"uppercase",letterSpacing:0.5}}>Arrival</span>
+                  <span style={{fontSize:10,fontWeight:700,color:C.sub,textTransform:"uppercase",letterSpacing:0.5}}>Departure</span>
+                  <span style={{fontSize:10,fontWeight:700,color:C.sub,textTransform:"uppercase",letterSpacing:0.5}}>Hours</span>
+                </div>
+                {form.techs.map(t=>{
+                  const mins = calcMins(t.arrival, t.departure);
+                  return(
+                    <div key={t.techName} style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr auto",gap:0,padding:"6px 10px",borderBottom:`1px solid ${C.border}`,alignItems:"center"}}>
+                      <span style={{fontSize:12,fontWeight:700,color:C.text}}>{t.techName}</span>
+                      <input type="datetime-local" value={t.arrival||""} onChange={e=>updateTechTime(t.techName,"arrival",e.target.value)}
+                        style={{...iSel,fontSize:11,padding:"4px 6px",marginRight:4}}/>
+                      <input type="datetime-local" value={t.departure||""} onChange={e=>updateTechTime(t.techName,"departure",e.target.value)}
+                        style={{...iSel,fontSize:11,padding:"4px 6px",marginRight:4}}/>
+                      <span style={{fontSize:11,fontWeight:700,color:mins?C.green:C.muted,minWidth:36,textAlign:"right"}}>
+                        {mins?fmtDuration(mins):"—"}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+            {form.techs.length===0&&<p style={{color:C.muted,fontSize:11,margin:"4px 0"}}>Select at least one technician above.</p>}
           </div>
+
+          {/* Notes */}
           <div style={{marginBottom:10}}>
             <label style={{display:"block",color:C.sub,fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:0.5,marginBottom:4}}>Notes</label>
-            <textarea value={form.notes} onChange={e=>setForm({...form,notes:e.target.value})} rows={2} placeholder="What was done, parts used, issues found…"
-              style={{...iSel,resize:"vertical"}}/>
+            <textarea value={form.notes} onChange={e=>setForm({...form,notes:e.target.value})} rows={2}
+              placeholder="Parts used, issues found, access notes…" style={{...iSel,resize:"vertical"}}/>
           </div>
+
           <div style={{display:"flex",gap:8}}>
             <Btn label="Save Visit" onClick={save} small/>
             <button onClick={()=>setAdding(false)} style={{background:"none",border:`1px solid ${C.border}`,color:C.sub,borderRadius:7,padding:"5px 12px",fontSize:12,cursor:"pointer",fontFamily:"inherit"}}>Cancel</button>
@@ -1244,8 +1340,8 @@ function VisitsSection({job, onUpdate, fieldStaff}) {
         </div>
       )}
 
-      {visits.length >= maxVisits && !adding && (
-        <div style={{color:C.muted,fontSize:11,marginTop:8,textAlign:"center"}}>Max 5 visits reached · consider creating a recall job</div>
+      {visits.length>=maxVisits&&!adding&&(
+        <div style={{color:C.muted,fontSize:11,marginTop:8,textAlign:"center"}}>Max 5 visits · consider a recall job</div>
       )}
     </div>
   );
