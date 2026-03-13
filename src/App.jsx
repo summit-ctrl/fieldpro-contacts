@@ -13,6 +13,41 @@ const DEFAULT_WORK_PRESETS = ["Add power point","Close off gas (gas shutdown)","
 const DEFAULT_JOB_TYPES = ["HVAC","Plumbing","Electrical"];
 const DEFAULT_TECHNICIANS = ["Jake Rivera","Tom Yuen","Maria Flores","Anita Shaw"];
 const DEFAULT_JOB_STAGES = ["New","Scheduled","In Progress","On Hold","Completed","Invoiced"];
+
+/* ─── DEFAULT REPORT TEMPLATES ─── */
+const DEFAULT_REPORT_TEMPLATES = [
+  {
+    id:"rt1", name:"Appliance Fault Report", icon:"🔧",
+    appliesTo:[], // empty = all job types
+    fields:[
+      {id:"f1",type:"yesno",   label:"Visual signs of damage?",    required:true},
+      {id:"f2",type:"yesno",   label:"Appliance functional on arrival?", required:true},
+      {id:"f3",type:"multi",   label:"Fault category", options:["Electrical","Mechanical","Gas","Cosmetic","User Error","Unknown"], required:true},
+      {id:"f4",type:"text",    label:"Fault description", multiline:true, required:true},
+      {id:"f5",type:"text",    label:"Model number / Serial", required:false},
+      {id:"f6",type:"multi",   label:"Parts required?", options:["None","Parts on hand","Parts ordered","Parts to be quoted"], required:true},
+      {id:"f7",type:"text",    label:"Parts detail (SKU / description)", multiline:false, required:false},
+      {id:"f8",type:"photo",   label:"Compliance plate photo", tag:"compliance_plate", required:false},
+      {id:"f9",type:"photo",   label:"Fault / damage photos", tag:"fault_photo", required:false},
+      {id:"f10",type:"yesno",  label:"Safe to use?", required:true},
+      {id:"f11",type:"text",   label:"Additional notes", multiline:true, required:false},
+    ]
+  },
+  {
+    id:"rt2", name:"Gas Safety Inspection", icon:"⛽",
+    appliesTo:["Plumbing"],
+    fields:[
+      {id:"g1",type:"yesno",  label:"Gas smell detected on arrival?", required:true},
+      {id:"g2",type:"yesno",  label:"All appliances tested?", required:true},
+      {id:"g3",type:"multi",  label:"Inspection outcome", options:["Pass","Fail","Conditional Pass","Further Inspection Required"], required:true},
+      {id:"g4",type:"text",   label:"Appliances tested (list)", multiline:true, required:true},
+      {id:"g5",type:"yesno",  label:"Isolation valve operational?", required:true},
+      {id:"g6",type:"text",   label:"Readings / pressure notes", multiline:false, required:false},
+      {id:"g7",type:"photo",  label:"Inspection photos", tag:"inspection_photo", required:false},
+      {id:"g8",type:"text",   label:"Certifier notes", multiline:true, required:false},
+    ]
+  }
+];
 const DEFAULT_JOB_SUBSTAGES = ["Waiting on tenant","Parts ordered","Awaiting approval","Pending inspection","Follow-up required","On hold – weather","Subcontractor booked","Materials delivered"];
 const DEFAULT_FIELD_STAFF = [
   {id:"fs1",name:"Jake Rivera",role:"Lead Technician",phone:"0411 100 200",email:"jake@fieldpro.com",trades:["Plumbing","HVAC"],status:"Active"},
@@ -27,7 +62,11 @@ const jobStatus = job => { if (job.status==="Open") return "Open"; return daysDi
 const statusColor = s => s==="Open"?"blue":s==="Recently Closed"?"orange":"gray";
 const fmtDate = d => d ? new Date(d).toLocaleDateString("en-AU",{day:"2-digit",month:"short",year:"numeric"}) : "—";
 const fmtMoney = n => "$"+Number(n||0).toLocaleString("en-AU",{minimumFractionDigits:2,maximumFractionDigits:2});
+const fileSizeFmt = b => b > 1048576 ? `${(b/1048576).toFixed(1)} MB` : `${Math.round(b/1024)} KB`;
+const fmtTs = ts => { const d = new Date(ts); return d.toLocaleDateString("en-AU",{day:"2-digit",month:"short",year:"numeric"}) + " " + d.toLocaleTimeString("en-AU",{hour:"2-digit",minute:"2-digit"}); };
 let _id=3000; const uid=()=>`id-${++_id}`;
+// Global auto-incrementing job number — starts after seed data (1006)
+let _jobNum=1006; const nextJobRef=()=>`${++_jobNum}`;
 const appIcon = t=>({"Oven":"🍳","Dishwasher":"🍽️","Cooktop – Gas":"🔥","Cooktop – Electric":"⚡","Upright Cooker":"🍲","Washing Machine":"🫧","Dryer":"💨","Fridge":"🧊","Microwave":"📡"}[t]||"🔧");
 const workIcon = d=>{const l=d.toLowerCase();if(l.includes("gas"))return"⛽";if(l.includes("power point")||l.includes("circuit")||l.includes("cable"))return"⚡";if(l.includes("cabinet")||l.includes("benchtop"))return"🪚";if(l.includes("alarm"))return"🔔";if(l.includes("water"))return"💧";return"🔧";};
 const stageColor = s => {
@@ -44,17 +83,17 @@ const SEED_COMPANIES = [
         agents:[
           {id:"a1",name:"James Okafor",email:"jokafor@raywhite.com",phone:"0412 111 222",properties:12,
             jobs:[
-              {id:"j1",ref:"JOB-1001",type:"Plumbing",address:"22 Oak St, Parramatta NSW",description:"Leaking tap in kitchen and bathroom",tech:"Jake Rivera",keyMethod:"other",keyNotes:"Key in lockbox – code 4421",createdDate:"2026-03-01",status:"Open",stage:"In Progress",subStage:"Waiting on tenant",closedDate:null,tenants:[{id:"t1",name:"Wei & Fang Liu",email:"wliu@gmail.com",phone:"0400 111 333"}],appliances:[{id:"ap1",appType:"Dishwasher",brand:"Bosch",model:"SMS46KI01A",serial:"BSH2024-001",condition:"Leaking from door seal"}],additionalWorks:[{id:"aw1",description:"Add power point",custom:false,notes:"Behind dishwasher cavity"}]},
-              {id:"j2",ref:"JOB-1002",type:"Electrical",address:"7/15 Church St, Parramatta NSW",description:"Power point replacement x3",tech:"Tom Yuen",keyMethod:"office",keyNotes:"Ask for Maria at reception",createdDate:"2026-02-10",status:"Closed",stage:"Invoiced",subStage:"",closedDate:"2026-02-20",tenants:[{id:"t2",name:"Priya Menon",email:"pmenon@hotmail.com",phone:"0400 222 444"}],appliances:[],additionalWorks:[{id:"aw2",description:"Replace cables",custom:false,notes:"3x double GPO"},{id:"aw3",description:"Update circuit breaker",custom:false,notes:""}]},
-              {id:"j3",ref:"JOB-1003",type:"HVAC",address:"22 Oak St, Parramatta NSW",description:"AC unit not cooling – full service",tech:"Maria Flores",keyMethod:"tenant",keyNotes:"Call 30 mins prior",createdDate:"2025-11-15",status:"Closed",stage:"Completed",subStage:"Follow-up required",closedDate:"2025-11-20",tenants:[{id:"t1",name:"Wei & Fang Liu",email:"wliu@gmail.com",phone:"0400 111 333"},{id:"t2",name:"Priya Menon",email:"pmenon@hotmail.com",phone:"0400 222 444"}],appliances:[{id:"ap2",appType:"Cooktop – Gas",brand:"Smeg",model:"SR264GH",serial:"SMG2022-887",condition:"One burner igniter faulty"},{id:"ap3",appType:"Oven",brand:"Smeg",model:"SF6341GVX",serial:"SMG2022-888",condition:"Good – general service"}],additionalWorks:[]},
+              {id:"j1",ref:"1001",type:"Plumbing",address:"22 Oak St, Parramatta NSW",description:"Leaking tap in kitchen and bathroom",tech:"Jake Rivera",keyMethod:"other",keyNotes:"Key in lockbox – code 4421",createdDate:"2026-03-01",status:"Open",stage:"In Progress",subStage:"Waiting on tenant",closedDate:null,tenants:[{id:"t1",name:"Wei & Fang Liu",email:"wliu@gmail.com",phone:"0400 111 333"}],appliances:[{id:"ap1",appType:"Dishwasher",brand:"Bosch",model:"SMS46KI01A",serial:"BSH2024-001",condition:"Leaking from door seal"}],additionalWorks:[{id:"aw1",description:"Add power point",custom:false,notes:"Behind dishwasher cavity"}]},
+              {id:"j2",ref:"1002",type:"Electrical",address:"7/15 Church St, Parramatta NSW",description:"Power point replacement x3",tech:"Tom Yuen",keyMethod:"office",keyNotes:"Ask for Maria at reception",createdDate:"2026-02-10",status:"Closed",stage:"Invoiced",subStage:"",closedDate:"2026-02-20",tenants:[{id:"t2",name:"Priya Menon",email:"pmenon@hotmail.com",phone:"0400 222 444"}],appliances:[],additionalWorks:[{id:"aw2",description:"Replace cables",custom:false,notes:"3x double GPO"},{id:"aw3",description:"Update circuit breaker",custom:false,notes:""}]},
+              {id:"j3",ref:"1003",type:"HVAC",address:"22 Oak St, Parramatta NSW",description:"AC unit not cooling – full service",tech:"Maria Flores",keyMethod:"tenant",keyNotes:"Call 30 mins prior",createdDate:"2025-11-15",status:"Closed",stage:"Completed",subStage:"Follow-up required",closedDate:"2025-11-20",tenants:[{id:"t1",name:"Wei & Fang Liu",email:"wliu@gmail.com",phone:"0400 111 333"},{id:"t2",name:"Priya Menon",email:"pmenon@hotmail.com",phone:"0400 222 444"}],appliances:[{id:"ap2",appType:"Cooktop – Gas",brand:"Smeg",model:"SR264GH",serial:"SMG2022-887",condition:"One burner igniter faulty"},{id:"ap3",appType:"Oven",brand:"Smeg",model:"SF6341GVX",serial:"SMG2022-888",condition:"Good – general service"}],additionalWorks:[]},
             ]},
           {id:"a2",name:"Sofia Reyes",email:"sreyes@raywhite.com",phone:"0413 333 444",properties:8,
-            jobs:[{id:"j4",ref:"JOB-1004",type:"Plumbing",address:"3 Rose Ave, Parramatta NSW",description:"Hot water system replacement",tech:"Anita Shaw",keyMethod:"office",keyNotes:"",createdDate:"2026-03-05",status:"Open",stage:"Scheduled",subStage:"",closedDate:null,tenants:[{id:"t3",name:"Ahmed & Sara Hassan",email:"ahassan@gmail.com",phone:"0400 333 555"}],appliances:[],additionalWorks:[{id:"aw4",description:"Close off gas (gas shutdown)",custom:false,notes:"Old HWS – gas line to be capped"}]}]},
+            jobs:[{id:"j4",ref:"1004",type:"Plumbing",address:"3 Rose Ave, Parramatta NSW",description:"Hot water system replacement",tech:"Anita Shaw",keyMethod:"office",keyNotes:"",createdDate:"2026-03-05",status:"Open",stage:"Scheduled",subStage:"",closedDate:null,tenants:[{id:"t3",name:"Ahmed & Sara Hassan",email:"ahassan@gmail.com",phone:"0400 333 555"}],appliances:[],additionalWorks:[{id:"aw4",description:"Close off gas (gas shutdown)",custom:false,notes:"Old HWS – gas line to be capped"}]}]},
         ]},
-      {id:"b2",name:"Ray White Blacktown",address:"1 Flushcombe Rd, Blacktown NSW 2148",phone:"(02) 9622 4400",email:"blacktown@raywhite.com",billing:{name:"Tom Nguyen",email:"tnguyen@raywhite.com",phone:"(02) 9622 4401"},agents:[{id:"a3",name:"Mia Chang",email:"mchang@raywhite.com",phone:"0414 555 666",properties:15,jobs:[{id:"j5",ref:"JOB-1005",type:"Electrical",address:"12 Main St, Blacktown NSW",description:"Smoke alarm replacement x4",tech:"Tom Yuen",keyMethod:"tenant",keyNotes:"Tenant works from home",createdDate:"2026-03-09",status:"Open",stage:"New",subStage:"",closedDate:null,tenants:[{id:"t4",name:"Carlos Fernandez",email:"cfernandez@gmail.com",phone:"0400 444 666"}],appliances:[],additionalWorks:[{id:"aw5",description:"Smoke alarm replacement",custom:false,notes:"4x units throughout"}]}]}]},
+      {id:"b2",name:"Ray White Blacktown",address:"1 Flushcombe Rd, Blacktown NSW 2148",phone:"(02) 9622 4400",email:"blacktown@raywhite.com",billing:{name:"Tom Nguyen",email:"tnguyen@raywhite.com",phone:"(02) 9622 4401"},agents:[{id:"a3",name:"Mia Chang",email:"mchang@raywhite.com",phone:"0414 555 666",properties:15,jobs:[{id:"j5",ref:"1005",type:"Electrical",address:"12 Main St, Blacktown NSW",description:"Smoke alarm replacement x4",tech:"Tom Yuen",keyMethod:"tenant",keyNotes:"Tenant works from home",createdDate:"2026-03-09",status:"Open",stage:"New",subStage:"",closedDate:null,tenants:[{id:"t4",name:"Carlos Fernandez",email:"cfernandez@gmail.com",phone:"0400 444 666"}],appliances:[],additionalWorks:[{id:"aw5",description:"Smoke alarm replacement",custom:false,notes:"4x units throughout"}]}]}]},
     ]},
   {id:"c2",name:"LJ Hooker Corporate",abn:"31 000 007 922",phone:"(02) 8244 4444",email:"accounts@ljhooker.com.au",website:"ljhooker.com.au",status:"Active",
-    branches:[{id:"b3",name:"LJ Hooker Penrith",address:"345 High St, Penrith NSW 2750",phone:"(02) 4732 1100",email:"penrith@ljhooker.com.au",billing:{name:"Rachel Park",email:"rpark@ljhooker.com.au",phone:"(02) 4732 1101"},agents:[{id:"a4",name:"David Tran",email:"dtran@ljhooker.com.au",phone:"0415 777 888",properties:10,jobs:[{id:"j6",ref:"JOB-1006",type:"HVAC",address:"88 Woodriff St, Penrith NSW",description:"Split system install – bedroom",tech:"Maria Flores",keyMethod:"tenant",keyNotes:"Call Maya on 0400 555 777",createdDate:"2026-03-08",status:"Open",stage:"On Hold",subStage:"Parts ordered",closedDate:null,tenants:[{id:"t5",name:"Maya & Luke Patel",email:"mpatel@gmail.com",phone:"0400 555 777"}],appliances:[{id:"ap4",appType:"Washing Machine",brand:"Samsung",model:"WW80T504DAW",serial:"SAM2023-441",condition:"Not spinning – needs service"}],additionalWorks:[]}]}]}]},
+    branches:[{id:"b3",name:"LJ Hooker Penrith",address:"345 High St, Penrith NSW 2750",phone:"(02) 4732 1100",email:"penrith@ljhooker.com.au",billing:{name:"Rachel Park",email:"rpark@ljhooker.com.au",phone:"(02) 4732 1101"},agents:[{id:"a4",name:"David Tran",email:"dtran@ljhooker.com.au",phone:"0415 777 888",properties:10,jobs:[{id:"j6",ref:"1006",type:"HVAC",address:"88 Woodriff St, Penrith NSW",description:"Split system install – bedroom",tech:"Maria Flores",keyMethod:"tenant",keyNotes:"Call Maya on 0400 555 777",createdDate:"2026-03-08",status:"Open",stage:"On Hold",subStage:"Parts ordered",closedDate:null,tenants:[{id:"t5",name:"Maya & Luke Patel",email:"mpatel@gmail.com",phone:"0400 555 777"}],appliances:[{id:"ap4",appType:"Washing Machine",brand:"Samsung",model:"WW80T504DAW",serial:"SAM2023-441",condition:"Not spinning – needs service"}],additionalWorks:[]}]}]}]},
 ];
 
 const SEED_VENDORS = [
@@ -71,9 +110,9 @@ const SEED_QUOTES = [
   {id:"q3",ref:"QUO-003",client:"Ray White Blacktown",contact:"Tom Nguyen",date:"2026-02-20",expiry:"2026-03-20",status:"Accepted",total:980,items:[{desc:"Smoke alarm x4 supply",qty:4,unit:"each",rate:85,amount:340},{desc:"Labour – installation",qty:4,unit:"hr",rate:120,amount:480},{desc:"Compliance certificate",qty:1,unit:"each",rate:160,amount:160}]},
 ];
 const SEED_INVOICES = [
-  {id:"i1",ref:"INV-0041",client:"Ray White Parramatta",contact:"Karen Lim",jobRef:"JOB-1002",date:"2026-02-21",due:"2026-03-21",status:"Paid",paidDate:"2026-03-10",total:1380,items:[{desc:"Power point replacement x3",qty:3,unit:"each",rate:220,amount:660},{desc:"Labour – electrical",qty:3,unit:"hr",rate:120,amount:360},{desc:"Cable replacement",qty:1,unit:"each",rate:360,amount:360}]},
-  {id:"i2",ref:"INV-0042",client:"Ray White Parramatta",contact:"Karen Lim",jobRef:"JOB-1003",date:"2026-03-01",due:"2026-03-31",status:"Overdue",paidDate:null,total:2240,items:[{desc:"HVAC full service – split system",qty:1,unit:"each",rate:480,amount:480},{desc:"Gas cooktop service",qty:1,unit:"each",rate:320,amount:320},{desc:"Labour – HVAC",qty:6,unit:"hr",rate:120,amount:720},{desc:"Parts & consumables",qty:1,unit:"each",rate:720,amount:720}]},
-  {id:"i3",ref:"INV-0043",client:"LJ Hooker Penrith",contact:"Rachel Park",jobRef:"JOB-1006",date:"2026-03-09",due:"2026-04-09",status:"Sent",paidDate:null,total:1379,items:[{desc:"Samsung washing machine service",qty:1,unit:"each",rate:299,amount:299},{desc:"Split system supply",qty:1,unit:"each",rate:899,amount:899},{desc:"Labour",qty:1.5,unit:"hr",rate:120,amount:181}]},
+  {id:"i1",ref:"INV-0041",client:"Ray White Parramatta",contact:"Karen Lim",jobRef:"1002",date:"2026-02-21",due:"2026-03-21",status:"Paid",paidDate:"2026-03-10",total:1380,items:[{desc:"Power point replacement x3",qty:3,unit:"each",rate:220,amount:660},{desc:"Labour – electrical",qty:3,unit:"hr",rate:120,amount:360},{desc:"Cable replacement",qty:1,unit:"each",rate:360,amount:360}]},
+  {id:"i2",ref:"INV-0042",client:"Ray White Parramatta",contact:"Karen Lim",jobRef:"1003",date:"2026-03-01",due:"2026-03-31",status:"Overdue",paidDate:null,total:2240,items:[{desc:"HVAC full service – split system",qty:1,unit:"each",rate:480,amount:480},{desc:"Gas cooktop service",qty:1,unit:"each",rate:320,amount:320},{desc:"Labour – HVAC",qty:6,unit:"hr",rate:120,amount:720},{desc:"Parts & consumables",qty:1,unit:"each",rate:720,amount:720}]},
+  {id:"i3",ref:"INV-0043",client:"LJ Hooker Penrith",contact:"Rachel Park",jobRef:"1006",date:"2026-03-09",due:"2026-04-09",status:"Sent",paidDate:null,total:1379,items:[{desc:"Samsung washing machine service",qty:1,unit:"each",rate:299,amount:299},{desc:"Split system supply",qty:1,unit:"each",rate:899,amount:899},{desc:"Labour",qty:1.5,unit:"hr",rate:120,amount:181}]},
 ];
 const SEED_INVENTORY = [
   {id:"in1",sku:"RIN-HW25",name:"Rinnai 25L Hot Water System",category:"Plumbing",qty:3,minQty:2,unitCost:1450,location:"Warehouse A",supplier:"The Good Guys"},
@@ -105,7 +144,8 @@ const useSettings = () => {
   const [jobSubStages, setJobSubStages] = useState(DEFAULT_JOB_SUBSTAGES);
   const [fieldStaff, setFieldStaff] = useState(DEFAULT_FIELD_STAFF);
   const [jobTypes, setJobTypes] = useState(DEFAULT_JOB_TYPES);
-  return { jobStages, setJobStages, jobSubStages, setJobSubStages, fieldStaff, setFieldStaff, jobTypes, setJobTypes };
+  const [reportTemplates, setReportTemplates] = useState(DEFAULT_REPORT_TEMPLATES);
+  return { jobStages, setJobStages, jobSubStages, setJobSubStages, fieldStaff, setFieldStaff, jobTypes, setJobTypes, reportTemplates, setReportTemplates };
 };
 
 /* ─── LIST MANAGER ─── */
@@ -194,6 +234,324 @@ function AdditionalWorksSection({works,onChange,workPresets,onPresetsChange}) {
   return(<div><SectionHead title="🛠️ Additional Works" count={works.length} action={{label:"+ Add",fn:openAdd}}/>{works.length===0&&<p style={{color:C.muted,fontSize:13,paddingBottom:8}}>No additional works logged.</p>}{works.map(w=>(<div key={w.id} style={{background:C.raised,border:`1px solid ${C.border}`,borderRadius:10,padding:"12px 14px",marginBottom:8}}><div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}><div style={{display:"flex",gap:10,alignItems:"flex-start",flex:1,minWidth:0}}><span style={{fontSize:20,flexShrink:0}}>{workIcon(w.description)}</span><div style={{minWidth:0}}><div style={{display:"flex",gap:6,alignItems:"center",flexWrap:"wrap"}}><span style={{color:C.text,fontWeight:700,fontSize:13}}>{w.description}</span>{w.custom&&<Badge label="Custom" color="purple"/>}</div>{w.notes&&<div style={{color:C.sub,fontSize:12,marginTop:3}}>📝 {w.notes}</div>}</div></div><button onClick={()=>remove(w.id)} style={{background:"none",border:"none",color:C.muted,fontSize:16,cursor:"pointer",flexShrink:0,marginLeft:8}}>✕</button></div></div>))}{showAdd&&(<Modal title="Add Additional Work" onClose={()=>setShowAdd(false)} onSave={save}><div style={{display:"flex",gap:8,marginBottom:14}}><button onClick={()=>setIsCustom(false)} style={{flex:1,padding:"9px",borderRadius:8,border:`2px solid ${!isCustom?C.accent:C.border}`,background:!isCustom?"#eff6ff":"#fff",color:!isCustom?C.accent:C.sub,fontWeight:700,fontSize:12,cursor:"pointer",fontFamily:"inherit"}}>Pick from list</button><button onClick={()=>setIsCustom(true)} style={{flex:1,padding:"9px",borderRadius:8,border:`2px solid ${isCustom?C.purple:C.border}`,background:isCustom?"#f5f3ff":"#fff",color:isCustom?C.purple:C.sub,fontWeight:700,fontSize:12,cursor:"pointer",fontFamily:"inherit"}}>Custom entry</button></div>{!isCustom?(<><ListManager label="Works Preset" items={workPresets} onChange={onPresetsChange}/><div style={{marginBottom:14}}><label style={{display:"block",color:C.sub,fontSize:12,fontWeight:600,textTransform:"uppercase",letterSpacing:0.5,marginBottom:5}}>Select Work Type <span style={{color:C.red}}>*</span></label><div style={{display:"flex",flexDirection:"column",gap:5,maxHeight:220,overflowY:"auto",padding:"2px 0"}}>{workPresets.map(p=>(<label key={p} style={{display:"flex",alignItems:"center",gap:10,padding:"9px 12px",borderRadius:8,border:`1.5px solid ${selected===p?C.accent:C.border}`,background:selected===p?"#eff6ff":"#fff",cursor:"pointer"}}><input type="radio" name="work" checked={selected===p} onChange={()=>setSelected(p)} style={{accentColor:C.accent}}/><span style={{fontSize:13,fontWeight:selected===p?700:500,color:C.text}}>{workIcon(p)} {p}</span></label>))}</div></div></>):(<FF label="Describe the Work" value={custom} onChange={setCustom} placeholder="e.g. Install rangehood vent to exterior..." required/>)}<FF label="Notes (optional)" value={notes} onChange={setNotes} placeholder="Location, spec, or extra details..." type="textarea"/></Modal>)}</div>);
 }
 
+
+/* ═══════════════════════════════════════════
+   JOB DIARY
+═══════════════════════════════════════════ */
+const DIARY_TYPES = [
+  {id:"email",    label:"Email",      icon:"📧", color:"#0ea5e9"},
+  {id:"phone",    label:"Phone Call", icon:"📞", color:"#16a34a"},
+  {id:"sms",      label:"SMS",        icon:"💬", color:"#f97316"},
+  {id:"whatsapp", label:"WhatsApp",   icon:"💚", color:"#25d366"},
+  {id:"photo",    label:"Photo",      icon:"📷", color:"#7c3aed"},
+  {id:"pdf",      label:"PDF",        icon:"📄", color:"#dc2626"},
+  {id:"video",    label:"Video",      icon:"🎥", color:"#d97706"},
+  {id:"visit",    label:"Site Visit", icon:"🔧", color:"#0891b2"},
+];
+
+function JobDiary({job, onUpdate, onOpenAttachment}){
+  const diary = job.diary || [];
+  const [filter, setFilter] = useState("All");
+  const [showAdd, setShowAdd] = useState(false);
+  const [entryType, setEntryType] = useState("email");
+  const [direction, setDirection] = useState("outbound");
+  const [contact, setContact] = useState("");
+  const [notes, setNotes] = useState("");
+  const [subject, setSubject] = useState("");
+  const [duration, setDuration] = useState("");
+  const [files, setFiles] = useState([]); // [{name,type,data,mime}]
+  const [lightbox, setLightbox] = useState(null);
+  const fileRef = useState(null);
+
+  const isMedia = id => ["photo","pdf","video"].includes(id);
+  const isComms = id => ["email","phone","sms","whatsapp"].includes(id);
+
+  const handleFiles = e => {
+    const chosen = Array.from(e.target.files);
+    chosen.forEach(file => {
+      const reader = new FileReader();
+      reader.onload = ev => {
+        setFiles(prev => [...prev, {
+          id: uid(),
+          name: file.name,
+          mime: file.type,
+          size: file.size,
+          data: ev.target.result, // base64 data URL
+        }]);
+      };
+      reader.readAsDataURL(file);
+    });
+    e.target.value = "";
+  };
+
+  const removeFile = id => setFiles(files.filter(f => f.id !== id));
+
+  const resetForm = () => {
+    setEntryType("email"); setDirection("outbound"); setContact("");
+    setNotes(""); setSubject(""); setDuration(""); setFiles([]);
+  };
+
+  const saveEntry = () => {
+    if(isComms(entryType) && !notes && files.length === 0) return;
+    if(isMedia(entryType) && files.length === 0) return;
+    const entry = {
+      id: uid(),
+      type: entryType,
+      direction,
+      contact,
+      subject,
+      notes,
+      duration,
+      files,
+      ts: new Date().toISOString(),
+    };
+    onUpdate({...job, diary: [entry, ...diary]});
+    resetForm();
+    setShowAdd(false);
+  };
+
+  const filtered = filter === "All" ? diary : diary.filter(e => e.type === filter);
+  const typeInfo = id => DIARY_TYPES.find(t => t.id === id) || DIARY_TYPES[0];
+
+  return(
+    <Card style={{marginBottom:14}}>
+      {/* Header */}
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
+        <div style={{display:"flex",alignItems:"center",gap:8}}>
+          <span style={{fontWeight:700,fontSize:14,color:C.text}}>📒 Job Diary</span>
+          <span style={{background:C.raised,border:`1px solid ${C.border}`,color:C.sub,borderRadius:99,padding:"1px 8px",fontSize:11,fontWeight:700}}>{diary.length}</span>
+        </div>
+        <Btn label="+ Log Entry" onClick={()=>{resetForm();setShowAdd(true);}} small/>
+      </div>
+
+      {/* Type filter pills */}
+      <div style={{display:"flex",gap:6,marginBottom:14,overflowX:"auto",paddingBottom:4,flexWrap:"nowrap"}}>
+        <Pill label="All" active={filter==="All"} onClick={()=>setFilter("All")}/>
+        {DIARY_TYPES.map(t=>(
+          <Pill key={t.id} label={`${t.icon} ${t.label}`} active={filter===t.id} onClick={()=>setFilter(t.id)}/>
+        ))}
+      </div>
+
+      {/* Diary feed */}
+      {filtered.length===0 && (
+        <div style={{textAlign:"center",padding:"28px 0",color:C.muted}}>
+          <div style={{fontSize:28,marginBottom:6}}>📒</div>
+          <div style={{fontSize:13,fontWeight:600}}>{filter==="All"?"No entries yet — log the first one":"No entries of this type"}</div>
+        </div>
+      )}
+
+      {filtered.map(entry => {
+        const ti = typeInfo(entry.type);
+        const isOut = entry.direction === "outbound";
+        return(
+          <div key={entry.id} style={{borderLeft:`3px solid ${ti.color}`,background:C.raised,borderRadius:"0 10px 10px 0",padding:"12px 14px",marginBottom:10}}>
+            {/* Top row */}
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:8,marginBottom:6}}>
+              <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
+                <span style={{fontSize:16}}>{ti.icon}</span>
+                <span style={{fontWeight:700,fontSize:13,color:C.text}}>{ti.label}</span>
+                {isComms(entry.type) && (
+                  <span style={{background:isOut?"#eff6ff":"#f0fdf4",color:isOut?C.accent:C.green,border:`1px solid ${isOut?"#bae6fd":"#bbf7d0"}`,borderRadius:99,padding:"1px 8px",fontSize:11,fontWeight:700}}>
+                    {isOut?"↑ Outbound":"↓ Inbound"}
+                  </span>
+                )}
+                {entry.duration && <span style={{color:C.sub,fontSize:12}}>⏱ {entry.duration}</span>}
+                {entry.source==="field_app" && <span style={{background:"#f0fdf4",color:"#15803d",border:"1px solid #bbf7d0",borderRadius:99,padding:"1px 7px",fontSize:10,fontWeight:700}}>📱 Field App</span>}
+              </div>
+              <span style={{color:C.muted,fontSize:11,whiteSpace:"nowrap",flexShrink:0}}>{fmtTs(entry.ts)}</span>
+            </div>
+
+            {/* Contact */}
+            {entry.contact && (
+              <div style={{color:C.sub,fontSize:12,marginBottom:4}}>
+                👤 {entry.contact}
+              </div>
+            )}
+
+            {/* Subject — visits show outcome, emails show Re: */}
+            {entry.subject && (
+              <div style={{color:C.text,fontSize:13,fontWeight:600,marginBottom:4}}>
+                {entry.type==="visit" ? entry.subject : `Re: ${entry.subject}`}
+              </div>
+            )}
+
+            {/* Notes/body */}
+            {entry.notes && (
+              <div style={{color:C.text,fontSize:13,lineHeight:1.5,whiteSpace:"pre-wrap",marginBottom:entry.files?.length?8:0}}>
+                {entry.notes}
+              </div>
+            )}
+
+            {/* Attached files */}
+            {entry.files?.length > 0 && (
+              <div style={{marginTop:8}}>
+                {/* Photos inline */}
+                {entry.files.filter(f=>f.mime?.startsWith("image/")).length > 0 && (
+                  <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:8}}>
+                    {entry.files.filter(f=>f.mime?.startsWith("image/")).map(f=>(
+                      <div key={f.id} onClick={()=>{ const imgs=entry.files.filter(x=>x.mime?.startsWith("image/")); onOpenAttachment?onOpenAttachment(f,entry,imgs):setLightbox(f); }}
+                        style={{cursor:"zoom-in",borderRadius:8,overflow:"hidden",border:`2px solid ${C.border}`,width:80,height:80,flexShrink:0,transition:"border-color 0.15s"}}
+                        onMouseEnter={e=>e.currentTarget.style.borderColor=C.accent}
+                        onMouseLeave={e=>e.currentTarget.style.borderColor=C.border}>
+                        <img src={f.data} alt={f.name} style={{width:"100%",height:"100%",objectFit:"cover"}}/>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {/* PDFs, videos, other files */}
+                {entry.files.filter(f=>!f.mime?.startsWith("image/")).map(f=>{
+                  const isPdf = f.mime==="application/pdf";
+                  const isVid = f.mime?.startsWith("video/");
+                  return(
+                    <div key={f.id} onClick={()=>onOpenAttachment?onOpenAttachment(f,entry):null}
+                      style={{display:"flex",alignItems:"center",gap:10,background:"#fff",border:`1px solid ${C.border}`,borderRadius:8,padding:"8px 12px",marginBottom:6,cursor:onOpenAttachment?"pointer":"default",transition:"border-color 0.15s"}}
+                      onMouseEnter={e=>{if(onOpenAttachment)e.currentTarget.style.borderColor=C.accent}}
+                      onMouseLeave={e=>e.currentTarget.style.borderColor=C.border}>
+                      <span style={{fontSize:20}}>{isPdf?"📄":isVid?"🎥":"📎"}</span>
+                      <div style={{flex:1,minWidth:0}}>
+                        <div style={{color:C.text,fontSize:12,fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{f.name}</div>
+                        <div style={{color:C.muted,fontSize:11}}>{fileSizeFmt(f.size)}{onOpenAttachment?" · click to open":""}</div>
+                      </div>
+                      {!onOpenAttachment && isVid && (
+                        <video controls style={{height:60,borderRadius:6,maxWidth:120}}>
+                          <source src={f.data} type={f.mime}/>
+                        </video>
+                      )}
+                      {!onOpenAttachment && isPdf && (
+                        <a href={f.data} download={f.name} style={{color:C.accent,fontSize:11,fontWeight:700,textDecoration:"none",border:`1px solid ${C.accent}`,borderRadius:6,padding:"4px 8px"}}>Download</a>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        );
+      })}
+
+      {/* Add entry modal */}
+      {showAdd && (
+        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.45)",zIndex:1000,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
+          <div style={{background:"#fff",borderRadius:16,width:"100%",maxWidth:560,maxHeight:"92vh",overflowY:"auto",boxShadow:"0 20px 60px rgba(0,0,0,0.2)"}}>
+            <div style={{padding:"18px 20px",borderBottom:`1px solid ${C.border}`,display:"flex",justifyContent:"space-between",alignItems:"center",position:"sticky",top:0,background:"#fff",zIndex:1}}>
+              <span style={{fontWeight:800,fontSize:16,color:C.text}}>Log Diary Entry</span>
+              <button onClick={()=>{resetForm();setShowAdd(false);}} style={{background:"none",border:"none",fontSize:22,cursor:"pointer",color:C.muted}}>×</button>
+            </div>
+            <div style={{padding:"18px 20px"}}>
+
+              {/* Type selector */}
+              <div style={{marginBottom:16}}>
+                <label style={{display:"block",color:C.sub,fontSize:12,fontWeight:600,textTransform:"uppercase",letterSpacing:0.5,marginBottom:8}}>Entry Type</label>
+                <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+                  {DIARY_TYPES.filter(t=>t.id!=="visit").map(t=>(
+                    <button key={t.id} onClick={()=>setEntryType(t.id)}
+                      style={{display:"flex",alignItems:"center",gap:5,padding:"7px 13px",borderRadius:99,border:`2px solid ${entryType===t.id?t.color:C.border}`,background:entryType===t.id?t.color+"15":"#fff",color:entryType===t.id?t.color:C.sub,fontWeight:entryType===t.id?700:500,fontSize:12,cursor:"pointer",fontFamily:"inherit"}}>
+                      <span>{t.icon}</span>{t.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Direction (comms only) */}
+              {isComms(entryType) && (
+                <div style={{marginBottom:14}}>
+                  <label style={{display:"block",color:C.sub,fontSize:12,fontWeight:600,textTransform:"uppercase",letterSpacing:0.5,marginBottom:6}}>Direction</label>
+                  <div style={{display:"flex",gap:8}}>
+                    {["outbound","inbound"].map(d=>(
+                      <button key={d} onClick={()=>setDirection(d)}
+                        style={{flex:1,padding:"9px",borderRadius:8,border:`2px solid ${direction===d?C.accent:C.border}`,background:direction===d?"#eff6ff":"#fff",color:direction===d?C.accent:C.sub,fontWeight:700,fontSize:12,cursor:"pointer",fontFamily:"inherit"}}>
+                        {d==="outbound"?"↑ Outbound":"↓ Inbound"}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Contact */}
+              <div style={{marginBottom:14}}>
+                <label style={{display:"block",color:C.sub,fontSize:12,fontWeight:600,textTransform:"uppercase",letterSpacing:0.5,marginBottom:5}}>Contact / Person</label>
+                <input value={contact} onChange={e=>setContact(e.target.value)} placeholder="e.g. Karen Lim, tenant Wei Liu…"
+                  style={{width:"100%",background:C.raised,border:`1px solid ${C.border}`,borderRadius:8,padding:"9px 12px",color:C.text,fontSize:13,fontFamily:"inherit",boxSizing:"border-box"}}/>
+              </div>
+
+              {/* Subject (email only) */}
+              {entryType==="email" && (
+                <div style={{marginBottom:14}}>
+                  <label style={{display:"block",color:C.sub,fontSize:12,fontWeight:600,textTransform:"uppercase",letterSpacing:0.5,marginBottom:5}}>Subject</label>
+                  <input value={subject} onChange={e=>setSubject(e.target.value)} placeholder="e.g. Quote approval for JOB-1007"
+                    style={{width:"100%",background:C.raised,border:`1px solid ${C.border}`,borderRadius:8,padding:"9px 12px",color:C.text,fontSize:13,fontFamily:"inherit",boxSizing:"border-box"}}/>
+                </div>
+              )}
+
+              {/* Duration (phone/call) */}
+              {(entryType==="phone"||entryType==="whatsapp") && (
+                <div style={{marginBottom:14}}>
+                  <label style={{display:"block",color:C.sub,fontSize:12,fontWeight:600,textTransform:"uppercase",letterSpacing:0.5,marginBottom:5}}>Duration</label>
+                  <input value={duration} onChange={e=>setDuration(e.target.value)} placeholder="e.g. 5 mins"
+                    style={{width:"100%",background:C.raised,border:`1px solid ${C.border}`,borderRadius:8,padding:"9px 12px",color:C.text,fontSize:13,fontFamily:"inherit",boxSizing:"border-box"}}/>
+                </div>
+              )}
+
+              {/* Notes */}
+              {(isComms(entryType)||entryType==="photo"||entryType==="pdf"||entryType==="video") && (
+                <div style={{marginBottom:14}}>
+                  <label style={{display:"block",color:C.sub,fontSize:12,fontWeight:600,textTransform:"uppercase",letterSpacing:0.5,marginBottom:5}}>
+                    {entryType==="email"?"Email Body":entryType==="phone"||entryType==="whatsapp"?"Call Notes":"Notes / Caption"}
+                  </label>
+                  <textarea value={notes} onChange={e=>setNotes(e.target.value)}
+                    placeholder={entryType==="email"?"Paste email body or summarise…":entryType==="phone"?"What was discussed…":entryType==="sms"||entryType==="whatsapp"?"Message content…":"Caption or description…"}
+                    rows={4} style={{width:"100%",background:C.raised,border:`1px solid ${C.border}`,borderRadius:8,padding:"9px 12px",color:C.text,fontSize:13,fontFamily:"inherit",resize:"vertical",boxSizing:"border-box"}}/>
+                </div>
+              )}
+
+              {/* File upload */}
+              <div style={{marginBottom:14}}>
+                <label style={{display:"block",color:C.sub,fontSize:12,fontWeight:600,textTransform:"uppercase",letterSpacing:0.5,marginBottom:8}}>
+                  {entryType==="photo"?"Attach Photos":entryType==="pdf"?"Attach PDFs":entryType==="video"?"Attach Videos":"Attach Files (optional)"}
+                </label>
+                <label style={{display:"flex",alignItems:"center",justifyContent:"center",gap:8,padding:"16px",border:`2px dashed ${C.border}`,borderRadius:10,cursor:"pointer",background:C.raised,color:C.sub,fontSize:13,fontWeight:600}}>
+                  <span style={{fontSize:20}}>
+                    {entryType==="photo"?"📷":entryType==="pdf"?"📄":entryType==="video"?"🎥":"📎"}
+                  </span>
+                  Click to attach {entryType==="photo"?"photos":entryType==="pdf"?"PDFs":entryType==="video"?"videos":"files"}
+                  <input type="file" multiple
+                    accept={entryType==="photo"?"image/*":entryType==="pdf"?"application/pdf":entryType==="video"?"video/*":"*"}
+                    onChange={handleFiles} style={{display:"none"}}/>
+                </label>
+                {/* File previews */}
+                {files.length > 0 && (
+                  <div style={{marginTop:10,display:"flex",flexWrap:"wrap",gap:8}}>
+                    {files.map(f=>(
+                      <div key={f.id} style={{position:"relative"}}>
+                        {f.mime?.startsWith("image/") ? (
+                          <div style={{width:72,height:72,borderRadius:8,overflow:"hidden",border:`1px solid ${C.border}`}}>
+                            <img src={f.data} alt={f.name} style={{width:"100%",height:"100%",objectFit:"cover"}}/>
+                          </div>
+                        ):(
+                          <div style={{display:"flex",alignItems:"center",gap:6,background:"#fff",border:`1px solid ${C.border}`,borderRadius:8,padding:"6px 10px",maxWidth:180}}>
+                            <span style={{fontSize:16}}>{f.mime==="application/pdf"?"📄":f.mime?.startsWith("video/")?"🎥":"📎"}</span>
+                            <span style={{fontSize:11,color:C.sub,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{f.name}</span>
+                          </div>
+                        )}
+                        <button onClick={()=>removeFile(f.id)} style={{position:"absolute",top:-6,right:-6,width:18,height:18,borderRadius:"50%",background:C.red,border:"none",color:"#fff",fontSize:10,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700}}>×</button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+            </div>
+            <div style={{padding:"14px 20px",borderTop:`1px solid ${C.border}`,display:"flex",gap:10,justifyContent:"flex-end",position:"sticky",bottom:0,background:"#fff"}}>
+              <button onClick={()=>{resetForm();setShowAdd(false);}} style={{background:C.raised,border:`1px solid ${C.border}`,color:C.sub,borderRadius:8,padding:"8px 16px",fontWeight:600,fontSize:13,cursor:"pointer",fontFamily:"inherit"}}>Cancel</button>
+              <Btn label="Save Entry" onClick={saveEntry}/>
+            </div>
+          </div>
+        </div>
+      )}
+    </Card>
+  );
+}
+
 /* ─── JOBS SECTION ─── */
 function JobsSection({agent,onUpdate,settings}) {
   const {jobStages,jobSubStages,fieldStaff,jobTypes,setJobTypes} = settings;
@@ -207,10 +565,20 @@ function JobsSection({agent,onUpdate,settings}) {
   const [workPresets,setWorkPresets]=useState(DEFAULT_WORK_PRESETS);
   const jobs=agent.jobs||[];
   const updateJob=updated=>{onUpdate({...agent,jobs:jobs.map(j=>j.id===updated.id?updated:j)});setShowJob(updated);};
+  // Recall: find existing recalls for base number, append next letter (a, b, c...)
+  const createRecall=(baseJob)=>{
+    const baseNum=baseJob.ref.replace(/[a-z]+$/,""); // strip any existing suffix
+    const existing=jobs.filter(j=>j.ref===baseNum||j.ref.startsWith(baseNum+"a")||j.ref.match(new RegExp(`^${baseNum}[a-z]$`)));
+    const suffixes=existing.map(j=>{const s=j.ref.replace(baseNum,"");return s||"";}).filter(s=>s);
+    const nextChar=suffixes.length===0?"a":String.fromCharCode(97+suffixes.length);
+    const recall={...baseJob,id:uid(),ref:`${baseNum}${nextChar}`,status:"Open",closedDate:null,createdDate:new Date().toISOString().split("T")[0],stage:"New",subStage:"",tenants:[...baseJob.tenants],appliances:[...baseJob.appliances],additionalWorks:[],diary:[]};
+    onUpdate({...agent,jobs:[...jobs,recall]});
+    setShowJob(null);
+  };
   const saveJob=()=>{
-    if(!newJob.ref||!newJob.address)return;
+    if(!newJob.address)return;
     const type=newJob.type||jobTypes[0]||"";
-    const j={...newJob,type,id:uid(),createdDate:new Date().toISOString().split("T")[0],closedDate:newJob.status==="Closed"?new Date().toISOString().split("T")[0]:null,tenants:[],appliances:[],additionalWorks:[]};
+    const j={...newJob,ref:nextJobRef(),type,id:uid(),createdDate:new Date().toISOString().split("T")[0],closedDate:newJob.status==="Closed"?new Date().toISOString().split("T")[0]:null,tenants:[],appliances:[],additionalWorks:[],diary:[]};
     onUpdate({...agent,jobs:[...jobs,j]});
     setNewJob({ref:"",type:"",address:"",description:"",tech:"",keyMethod:"",keyNotes:"",status:"Open",stage:"New",subStage:""});
     setShowAddJob(false);
@@ -238,11 +606,15 @@ function JobsSection({agent,onUpdate,settings}) {
         {showJob.keyNotes&&<Field label="Key Notes" value={showJob.keyNotes}/>}
         <Field label="Created" value={showJob.createdDate}/>
         {showJob.closedDate&&<Field label="Closed" value={showJob.closedDate}/>}
-        {showJob.status==="Open"&&<div style={{marginTop:14}}><Btn label="Mark as Closed" onClick={()=>updateJob({...showJob,status:"Closed",closedDate:new Date().toISOString().split("T")[0]})} color={C.orange} small/></div>}
+        <div style={{display:"flex",gap:8,marginTop:14,flexWrap:"wrap"}}>
+          {showJob.status==="Open"&&<Btn label="✓ Mark as Closed" onClick={()=>updateJob({...showJob,status:"Closed",closedDate:new Date().toISOString().split("T")[0]})} color={C.orange} small/>}
+          <Btn label="🔁 Create Recall" onClick={()=>createRecall(showJob)} color={C.purple} small outline/>
+        </div>
       </Card>
       <Card style={{marginBottom:14}}><SectionHead title="👥 Tenants" count={showJob.tenants.length} action={{label:"+ Add Tenant",fn:()=>setShowAddTenant(true)}}/>{showJob.tenants.length===0&&<p style={{color:C.muted,fontSize:13}}>No tenants linked yet.</p>}{showJob.tenants.map(t=>(<div key={t.id} style={{display:"flex",gap:12,alignItems:"center",padding:"10px 0",borderBottom:`1px solid ${C.border}`}}><Avatar name={t.name} size={36} bg="#dcfce7" fg="#15803d"/><div><div style={{color:C.text,fontWeight:700,fontSize:13}}>{t.name}</div>{t.email&&<div style={{color:C.sub,fontSize:12}}>{t.email}</div>}{t.phone&&<div style={{color:C.sub,fontSize:12}}>{t.phone}</div>}</div></div>))}</Card>
       <Card style={{marginBottom:14}}><AppliancesSection appliances={showJob.appliances||[]} onChange={ap=>updateJob({...showJob,appliances:ap})} applianceTypes={applianceTypes} onTypesChange={setApplianceTypes}/></Card>
       <Card style={{marginBottom:14}}><AdditionalWorksSection works={showJob.additionalWorks||[]} onChange={ws=>updateJob({...showJob,additionalWorks:ws})} workPresets={workPresets} onPresetsChange={setWorkPresets}/></Card>
+      <JobDiary job={showJob} onUpdate={updateJob}/>
       {showAddTenant&&(<Modal title="Add Tenant to Job" onClose={()=>setShowAddTenant(false)} onSave={saveTenant}><FF label="Full Name" value={newTenant.name} onChange={v=>setNewTenant({...newTenant,name:v})} placeholder="e.g. John Smith" required/><FF label="Email" value={newTenant.email} onChange={v=>setNewTenant({...newTenant,email:v})} placeholder="john@email.com" type="email"/><FF label="Phone" value={newTenant.phone} onChange={v=>setNewTenant({...newTenant,phone:v})} placeholder="0400 000 000"/></Modal>)}
     </div>);
   }
@@ -279,7 +651,7 @@ function JobsSection({agent,onUpdate,settings}) {
     })}
     {showAddJob&&(
       <Modal title="New Job" onClose={()=>setShowAddJob(false)} onSave={saveJob}>
-        <FF label="Job Reference" value={newJob.ref} onChange={v=>setNewJob({...newJob,ref:v})} placeholder="e.g. JOB-1007" required/>
+        <div style={{background:"#eff6ff",border:`1px solid ${C.accent}`,borderRadius:8,padding:"8px 12px",marginBottom:14,fontSize:12,color:C.accent,fontWeight:600}}>🔢 Number assigned automatically (e.g. 1007, 1007a for recalls)</div>
         <ListManager label="Job Type" items={jobTypes} onChange={setJobTypes}/>
         <div style={{marginBottom:14}}><label style={{display:"block",color:C.sub,fontSize:12,fontWeight:600,textTransform:"uppercase",letterSpacing:0.5,marginBottom:5}}>Job Type</label><select value={newJob.type||jobTypes[0]} onChange={e=>setNewJob({...newJob,type:e.target.value})} style={{width:"100%",background:C.raised,border:`1px solid ${C.border}`,borderRadius:8,padding:"9px 12px",color:C.text,fontSize:13,fontFamily:"inherit",boxSizing:"border-box"}}>{jobTypes.map(t=><option key={t}>{t}</option>)}</select></div>
         <FF label="Property Address" value={newJob.address} onChange={v=>setNewJob({...newJob,address:v})} placeholder="e.g. 22 Oak St, Parramatta NSW" required/>
@@ -301,7 +673,7 @@ function JobsSection({agent,onUpdate,settings}) {
    SETTINGS TAB
 ═══════════════════════════════════════════ */
 function SettingsTab({settings}) {
-  const {jobStages,setJobStages,jobSubStages,setJobSubStages,fieldStaff,setFieldStaff,jobTypes,setJobTypes} = settings;
+  const {jobStages,setJobStages,jobSubStages,setJobSubStages,fieldStaff,setFieldStaff,jobTypes,setJobTypes,reportTemplates,setReportTemplates} = settings;
   const [section,setSection]=useState("stages");
   const [modal,setModal]=useState(null);
   const [form,setForm]=useState({});
@@ -314,7 +686,7 @@ function SettingsTab({settings}) {
   const toggleStaffStatus=id=>setFieldStaff(fieldStaff.map(f=>f.id===id?{...f,status:f.status==="Active"?"Inactive":"Active"}:f));
   const removeStaff=id=>setFieldStaff(fieldStaff.filter(f=>f.id!==id));
 
-  const sections=[{id:"stages",icon:"🎯",label:"Job Stages"},{id:"substages",icon:"🏷️",label:"Sub-stages"},{id:"staff",icon:"👷",label:"Field Staff"},{id:"jobtypes",icon:"🔧",label:"Job Types"}];
+  const sections=[{id:"stages",icon:"🎯",label:"Job Stages"},{id:"substages",icon:"🏷️",label:"Sub-stages"},{id:"staff",icon:"👷",label:"Field Staff"},{id:"jobtypes",icon:"🔧",label:"Job Types"},{id:"reports",icon:"📋",label:"Report Templates"}];
 
   return(<div>
     <div style={{marginBottom:20}}><h2 style={{fontSize:18,fontWeight:800,color:C.text}}>Settings</h2><p style={{color:C.sub,fontSize:12,marginTop:2}}>Manage lists, field staff, and job configuration</p></div>
@@ -425,14 +797,21 @@ function SettingsTab({settings}) {
         </div>
       </Card>
     )}
+
+    {section==="reports"&&(
+      <Card>
+        <SectionHead title="📋 Report Templates"/>
+        <p style={{color:C.sub,fontSize:13,marginBottom:16}}>Build report formats for technicians to fill on-site. Each template can have custom fields — Yes/No, multiple choice, text, and photo capture.</p>
+        <ReportTemplateEditor reportTemplates={reportTemplates} setReportTemplates={setReportTemplates} jobTypes={jobTypes}/>
+      </Card>
+    )}
   </div>);
 }
 
 /* ═══════════════════════════════════════════
    CONTACTS TAB
 ═══════════════════════════════════════════ */
-function CustomersTab({settings}) {
-  const [companies,setCompanies]=useState(SEED_COMPANIES);
+function CustomersTab({settings, companies, setCompanies}) {
   const [view,setView]=useState("list");
   const [company,setCompany]=useState(null);
   const [branch,setBranch]=useState(null);
@@ -460,8 +839,7 @@ function CustomersTab({settings}) {
 /* ═══════════════════════════════════════════
    VENDORS TAB
 ═══════════════════════════════════════════ */
-function VendorsTab() {
-  const [vendors,setVendors]=useState(SEED_VENDORS);
+function VendorsTab({vendors, setVendors}) {
   const [sel,setSel]=useState(null);
   const [vTab,setVTab]=useState("overview");
   const [modal,setModal]=useState(null);
@@ -555,38 +933,1381 @@ function DispatchCard({job}) {
 }
 
 /* ═══════════════════════════════════════════
+   QUICK ASSIGN PICKER (Company → Branch → Agent with Add New)
+═══════════════════════════════════════════ */
+function QuickAssignPicker({companies,setCompanies,selCo,setSelCo,selBr,setSelBr,selAg,setSelAg}){
+  const [miniModal,setMiniModal]=useState(null); // "company"|"branch"|"agent"
+  const [mf,setMf]=useState({});
+
+  const selCompany=companies.find(c=>c.id===selCo);
+  const selBranch=selCompany?.branches.find(b=>b.id===selBr);
+  const selAgent=selBranch?.agents.find(a=>a.id===selAg);
+
+  const handleCoChange=e=>{
+    if(e.target.value==="__new__"){setMf({});setMiniModal("company");}
+    else setSelCo(e.target.value);
+  };
+  const handleBrChange=e=>{
+    if(e.target.value==="__new__"){setMf({});setMiniModal("branch");}
+    else setSelBr(e.target.value);
+  };
+  const handleAgChange=e=>{
+    if(e.target.value==="__new__"){setMf({});setMiniModal("agent");}
+    else setSelAg(e.target.value);
+  };
+
+  const saveCo=()=>{
+    if(!mf.name)return;
+    const co={id:uid(),name:mf.name,abn:mf.abn||"",phone:mf.phone||"",email:mf.email||"",website:"",status:"Active",branches:[]};
+    const newCos=[...companies,co];
+    setCompanies(newCos);
+    setSelCo(co.id);
+    setMiniModal(null);
+  };
+  const saveBr=()=>{
+    if(!mf.name||!selCo)return;
+    const br={id:uid(),name:mf.name,address:mf.address||"",phone:mf.phone||"",email:mf.email||"",billing:{name:"",email:"",phone:""},agents:[]};
+    setCompanies(companies.map(c=>c.id===selCo?{...c,branches:[...c.branches,br]}:c));
+    setSelBr(br.id);
+    setMiniModal(null);
+  };
+  const saveAg=()=>{
+    if(!mf.name||!selCo||!selBr)return;
+    const ag={id:uid(),name:mf.name,email:mf.email||"",phone:mf.phone||"",properties:0,jobs:[]};
+    setCompanies(companies.map(c=>c.id===selCo?{...c,branches:c.branches.map(b=>b.id===selBr?{...b,agents:[...b.agents,ag]}:b)}:c));
+    setSelAg(ag.id);
+    setMiniModal(null);
+  };
+
+  const sel={width:"100%",background:"#fff",border:`1px solid ${C.border}`,borderRadius:8,padding:"9px 12px",color:C.text,fontSize:13,fontFamily:"inherit",boxSizing:"border-box"};
+  const lbl={display:"block",color:C.sub,fontSize:12,fontWeight:600,textTransform:"uppercase",letterSpacing:0.5,marginBottom:5};
+
+  return(<>
+    <div style={{background:C.raised,border:`1px solid ${C.border}`,borderRadius:10,padding:"14px",marginBottom:14}}>
+      <div style={{fontWeight:700,fontSize:13,color:C.text,marginBottom:12}}>📍 Assign to Agent</div>
+
+      {/* Company */}
+      <div style={{marginBottom:10}}>
+        <label style={lbl}>Company <span style={{color:C.red}}>*</span></label>
+        <select value={selCo} onChange={handleCoChange} style={sel}>
+          <option value="">— Select Company —</option>
+          {companies.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}
+          <option value="__new__">➕ Add New Company…</option>
+        </select>
+      </div>
+
+      {/* Branch — only show once company selected */}
+      {selCompany&&(
+        <div style={{marginBottom:10}}>
+          <label style={lbl}>Branch <span style={{color:C.red}}>*</span></label>
+          <select value={selBr} onChange={handleBrChange} style={sel}>
+            <option value="">— Select Branch —</option>
+            {selCompany.branches.map(b=><option key={b.id} value={b.id}>{b.name}</option>)}
+            <option value="__new__">➕ Add New Branch…</option>
+          </select>
+        </div>
+      )}
+
+      {/* Agent — only show once branch selected */}
+      {selBranch&&(
+        <div>
+          <label style={lbl}>Agent <span style={{color:C.red}}>*</span></label>
+          <select value={selAg} onChange={handleAgChange} style={sel}>
+            <option value="">— Select Agent —</option>
+            {selBranch.agents.map(a=><option key={a.id} value={a.id}>{a.name}</option>)}
+            <option value="__new__">➕ Add New Agent…</option>
+          </select>
+        </div>
+      )}
+
+      {/* Confirmation chip */}
+      {selAgent&&(
+        <div style={{marginTop:10,padding:"8px 12px",background:"#dcfce7",borderRadius:7,fontSize:12,color:"#15803d",fontWeight:600}}>
+          ✓ {selAgent.name} · {selBranch.name} · {selCompany.name}
+        </div>
+      )}
+    </div>
+
+    {/* Mini modal — Add Company */}
+    {miniModal==="company"&&(
+      <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:2000,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
+        <div style={{background:"#fff",borderRadius:14,width:"100%",maxWidth:400,boxShadow:"0 20px 60px rgba(0,0,0,0.25)"}}>
+          <div style={{padding:"16px 18px",borderBottom:`1px solid ${C.border}`,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+            <span style={{fontWeight:800,fontSize:15,color:C.text}}>New Company</span>
+            <button onClick={()=>setMiniModal(null)} style={{background:"none",border:"none",fontSize:20,cursor:"pointer",color:C.muted}}>×</button>
+          </div>
+          <div style={{padding:"16px 18px"}}>
+            <FF label="Company Name" value={mf.name||""} onChange={v=>setMf({...mf,name:v})} placeholder="e.g. Ray White Group" required/>
+            <FF label="ABN" value={mf.abn||""} onChange={v=>setMf({...mf,abn:v})} placeholder="00 000 000 000"/>
+            <FF label="Phone" value={mf.phone||""} onChange={v=>setMf({...mf,phone:v})} placeholder="(02) 9000 0000"/>
+            <FF label="Email" value={mf.email||""} onChange={v=>setMf({...mf,email:v})} placeholder="accounts@company.com"/>
+          </div>
+          <div style={{padding:"12px 18px",borderTop:`1px solid ${C.border}`,display:"flex",gap:8,justifyContent:"flex-end"}}>
+            <button onClick={()=>setMiniModal(null)} style={{background:C.raised,border:`1px solid ${C.border}`,color:C.sub,borderRadius:8,padding:"8px 14px",fontWeight:600,fontSize:13,cursor:"pointer",fontFamily:"inherit"}}>Cancel</button>
+            <Btn label="Create & Select" onClick={saveCo}/>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {/* Mini modal — Add Branch */}
+    {miniModal==="branch"&&(
+      <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:2000,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
+        <div style={{background:"#fff",borderRadius:14,width:"100%",maxWidth:400,boxShadow:"0 20px 60px rgba(0,0,0,0.25)"}}>
+          <div style={{padding:"16px 18px",borderBottom:`1px solid ${C.border}`,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+            <div><span style={{fontWeight:800,fontSize:15,color:C.text}}>New Branch</span><div style={{fontSize:12,color:C.sub,marginTop:2}}>for {selCompany?.name}</div></div>
+            <button onClick={()=>setMiniModal(null)} style={{background:"none",border:"none",fontSize:20,cursor:"pointer",color:C.muted}}>×</button>
+          </div>
+          <div style={{padding:"16px 18px"}}>
+            <FF label="Branch Name" value={mf.name||""} onChange={v=>setMf({...mf,name:v})} placeholder="e.g. Ray White Parramatta" required/>
+            <FF label="Address" value={mf.address||""} onChange={v=>setMf({...mf,address:v})} placeholder="10 Main St, Suburb NSW 2000"/>
+            <FF label="Phone" value={mf.phone||""} onChange={v=>setMf({...mf,phone:v})} placeholder="(02) 9000 0000"/>
+            <FF label="Email" value={mf.email||""} onChange={v=>setMf({...mf,email:v})} placeholder="branch@company.com"/>
+          </div>
+          <div style={{padding:"12px 18px",borderTop:`1px solid ${C.border}`,display:"flex",gap:8,justifyContent:"flex-end"}}>
+            <button onClick={()=>setMiniModal(null)} style={{background:C.raised,border:`1px solid ${C.border}`,color:C.sub,borderRadius:8,padding:"8px 14px",fontWeight:600,fontSize:13,cursor:"pointer",fontFamily:"inherit"}}>Cancel</button>
+            <Btn label="Create & Select" onClick={saveBr}/>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {/* Mini modal — Add Agent */}
+    {miniModal==="agent"&&(
+      <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:2000,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
+        <div style={{background:"#fff",borderRadius:14,width:"100%",maxWidth:400,boxShadow:"0 20px 60px rgba(0,0,0,0.25)"}}>
+          <div style={{padding:"16px 18px",borderBottom:`1px solid ${C.border}`,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+            <div><span style={{fontWeight:800,fontSize:15,color:C.text}}>New Agent</span><div style={{fontSize:12,color:C.sub,marginTop:2}}>for {selBranch?.name}</div></div>
+            <button onClick={()=>setMiniModal(null)} style={{background:"none",border:"none",fontSize:20,cursor:"pointer",color:C.muted}}>×</button>
+          </div>
+          <div style={{padding:"16px 18px"}}>
+            <FF label="Agent Name" value={mf.name||""} onChange={v=>setMf({...mf,name:v})} placeholder="e.g. James Okafor" required/>
+            <FF label="Email" value={mf.email||""} onChange={v=>setMf({...mf,email:v})} placeholder="agent@company.com"/>
+            <FF label="Phone" value={mf.phone||""} onChange={v=>setMf({...mf,phone:v})} placeholder="0400 000 000"/>
+          </div>
+          <div style={{padding:"12px 18px",borderTop:`1px solid ${C.border}`,display:"flex",gap:8,justifyContent:"flex-end"}}>
+            <button onClick={()=>setMiniModal(null)} style={{background:C.raised,border:`1px solid ${C.border}`,color:C.sub,borderRadius:8,padding:"8px 14px",fontWeight:600,fontSize:13,cursor:"pointer",fontFamily:"inherit"}}>Cancel</button>
+            <Btn label="Create & Select" onClick={saveAg}/>
+          </div>
+        </div>
+      </div>
+    )}
+  </>);
+}
+
+/* ═══════════════════════════════════════════
+   VISITS SECTION
+   Tracks up to 5 site visits per job — who went, when, outcome.
+   KPI foundation: longest-running jobs, who fixes whose work.
+═══════════════════════════════════════════ */
+const VISIT_OUTCOMES = ["Completed","Parts Needed","Recall Required","No Access","Quote Required","Other"];
+
+function VisitsSection({job, onUpdate, fieldStaff}) {
+  const visits = job.visits || [];
+  const [adding, setAdding] = useState(false);
+  const [editIdx, setEditIdx] = useState(null);
+  const [form, setForm] = useState({tech:"", date:"", outcome:"", notes:""});
+
+  const maxVisits = 5;
+  const visitLabels = ["1st Visit","2nd Visit","3rd Visit","4th Visit","5th Visit"];
+  const outcomeColor = o => o==="Completed"?"green":o==="Parts Needed"?"orange":o==="Recall Required"?"red":o==="No Access"?"red":o==="Quote Required"?"blue":"gray";
+
+  const openAdd = () => {
+    setForm({tech:"", date:new Date().toISOString().split("T")[0], outcome:"", notes:""});
+    setEditIdx(null);
+    setAdding(true);
+  };
+  const openEdit = (i) => {
+    setForm({...visits[i]});
+    setEditIdx(i);
+    setAdding(true);
+  };
+  const save = () => {
+    if(!form.tech || !form.date) return;
+    const visitId = uid();
+    let updatedVisits;
+    if(editIdx !== null) {
+      updatedVisits = visits.map((v,i) => i===editIdx ? {...form, id:v.id} : v);
+    } else {
+      updatedVisits = [...visits, {...form, id:visitId}];
+    }
+
+    // Auto-log diary entry for new visits (not edits)
+    // TODO: Field Service App integration — when a tech submits a site report,
+    // call ingestVisitFromFieldApp(jobId, visitData) which runs this same logic
+    // to create the visit record + diary entry from the app's form submission.
+    let updatedDiary = job.diary || [];
+    if(editIdx === null) {
+      const label = visitLabels[visits.length] || `Visit ${visits.length+1}`;
+      const diaryEntry = {
+        id: uid(),
+        type: "visit",
+        ts: new Date(`${form.date}T09:00:00`).toISOString(),
+        contact: form.tech,
+        subject: `${label} — ${form.outcome||"Logged"}`,
+        notes: form.notes || "",
+        direction: "outbound",
+        files: [],
+        visitId, // link back to visit record
+        source: "manual", // will be "field_app" when synced from mobile
+      };
+      updatedDiary = [diaryEntry, ...updatedDiary];
+    }
+
+    onUpdate({...job, visits: updatedVisits, diary: updatedDiary});
+    setAdding(false);
+  };
+  const remove = i => onUpdate({...job, visits: visits.filter((_,vi)=>vi!==i)});
+
+  const iSel = {width:"100%",background:"#fff",border:`1px solid ${C.border}`,borderRadius:7,padding:"7px 10px",color:C.text,fontSize:12,fontFamily:"inherit",boxSizing:"border-box"};
+
+  return (
+    <div style={{background:"#fff",border:`1px solid ${C.border}`,borderRadius:12,padding:"10px 14px",marginBottom:10}}>
+      <SectionHead title="🔧 Site Visits" count={visits.length}
+        action={visits.length < maxVisits ? {label:"+ Add Visit", fn:openAdd} : null}/>
+
+      {visits.length === 0 && !adding && (
+        <p style={{color:C.muted,fontSize:12,margin:"4px 0 8px"}}>No visits recorded yet.</p>
+      )}
+
+      {/* Visit list */}
+      {visits.map((v,i) => (
+        <div key={v.id} style={{padding:"8px 0",borderBottom:`1px solid ${C.border}`,display:"flex",gap:10,alignItems:"flex-start"}}>
+          {/* Visit number badge */}
+          <div style={{background:"#eff6ff",color:C.accent,borderRadius:6,padding:"3px 8px",fontSize:10,fontWeight:800,whiteSpace:"nowrap",flexShrink:0,marginTop:2}}>
+            {visitLabels[i]||`Visit ${i+1}`}
+          </div>
+          <div style={{flex:1,minWidth:0}}>
+            <div style={{display:"flex",gap:6,alignItems:"center",flexWrap:"wrap"}}>
+              <span style={{color:C.text,fontWeight:700,fontSize:12}}>{v.tech}</span>
+              <span style={{color:C.muted,fontSize:11}}>·</span>
+              <span style={{color:C.sub,fontSize:11}}>{fmtDate(v.date)}</span>
+              {v.outcome && <Badge label={v.outcome} color={outcomeColor(v.outcome)}/>}
+            </div>
+            {v.notes && <div style={{color:C.sub,fontSize:11,marginTop:3,lineHeight:1.4}}>{v.notes}</div>}
+          </div>
+          <button onClick={()=>openEdit(i)} style={{background:"none",border:"none",color:C.muted,cursor:"pointer",fontSize:13,padding:"2px 4px",fontFamily:"inherit"}}>✎</button>
+          <button onClick={()=>remove(i)} style={{background:"none",border:"none",color:C.muted,cursor:"pointer",fontSize:13,padding:"2px 4px",fontFamily:"inherit"}}>×</button>
+        </div>
+      ))}
+
+      {/* Add/edit form */}
+      {adding && (
+        <div style={{background:C.raised,borderRadius:10,padding:"12px",marginTop:10,border:`1px solid ${C.border}`}}>
+          <div style={{fontWeight:700,fontSize:12,color:C.text,marginBottom:10}}>
+            {editIdx!==null ? `Edit ${visitLabels[editIdx]||"Visit"}` : `Log ${visitLabels[visits.length]||"Visit"}`}
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}>
+            <div>
+              <label style={{display:"block",color:C.sub,fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:0.5,marginBottom:4}}>Technician *</label>
+              <select value={form.tech} onChange={e=>setForm({...form,tech:e.target.value})} style={iSel}>
+                <option value="">— Select —</option>
+                {fieldStaff.filter(f=>f.status==="Active").map(f=><option key={f.id} value={f.name}>{f.name}</option>)}
+              </select>
+            </div>
+            <div>
+              <label style={{display:"block",color:C.sub,fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:0.5,marginBottom:4}}>Date *</label>
+              <input type="date" value={form.date} onChange={e=>setForm({...form,date:e.target.value})} style={iSel}/>
+            </div>
+          </div>
+          <div style={{marginBottom:8}}>
+            <label style={{display:"block",color:C.sub,fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:0.5,marginBottom:4}}>Outcome</label>
+            <select value={form.outcome} onChange={e=>setForm({...form,outcome:e.target.value})} style={iSel}>
+              <option value="">— Select outcome —</option>
+              {VISIT_OUTCOMES.map(o=><option key={o}>{o}</option>)}
+            </select>
+          </div>
+          <div style={{marginBottom:10}}>
+            <label style={{display:"block",color:C.sub,fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:0.5,marginBottom:4}}>Notes</label>
+            <textarea value={form.notes} onChange={e=>setForm({...form,notes:e.target.value})} rows={2} placeholder="What was done, parts used, issues found…"
+              style={{...iSel,resize:"vertical"}}/>
+          </div>
+          <div style={{display:"flex",gap:8}}>
+            <Btn label="Save Visit" onClick={save} small/>
+            <button onClick={()=>setAdding(false)} style={{background:"none",border:`1px solid ${C.border}`,color:C.sub,borderRadius:7,padding:"5px 12px",fontSize:12,cursor:"pointer",fontFamily:"inherit"}}>Cancel</button>
+          </div>
+        </div>
+      )}
+
+      {visits.length >= maxVisits && !adding && (
+        <div style={{color:C.muted,fontSize:11,marginTop:8,textAlign:"center"}}>Max 5 visits reached · consider creating a recall job</div>
+      )}
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════
+   REPORT TEMPLATE EDITOR (Settings)
+   Admin/office staff build report formats here.
+═══════════════════════════════════════════ */
+const FIELD_TYPES = [
+  {id:"yesno",  icon:"✅", label:"Yes / No"},
+  {id:"multi",  icon:"☑️", label:"Multiple Choice"},
+  {id:"text",   icon:"📝", label:"Text / Alphanumeric"},
+  {id:"photo",  icon:"📷", label:"Photo Attachment"},
+];
+
+function ReportTemplateEditor({reportTemplates, setReportTemplates, jobTypes}) {
+  const [sel, setSel] = useState(null); // selected template id
+  const [editingTemplate, setEditingTemplate] = useState(null); // {name, icon, appliesTo}
+  const [editingField, setEditingField] = useState(null); // field being added/edited
+  const [showNewTemplate, setShowNewTemplate] = useState(false);
+  const [newTpl, setNewTpl] = useState({name:"", icon:"📋"});
+
+  const tpl = reportTemplates.find(t=>t.id===sel);
+
+  const addTemplate = () => {
+    if(!newTpl.name.trim()) return;
+    const t = {id:uid(), name:newTpl.name.trim(), icon:newTpl.icon||"📋", appliesTo:[], fields:[]};
+    setReportTemplates([...reportTemplates, t]);
+    setSel(t.id);
+    setShowNewTemplate(false);
+    setNewTpl({name:"", icon:"📋"});
+  };
+
+  const deleteTemplate = id => { setReportTemplates(reportTemplates.filter(t=>t.id!==id)); if(sel===id) setSel(null); };
+
+  const updateFields = fields => setReportTemplates(reportTemplates.map(t=>t.id===sel?{...t,fields}:t));
+
+  const addField = () => {
+    if(!editingField||!editingField.label.trim()) return;
+    const field = {
+      id: uid(),
+      type: editingField.type||"text",
+      label: editingField.label.trim(),
+      required: !!editingField.required,
+      multiline: !!editingField.multiline,
+      options: editingField.type==="multi" ? (editingField.optionsStr||"").split("\n").map(s=>s.trim()).filter(Boolean) : [],
+      tag: editingField.tag||"",
+    };
+    updateFields([...(tpl.fields||[]), field]);
+    setEditingField(null);
+  };
+
+  const removeField = fid => updateFields((tpl.fields||[]).filter(f=>f.id!==fid));
+  const moveField = (idx, dir) => {
+    const fs = [...(tpl.fields||[])];
+    const ni = idx+dir;
+    if(ni<0||ni>=fs.length) return;
+    [fs[idx],fs[ni]]=[fs[ni],fs[idx]];
+    updateFields(fs);
+  };
+
+  const iSel = {width:"100%",background:"#fff",border:`1px solid ${C.border}`,borderRadius:7,padding:"7px 10px",color:C.text,fontSize:13,fontFamily:"inherit",boxSizing:"border-box"};
+  const iText = {...iSel};
+
+  return (
+    <div style={{display:"flex",gap:16,alignItems:"flex-start"}}>
+      {/* Template list */}
+      <div style={{width:220,flexShrink:0}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+          <span style={{fontWeight:700,fontSize:13,color:C.text}}>Templates</span>
+          <button onClick={()=>setShowNewTemplate(true)} style={{background:C.accent,color:"#fff",border:"none",borderRadius:6,padding:"4px 10px",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>+ New</button>
+        </div>
+        {showNewTemplate && (
+          <div style={{background:C.raised,border:`1px solid ${C.border}`,borderRadius:10,padding:12,marginBottom:10}}>
+            <div style={{display:"flex",gap:6,marginBottom:8}}>
+              <input value={newTpl.icon} onChange={e=>setNewTpl({...newTpl,icon:e.target.value})} style={{...iText,width:48,textAlign:"center",fontSize:18,padding:"4px"}} maxLength={2}/>
+              <input value={newTpl.name} onChange={e=>setNewTpl({...newTpl,name:e.target.value})} placeholder="Template name…" style={{...iText,flex:1}}
+                onKeyDown={e=>e.key==="Enter"&&addTemplate()}/>
+            </div>
+            <div style={{display:"flex",gap:6}}>
+              <button onClick={addTemplate} style={{background:C.accent,color:"#fff",border:"none",borderRadius:6,padding:"5px 12px",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>Create</button>
+              <button onClick={()=>setShowNewTemplate(false)} style={{background:"none",border:`1px solid ${C.border}`,color:C.sub,borderRadius:6,padding:"5px 10px",fontSize:12,cursor:"pointer",fontFamily:"inherit"}}>Cancel</button>
+            </div>
+          </div>
+        )}
+        {reportTemplates.map(t=>(
+          <div key={t.id} onClick={()=>setSel(t.id)}
+            style={{display:"flex",alignItems:"center",gap:8,padding:"10px 12px",borderRadius:10,marginBottom:6,cursor:"pointer",
+              background:sel===t.id?"#eff6ff":"#fff",border:`1.5px solid ${sel===t.id?C.accent:C.border}`}}>
+            <span style={{fontSize:18}}>{t.icon}</span>
+            <div style={{flex:1,minWidth:0}}>
+              <div style={{fontSize:13,fontWeight:700,color:sel===t.id?C.accent:C.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{t.name}</div>
+              <div style={{fontSize:11,color:C.muted}}>{(t.fields||[]).length} fields</div>
+            </div>
+            <button onClick={e=>{e.stopPropagation();deleteTemplate(t.id);}}
+              style={{background:"none",border:"none",color:"#fca5a5",cursor:"pointer",fontSize:14,padding:"0 2px",fontFamily:"inherit"}}>✕</button>
+          </div>
+        ))}
+        {reportTemplates.length===0&&<p style={{color:C.muted,fontSize:12}}>No templates yet.</p>}
+      </div>
+
+      {/* Field editor */}
+      {tpl ? (
+        <div style={{flex:1,minWidth:0}}>
+          <div style={{background:"#fff",border:`1px solid ${C.border}`,borderRadius:12,padding:"14px 16px",marginBottom:12}}>
+            <div style={{fontWeight:800,fontSize:15,color:C.text,marginBottom:4}}>{tpl.icon} {tpl.name}</div>
+            <div style={{fontSize:12,color:C.sub,marginBottom:10}}>Applies to: {tpl.appliesTo.length===0?"All job types":tpl.appliesTo.join(", ")}</div>
+            <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+              {jobTypes.map(jt=>(
+                <button key={jt} onClick={()=>{
+                  const cur = tpl.appliesTo||[];
+                  const next = cur.includes(jt)?cur.filter(x=>x!==jt):[...cur,jt];
+                  setReportTemplates(reportTemplates.map(t=>t.id===sel?{...t,appliesTo:next}:t));
+                }} style={{padding:"4px 10px",borderRadius:99,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit",
+                  border:`1.5px solid ${(tpl.appliesTo||[]).includes(jt)?C.accent:C.border}`,
+                  background:(tpl.appliesTo||[]).includes(jt)?"#eff6ff":"#fff",
+                  color:(tpl.appliesTo||[]).includes(jt)?C.accent:C.sub}}>
+                  {jt}
+                </button>
+              ))}
+              <span style={{color:C.muted,fontSize:11,alignSelf:"center",marginLeft:4}}>← toggle to filter by job type (none = all)</span>
+            </div>
+          </div>
+
+          {/* Fields list */}
+          <div style={{marginBottom:12}}>
+            {(tpl.fields||[]).length===0&&<p style={{color:C.muted,fontSize:13,marginBottom:10}}>No fields yet — add some below.</p>}
+            {(tpl.fields||[]).map((f,i)=>(
+              <div key={f.id} style={{background:"#fff",border:`1px solid ${C.border}`,borderRadius:10,padding:"10px 14px",marginBottom:8,display:"flex",gap:10,alignItems:"center"}}>
+                <span style={{fontSize:16}}>{FIELD_TYPES.find(ft=>ft.id===f.type)?.icon||"📝"}</span>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{fontWeight:700,fontSize:13,color:C.text}}>{f.label}</div>
+                  <div style={{fontSize:11,color:C.muted,marginTop:2}}>
+                    {FIELD_TYPES.find(ft=>ft.id===f.type)?.label}
+                    {f.type==="multi"&&f.options?.length>0&&` · ${f.options.join(", ")}`}
+                    {f.required&&<span style={{color:C.red,marginLeft:6,fontWeight:700}}>Required</span>}
+                    {f.tag&&<span style={{color:C.accent,marginLeft:6}}>#{f.tag}</span>}
+                  </div>
+                </div>
+                <button onClick={()=>moveField(i,-1)} disabled={i===0} style={{background:"none",border:"none",color:i===0?C.muted:C.sub,cursor:i===0?"default":"pointer",fontSize:13,fontFamily:"inherit"}}>▲</button>
+                <button onClick={()=>moveField(i,1)} disabled={i===(tpl.fields||[]).length-1} style={{background:"none",border:"none",color:i===(tpl.fields||[]).length-1?C.muted:C.sub,cursor:i===(tpl.fields||[]).length-1?"default":"pointer",fontSize:13,fontFamily:"inherit"}}>▼</button>
+                <button onClick={()=>removeField(f.id)} style={{background:"none",border:"none",color:"#fca5a5",cursor:"pointer",fontSize:16,fontFamily:"inherit"}}>✕</button>
+              </div>
+            ))}
+          </div>
+
+          {/* Add field */}
+          {editingField ? (
+            <div style={{background:C.raised,border:`1px solid ${C.border}`,borderRadius:12,padding:"14px 16px"}}>
+              <div style={{fontWeight:700,fontSize:13,color:C.text,marginBottom:12}}>New Field</div>
+              <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:12}}>
+                {FIELD_TYPES.map(ft=>(
+                  <button key={ft.id} onClick={()=>setEditingField({...editingField,type:ft.id})}
+                    style={{display:"flex",alignItems:"center",gap:5,padding:"6px 12px",borderRadius:99,fontSize:12,cursor:"pointer",fontFamily:"inherit",
+                      border:`1.5px solid ${editingField.type===ft.id?C.accent:C.border}`,
+                      background:editingField.type===ft.id?"#eff6ff":"#fff",
+                      color:editingField.type===ft.id?C.accent:C.sub,fontWeight:editingField.type===ft.id?700:500}}>
+                    {ft.icon} {ft.label}
+                  </button>
+                ))}
+              </div>
+              <div style={{marginBottom:10}}>
+                <label style={{display:"block",fontSize:11,color:C.sub,fontWeight:700,textTransform:"uppercase",letterSpacing:0.5,marginBottom:4}}>Field Label *</label>
+                <input value={editingField.label||""} onChange={e=>setEditingField({...editingField,label:e.target.value})} placeholder="e.g. Was the appliance functional?" style={iText}/>
+              </div>
+              {editingField.type==="multi"&&(
+                <div style={{marginBottom:10}}>
+                  <label style={{display:"block",fontSize:11,color:C.sub,fontWeight:700,textTransform:"uppercase",letterSpacing:0.5,marginBottom:4}}>Options (one per line)</label>
+                  <textarea value={editingField.optionsStr||""} onChange={e=>setEditingField({...editingField,optionsStr:e.target.value})} rows={4} placeholder={"Option A\nOption B\nOption C"} style={{...iText,resize:"vertical"}}/>
+                </div>
+              )}
+              {editingField.type==="text"&&(
+                <label style={{display:"flex",alignItems:"center",gap:8,marginBottom:10,cursor:"pointer",fontSize:13,color:C.text}}>
+                  <input type="checkbox" checked={!!editingField.multiline} onChange={e=>setEditingField({...editingField,multiline:e.target.checked})}/> Multi-line text area
+                </label>
+              )}
+              {editingField.type==="photo"&&(
+                <div style={{marginBottom:10}}>
+                  <label style={{display:"block",fontSize:11,color:C.sub,fontWeight:700,textTransform:"uppercase",letterSpacing:0.5,marginBottom:4}}>Photo Tag (for supplier email filtering)</label>
+                  <input value={editingField.tag||""} onChange={e=>setEditingField({...editingField,tag:e.target.value})} placeholder="e.g. compliance_plate, fault_photo" style={iText}/>
+                </div>
+              )}
+              <label style={{display:"flex",alignItems:"center",gap:8,marginBottom:12,cursor:"pointer",fontSize:13,color:C.text}}>
+                <input type="checkbox" checked={!!editingField.required} onChange={e=>setEditingField({...editingField,required:e.target.checked})}/> Required field
+              </label>
+              <div style={{display:"flex",gap:8}}>
+                <button onClick={addField} style={{background:C.accent,color:"#fff",border:"none",borderRadius:7,padding:"7px 16px",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>Add Field</button>
+                <button onClick={()=>setEditingField(null)} style={{background:"none",border:`1px solid ${C.border}`,color:C.sub,borderRadius:7,padding:"7px 12px",fontSize:12,cursor:"pointer",fontFamily:"inherit"}}>Cancel</button>
+              </div>
+            </div>
+          ) : (
+            <button onClick={()=>setEditingField({type:"text",label:"",required:false,multiline:false,optionsStr:"",tag:""})}
+              style={{width:"100%",background:"none",border:`2px dashed ${C.border}`,borderRadius:10,padding:"12px",fontSize:13,color:C.sub,cursor:"pointer",fontFamily:"inherit",fontWeight:600}}>
+              + Add Field
+            </button>
+          )}
+        </div>
+      ) : (
+        <div style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",color:C.muted,fontSize:13,padding:40}}>
+          ← Select a template to edit its fields
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════
+   REPORT FORM — fill a report on a job
+   Captures GPS location stamp, tech, attachments,
+   and triggers supplier email.
+═══════════════════════════════════════════ */
+function ReportForm({template, job, fieldStaff, vendors, onSave, onCancel}) {
+  const [answers, setAnswers] = useState({});
+  const [tech2, setTech2] = useState("");
+  const [arrivalTime, setArrivalTime] = useState(new Date().toISOString().slice(0,16));
+  const [locationStamp, setLocationStamp] = useState(null);
+  const [locLoading, setLocLoading] = useState(false);
+  const [showEmail, setShowEmail] = useState(false);
+  const [emailForm, setEmailForm] = useState({vendorIds:[], manualEmail:"", subject:"", body:"", attachTags:["compliance_plate"]});
+  const [saving, setSaving] = useState(false);
+
+  // Get GPS on mount
+  useEffect(()=>{
+    setLocLoading(true);
+    if(navigator.geolocation){
+      navigator.geolocation.getCurrentPosition(
+        pos => {
+          setLocationStamp({lat:pos.coords.latitude, lng:pos.coords.longitude, accuracy:Math.round(pos.coords.accuracy), ts:new Date().toISOString()});
+          setLocLoading(false);
+        },
+        () => { setLocationStamp({error:"Location unavailable"}); setLocLoading(false); },
+        {timeout:8000}
+      );
+    } else {
+      setLocationStamp({error:"Geolocation not supported"});
+      setLocLoading(false);
+    }
+  },[]);
+
+  // Calculate distance from job address (simplified — in real app use geocoding API)
+  const getLocationSummary = () => {
+    if(!locationStamp) return "📍 Detecting location…";
+    if(locationStamp.error) return `📍 ${locationStamp.error}`;
+    const arrival = new Date(arrivalTime);
+    const now = new Date(locationStamp.ts);
+    const minsSince = Math.round((now - arrival) / 60000);
+    const timeStr = minsSince < 1 ? "at arrival" : minsSince < 60 ? `${minsSince} mins after arrival` : `${Math.round(minsSince/60)}h ${minsSince%60}m after arrival`;
+    return `📍 GPS captured · ±${locationStamp.accuracy}m accuracy · ${timeStr}`;
+  };
+
+  const setAnswer = (fid, val) => setAnswers(a=>({...a,[fid]:val}));
+
+  const addPhoto = (fid, e) => {
+    const files = Array.from(e.target.files);
+    files.forEach(file=>{
+      const reader = new FileReader();
+      reader.onload = ev => {
+        setAnswers(a=>({...a,[fid]:[...(a[fid]||[]),{id:uid(),name:file.name,size:file.size,mime:file.type,data:ev.target.result}]}));
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const validate = () => {
+    for(const f of template.fields||[]){
+      if(!f.required) continue;
+      const val = answers[f.id];
+      if(f.type==="yesno"&&val==null) return f.label;
+      if(f.type==="multi"&&!val) return f.label;
+      if(f.type==="text"&&!String(val||"").trim()) return f.label;
+    }
+    return null;
+  };
+
+  const buildSupplierEmail = () => {
+    // Collect compliance plate / tagged photos
+    const taggedPhotos = [];
+    (template.fields||[]).filter(f=>f.type==="photo").forEach(f=>{
+      const val = answers[f.id]||[];
+      val.forEach(ph=>taggedPhotos.push({...ph, tag:f.tag}));
+    });
+    // Pre-fill email
+    setEmailForm(ef=>({
+      ...ef,
+      subject:`Parts request – Job ${job.ref} – ${job.address}`,
+      body:`Hi,\n\nPlease find attached compliance plate photos for the appliance at:\n${job.address}\n\nJob Ref: ${job.ref}\nReport: ${template.name}\n\nCould you please advise on parts availability and pricing?\n\nThank you.`,
+      photos: taggedPhotos,
+    }));
+    setShowEmail(true);
+  };
+
+  const sendEmail = () => {
+    const recipients = [
+      ...emailForm.vendorIds.map(id=>{
+        const v = (vendors||[]).find(x=>x.id===id);
+        return v?.email||"";
+      }).filter(Boolean),
+      ...(emailForm.manualEmail?emailForm.manualEmail.split(",").map(s=>s.trim()).filter(Boolean):[])
+    ];
+    if(recipients.length===0) return alert("Add at least one recipient.");
+    // Build mailto (in real app would use email API)
+    const mailto = `mailto:${recipients.join(",")}?subject=${encodeURIComponent(emailForm.subject)}&body=${encodeURIComponent(emailForm.body)}`;
+    window.open(mailto);
+    setShowEmail(false);
+  };
+
+  const save = () => {
+    const err = validate();
+    if(err) { alert(`Required field missing: "${err}"`); return; }
+    setSaving(true);
+    const report = {
+      id: uid(),
+      templateId: template.id,
+      templateName: template.name,
+      templateIcon: template.icon,
+      tech2,
+      arrivalTime,
+      locationStamp,
+      locationSummary: getLocationSummary(),
+      answers,
+      submittedAt: new Date().toISOString(),
+      source: locationStamp&&!locationStamp.error ? "gps_captured" : "no_gps",
+    };
+    onSave(report);
+  };
+
+  const iSel = {width:"100%",background:"#fff",border:`1px solid ${C.border}`,borderRadius:7,padding:"8px 10px",color:C.text,fontSize:13,fontFamily:"inherit",boxSizing:"border-box"};
+
+  if(showEmail) return (
+    <div style={{padding:"0 0 20px"}}>
+      <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:16}}>
+        <button onClick={()=>setShowEmail(false)} style={{background:"none",border:`1px solid ${C.border}`,borderRadius:7,padding:"5px 10px",cursor:"pointer",fontSize:12,color:C.sub,fontFamily:"inherit"}}>← Back</button>
+        <span style={{fontWeight:800,fontSize:14,color:C.text}}>📧 Email Supplier</span>
+      </div>
+      <div style={{background:"#fffbeb",border:"1px solid #fde68a",borderRadius:10,padding:"10px 14px",marginBottom:14,fontSize:12,color:"#92400e"}}>
+        Compliance plate and tagged photos will be referenced in the email body. Attach them manually in your email client after it opens.
+      </div>
+
+      <div style={{marginBottom:12}}>
+        <label style={{display:"block",fontSize:11,color:C.sub,fontWeight:700,textTransform:"uppercase",letterSpacing:0.5,marginBottom:6}}>Vendors (from your supplier list)</label>
+        <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+          {(vendors||[]).filter(v=>v.email).map(v=>(
+            <button key={v.id} onClick={()=>setEmailForm(ef=>({...ef,vendorIds:ef.vendorIds.includes(v.id)?ef.vendorIds.filter(x=>x!==v.id):[...ef.vendorIds,v.id]}))}
+              style={{padding:"5px 12px",borderRadius:99,fontSize:12,cursor:"pointer",fontFamily:"inherit",
+                border:`1.5px solid ${emailForm.vendorIds.includes(v.id)?C.accent:C.border}`,
+                background:emailForm.vendorIds.includes(v.id)?"#eff6ff":"#fff",
+                color:emailForm.vendorIds.includes(v.id)?C.accent:C.sub,fontWeight:emailForm.vendorIds.includes(v.id)?700:500}}>
+              {v.name}
+            </button>
+          ))}
+          {(vendors||[]).filter(v=>v.email).length===0&&<span style={{color:C.muted,fontSize:12}}>No vendors with email addresses found.</span>}
+        </div>
+      </div>
+      <div style={{marginBottom:12}}>
+        <label style={{display:"block",fontSize:11,color:C.sub,fontWeight:700,textTransform:"uppercase",letterSpacing:0.5,marginBottom:4}}>Additional recipients (comma separated)</label>
+        <input value={emailForm.manualEmail} onChange={e=>setEmailForm({...emailForm,manualEmail:e.target.value})} placeholder="parts@supplier.com, quote@vendor.com.au" style={iSel}/>
+      </div>
+      <div style={{marginBottom:12}}>
+        <label style={{display:"block",fontSize:11,color:C.sub,fontWeight:700,textTransform:"uppercase",letterSpacing:0.5,marginBottom:4}}>Subject</label>
+        <input value={emailForm.subject} onChange={e=>setEmailForm({...emailForm,subject:e.target.value})} style={iSel}/>
+      </div>
+      <div style={{marginBottom:16}}>
+        <label style={{display:"block",fontSize:11,color:C.sub,fontWeight:700,textTransform:"uppercase",letterSpacing:0.5,marginBottom:4}}>Body</label>
+        <textarea value={emailForm.body} onChange={e=>setEmailForm({...emailForm,body:e.target.value})} rows={7} style={{...iSel,resize:"vertical"}}/>
+      </div>
+      {(emailForm.photos||[]).length>0&&(
+        <div style={{marginBottom:14,background:C.raised,border:`1px solid ${C.border}`,borderRadius:10,padding:"10px 14px"}}>
+          <div style={{fontSize:11,color:C.sub,fontWeight:700,textTransform:"uppercase",letterSpacing:0.5,marginBottom:8}}>Tagged photos to reference ({emailForm.photos.length})</div>
+          <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+            {emailForm.photos.map(p=>(
+              <div key={p.id} style={{textAlign:"center"}}>
+                <img src={p.data} alt={p.name} style={{width:60,height:60,objectFit:"cover",borderRadius:6,border:`1px solid ${C.border}`}}/>
+                <div style={{fontSize:10,color:C.muted,marginTop:2,maxWidth:60,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.tag}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+      <div style={{display:"flex",gap:8}}>
+        <button onClick={sendEmail} style={{background:C.accent,color:"#fff",border:"none",borderRadius:8,padding:"9px 20px",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>📤 Open in Email Client</button>
+        <button onClick={()=>setShowEmail(false)} style={{background:"none",border:`1px solid ${C.border}`,color:C.sub,borderRadius:8,padding:"9px 14px",fontSize:13,cursor:"pointer",fontFamily:"inherit"}}>Cancel</button>
+      </div>
+    </div>
+  );
+
+  return (
+    <div>
+      {/* Header */}
+      <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:16}}>
+        <button onClick={onCancel} style={{background:"none",border:`1px solid ${C.border}`,borderRadius:7,padding:"5px 10px",cursor:"pointer",fontSize:12,color:C.sub,fontFamily:"inherit"}}>← Back</button>
+        <span style={{fontSize:20}}>{template.icon}</span>
+        <span style={{fontWeight:800,fontSize:15,color:C.text}}>{template.name}</span>
+      </div>
+
+      {/* Location stamp */}
+      <div style={{background:locationStamp&&!locationStamp.error?"#f0fdf4":"#f8fafc",border:`1px solid ${locationStamp&&!locationStamp.error?"#bbf7d0":C.border}`,borderRadius:10,padding:"10px 14px",marginBottom:14,fontSize:12,color:locationStamp&&!locationStamp.error?"#15803d":C.sub}}>
+        {locLoading ? "📍 Detecting GPS location…" : getLocationSummary()}
+      </div>
+
+      {/* Arrival time */}
+      <div style={{marginBottom:14}}>
+        <label style={{display:"block",fontSize:11,color:C.sub,fontWeight:700,textTransform:"uppercase",letterSpacing:0.5,marginBottom:4}}>Arrival time at site</label>
+        <input type="datetime-local" value={arrivalTime} onChange={e=>setArrivalTime(e.target.value)} style={iSel}/>
+      </div>
+
+      {/* Second technician */}
+      <div style={{marginBottom:16}}>
+        <label style={{display:"block",fontSize:11,color:C.sub,fontWeight:700,textTransform:"uppercase",letterSpacing:0.5,marginBottom:4}}>Second Technician (optional — for time tracking KPI)</label>
+        <select value={tech2} onChange={e=>setTech2(e.target.value)} style={iSel}>
+          <option value="">— None —</option>
+          {fieldStaff.filter(f=>f.status==="Active").map(f=><option key={f.id} value={f.name}>{f.name} – {f.role}</option>)}
+        </select>
+      </div>
+
+      <div style={{height:1,background:C.border,marginBottom:16}}/>
+
+      {/* Dynamic fields */}
+      {(template.fields||[]).map(f=>(
+        <div key={f.id} style={{marginBottom:16}}>
+          <label style={{display:"block",fontSize:12,fontWeight:700,color:C.text,marginBottom:6}}>
+            {f.label}
+            {f.required&&<span style={{color:C.red,marginLeft:4}}>*</span>}
+          </label>
+
+          {f.type==="yesno"&&(
+            <div style={{display:"flex",gap:8}}>
+              {["Yes","No"].map(opt=>(
+                <button key={opt} onClick={()=>setAnswer(f.id,opt)}
+                  style={{flex:1,padding:"9px",borderRadius:8,fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit",
+                    border:`2px solid ${answers[f.id]===opt?(opt==="Yes"?C.green:C.red):C.border}`,
+                    background:answers[f.id]===opt?(opt==="Yes"?"#f0fdf4":"#fef2f2"):"#fff",
+                    color:answers[f.id]===opt?(opt==="Yes"?C.green:C.red):C.sub}}>
+                  {opt==="Yes"?"✅ Yes":"❌ No"}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {f.type==="multi"&&(
+            <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+              {(f.options||[]).map(opt=>(
+                <button key={opt} onClick={()=>setAnswer(f.id,opt)}
+                  style={{padding:"6px 14px",borderRadius:99,fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"inherit",
+                    border:`1.5px solid ${answers[f.id]===opt?C.accent:C.border}`,
+                    background:answers[f.id]===opt?"#eff6ff":"#fff",
+                    color:answers[f.id]===opt?C.accent:C.sub}}>
+                  {opt}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {f.type==="text"&&(
+            f.multiline
+              ? <textarea value={answers[f.id]||""} onChange={e=>setAnswer(f.id,e.target.value)} rows={3} style={{...iSel,resize:"vertical"}} placeholder="Enter details…"/>
+              : <input value={answers[f.id]||""} onChange={e=>setAnswer(f.id,e.target.value)} style={iSel} placeholder="Enter value…"/>
+          )}
+
+          {f.type==="photo"&&(
+            <div>
+              <label style={{display:"inline-flex",alignItems:"center",gap:6,background:C.raised,border:`1.5px dashed ${C.border}`,borderRadius:8,padding:"8px 14px",cursor:"pointer",fontSize:12,color:C.sub,fontWeight:600}}>
+                📷 Add photos
+                <input type="file" accept="image/*" multiple onChange={e=>addPhoto(f.id,e)} style={{display:"none"}}/>
+              </label>
+              {(answers[f.id]||[]).length>0&&(
+                <div style={{display:"flex",gap:8,flexWrap:"wrap",marginTop:8}}>
+                  {(answers[f.id]||[]).map((ph,pi)=>(
+                    <div key={ph.id} style={{position:"relative"}}>
+                      <img src={ph.data} alt={ph.name} style={{width:72,height:72,objectFit:"cover",borderRadius:8,border:`1px solid ${C.border}`}}/>
+                      <button onClick={()=>setAnswer(f.id,(answers[f.id]||[]).filter((_,i)=>i!==pi))}
+                        style={{position:"absolute",top:-6,right:-6,background:C.red,color:"#fff",border:"none",borderRadius:"50%",width:18,height:18,fontSize:11,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"inherit"}}>×</button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      ))}
+
+      {/* Supplier email trigger */}
+      <div style={{background:"#eff6ff",border:`1px solid #bae6fd`,borderRadius:10,padding:"12px 14px",marginBottom:16,display:"flex",alignItems:"center",justifyContent:"space-between",gap:10}}>
+        <div>
+          <div style={{fontWeight:700,fontSize:13,color:C.accent}}>📧 Email Supplier</div>
+          <div style={{fontSize:11,color:C.sub,marginTop:2}}>Send compliance plate photos & parts request to a supplier</div>
+        </div>
+        <button onClick={buildSupplierEmail}
+          style={{background:C.accent,color:"#fff",border:"none",borderRadius:8,padding:"8px 16px",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>
+          Compose Email
+        </button>
+      </div>
+
+      {/* Submit */}
+      <div style={{display:"flex",gap:8}}>
+        <button onClick={save} disabled={saving}
+          style={{background:C.green,color:"#fff",border:"none",borderRadius:8,padding:"10px 24px",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
+          ✓ Submit Report
+        </button>
+        <button onClick={onCancel} style={{background:"none",border:`1px solid ${C.border}`,color:C.sub,borderRadius:8,padding:"10px 16px",fontSize:13,cursor:"pointer",fontFamily:"inherit"}}>Cancel</button>
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════
+   REPORTS PANE — tabbed Diary | Reports
+   Lives in the right pane of JobDrawer
+═══════════════════════════════════════════ */
+function ReportsPane({job, onUpdate, onOpenAttachment, reportTemplates, fieldStaff, vendors}) {
+  const [activeTab, setActiveTab] = useState("diary");
+  const [fillingTemplate, setFillingTemplate] = useState(null);
+  const [viewReport, setViewReport] = useState(null);
+
+  const reports = job.reports || [];
+
+  const saveReport = report => {
+    const newReports = [...reports, report];
+    // Auto-log to diary
+    const diaryEntry = {
+      id: uid(),
+      type: "visit",
+      ts: report.submittedAt,
+      contact: job.tech||"",
+      subject: `${report.templateIcon} ${report.templateName} submitted`,
+      notes: [
+        report.tech2 ? `2nd tech: ${report.tech2}` : "",
+        report.locationSummary,
+        `Arrival: ${fmtTs(report.arrivalTime)}`,
+      ].filter(Boolean).join("\n"),
+      direction: "outbound",
+      files: [],
+      source: "report",
+      reportId: report.id,
+    };
+    onUpdate({...job, reports: newReports, diary:[diaryEntry,...(job.diary||[])]});
+    setFillingTemplate(null);
+    setActiveTab("reports");
+  };
+
+  const outcomeColor = o => o==="Yes"?"green":o==="No"?"red":"blue";
+
+  if(fillingTemplate) return (
+    <ReportForm
+      template={fillingTemplate}
+      job={job}
+      fieldStaff={fieldStaff}
+      vendors={vendors}
+      onSave={saveReport}
+      onCancel={()=>setFillingTemplate(null)}
+    />
+  );
+
+  if(viewReport) {
+    const tpl = reportTemplates.find(t=>t.id===viewReport.templateId)||{fields:[]};
+    return (
+      <div>
+        <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14}}>
+          <button onClick={()=>setViewReport(null)} style={{background:"none",border:`1px solid ${C.border}`,borderRadius:7,padding:"5px 10px",cursor:"pointer",fontSize:12,color:C.sub,fontFamily:"inherit"}}>← Back</button>
+          <span style={{fontSize:18}}>{viewReport.templateIcon}</span>
+          <div>
+            <div style={{fontWeight:800,fontSize:14,color:C.text}}>{viewReport.templateName}</div>
+            <div style={{fontSize:11,color:C.muted}}>{fmtTs(viewReport.submittedAt)}</div>
+          </div>
+        </div>
+        <div style={{background:viewReport.source==="gps_captured"?"#f0fdf4":"#f8fafc",border:`1px solid ${viewReport.source==="gps_captured"?"#bbf7d0":C.border}`,borderRadius:10,padding:"8px 12px",marginBottom:12,fontSize:11,color:viewReport.source==="gps_captured"?"#15803d":C.sub}}>
+          {viewReport.locationSummary}
+        </div>
+        {viewReport.tech2&&<div style={{marginBottom:10,fontSize:12,color:C.sub}}>👤 2nd Tech: <strong>{viewReport.tech2}</strong></div>}
+        {(tpl.fields||[]).map(f=>{
+          const val = viewReport.answers?.[f.id];
+          if(!val&&val!==0) return null;
+          return(
+            <div key={f.id} style={{marginBottom:12,paddingBottom:12,borderBottom:`1px solid ${C.border}`}}>
+              <div style={{fontSize:11,color:C.sub,fontWeight:700,textTransform:"uppercase",letterSpacing:0.5,marginBottom:4}}>{f.label}</div>
+              {f.type==="yesno"&&<Badge label={val} color={val==="Yes"?"green":"red"}/>}
+              {f.type==="multi"&&<Badge label={val} color="blue"/>}
+              {f.type==="text"&&<div style={{fontSize:13,color:C.text,whiteSpace:"pre-wrap"}}>{val}</div>}
+              {f.type==="photo"&&Array.isArray(val)&&(
+                <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+                  {val.map(ph=>(
+                    <img key={ph.id} src={ph.data} alt={ph.name} onClick={()=>onOpenAttachment(ph,{},val)}
+                      style={{width:80,height:80,objectFit:"cover",borderRadius:8,border:`1px solid ${C.border}`,cursor:"pointer"}}/>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      {/* Tab switcher */}
+      <div style={{display:"flex",gap:0,marginBottom:14,background:C.raised,border:`1px solid ${C.border}`,borderRadius:10,padding:3}}>
+        {[{id:"diary",icon:"📒",label:"Diary"},{id:"reports",icon:"📋",label:`Reports${reports.length>0?` (${reports.length})`:""}`}].map(t=>(
+          <button key={t.id} onClick={()=>setActiveTab(t.id)}
+            style={{flex:1,padding:"7px 12px",borderRadius:8,border:"none",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",
+              background:activeTab===t.id?"#fff":"transparent",
+              color:activeTab===t.id?C.text:C.sub,
+              boxShadow:activeTab===t.id?"0 1px 3px rgba(0,0,0,0.08)":"none"}}>
+            {t.icon} {t.label}
+          </button>
+        ))}
+      </div>
+
+      {activeTab==="diary"&&(
+        <JobDiary job={job} onUpdate={onUpdate} onOpenAttachment={onOpenAttachment}/>
+      )}
+
+      {activeTab==="reports"&&(
+        <div>
+          {/* Start new report */}
+          <div style={{marginBottom:14}}>
+            <div style={{fontSize:12,color:C.sub,fontWeight:700,textTransform:"uppercase",letterSpacing:0.5,marginBottom:8}}>Start New Report</div>
+            <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
+              {reportTemplates.filter(t=>t.appliesTo.length===0||t.appliesTo.includes(job.type)).map(t=>(
+                <button key={t.id} onClick={()=>setFillingTemplate(t)}
+                  style={{display:"flex",alignItems:"center",gap:8,padding:"9px 14px",borderRadius:10,border:`1.5px solid ${C.border}`,background:"#fff",cursor:"pointer",fontFamily:"inherit",fontSize:12,fontWeight:700,color:C.text}}>
+                  <span style={{fontSize:18}}>{t.icon}</span>
+                  <div style={{textAlign:"left"}}>
+                    <div>{t.name}</div>
+                    <div style={{fontSize:10,color:C.muted,fontWeight:500}}>{t.fields.length} fields</div>
+                  </div>
+                </button>
+              ))}
+              {reportTemplates.filter(t=>t.appliesTo.length===0||t.appliesTo.includes(job.type)).length===0&&(
+                <p style={{color:C.muted,fontSize:12}}>No templates match this job type. Configure templates in Settings → Report Templates.</p>
+              )}
+            </div>
+          </div>
+
+          <div style={{height:1,background:C.border,marginBottom:14}}/>
+
+          {/* Past reports */}
+          {reports.length===0&&<p style={{color:C.muted,fontSize:12}}>No reports submitted yet.</p>}
+          {[...reports].reverse().map(r=>(
+            <div key={r.id} onClick={()=>setViewReport(r)}
+              style={{background:"#fff",border:`1px solid ${C.border}`,borderRadius:12,padding:"12px 14px",marginBottom:8,cursor:"pointer",display:"flex",gap:12,alignItems:"center"}}>
+              <span style={{fontSize:22}}>{r.templateIcon}</span>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{fontWeight:700,fontSize:13,color:C.text}}>{r.templateName}</div>
+                <div style={{fontSize:11,color:C.muted,marginTop:2}}>{fmtTs(r.submittedAt)}</div>
+                {r.tech2&&<div style={{fontSize:11,color:C.sub,marginTop:1}}>+ {r.tech2}</div>}
+              </div>
+              <div style={{flexShrink:0}}>
+                <Badge label={r.source==="gps_captured"?"📍 On-site":"⚠️ No GPS"} color={r.source==="gps_captured"?"green":"gray"}/>
+              </div>
+              <span style={{color:C.muted,fontSize:16}}>›</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════
+   PDF VIEWER — converts base64 to blob URL
+═══════════════════════════════════════════ */
+function PdfViewer({file}) {
+  const openPdf = () => {
+    const base64 = file.data.split(",")[1] || file.data;
+    const binary = atob(base64);
+    const bytes = new Uint8Array(binary.length);
+    for(let i=0;i<binary.length;i++) bytes[i]=binary.charCodeAt(i);
+    const blob = new Blob([bytes], {type:"application/pdf"});
+    const url = URL.createObjectURL(blob);
+    window.open(url, "_blank");
+  };
+
+  return (
+    <div style={{textAlign:"center",padding:40,display:"flex",flexDirection:"column",alignItems:"center",gap:20}}>
+      <div style={{fontSize:72}}>📄</div>
+      <div style={{color:"#f1f5f9",fontWeight:700,fontSize:16}}>{file.name}</div>
+      <div style={{color:"#64748b",fontSize:13}}>{fileSizeFmt(file.size)}</div>
+      <button onClick={openPdf}
+        style={{background:C.accent,color:"#fff",border:"none",borderRadius:10,padding:"14px 28px",fontSize:15,fontWeight:700,cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",gap:8}}>
+        <span>🔗</span> Open PDF in New Tab
+      </button>
+      <a href={file.data} download={file.name}
+        style={{color:"#64748b",fontSize:13,textDecoration:"underline",cursor:"pointer"}}>
+        or download file
+      </a>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════
+   JOB DRAWER — slide-in panel, expandable
+═══════════════════════════════════════════ */
+function JobDrawer({job, onClose, onUpdate, settings, companies, setCompanies, vendors}) {
+  const [expanded, setExpanded] = useState(false);
+  const {jobStages, jobSubStages, fieldStaff, jobTypes, reportTemplates} = settings;
+  const [applianceTypes, setApplianceTypes] = useState(DEFAULT_APPLIANCE_TYPES);
+  const [workPresets, setWorkPresets] = useState(DEFAULT_WORK_PRESETS);
+  const [showAddTenant, setShowAddTenant] = useState(false);
+  const [newTenant, setNewTenant] = useState({name:"",email:"",phone:""});
+  const [editing, setEditing] = useState(null);
+  const [draft, setDraft] = useState({});
+  const [attachment, setAttachment] = useState(null);
+
+  const openAttachment = (file, entry, siblings) => {
+    setAttachment({file, entry, siblings: siblings||[file]});
+    setExpanded(true);
+  };
+  const closeAttachment = () => setAttachment(null);
+
+  // Keyboard left/right arrow navigation for photos
+  useEffect(() => {
+    if(!attachment) return;
+    const handler = e => {
+      const sibs = attachment.siblings||[];
+      if(sibs.length < 2) return;
+      const idx = sibs.findIndex(f=>f.id===attachment.file.id);
+      if(e.key==="ArrowLeft" && idx > 0)
+        setAttachment(a=>({...a, file:sibs[idx-1]}));
+      if(e.key==="ArrowRight" && idx < sibs.length-1)
+        setAttachment(a=>({...a, file:sibs[idx+1]}));
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [attachment]);
+
+  if(!job) return null;
+
+  const updateJob = updated => onUpdate(updated);
+
+  const startEdit = (field, value) => { setEditing(field); setDraft({[field]: value}); };
+  const commitEdit = (field) => {
+    if(draft[field] !== undefined) updateJob({...job, [field]: draft[field]});
+    setEditing(null);
+  };
+  const cancelEdit = () => setEditing(null);
+
+  // Editable field row — click label/value to edit inline
+  const EF = ({label, field, value, type="text", options=null, placeholder=""}) => {
+    const isEditing = editing === field;
+    const inputStyle = {width:"100%",background:"#fff",border:`1.5px solid ${C.accent}`,borderRadius:7,padding:"7px 10px",color:C.text,fontSize:13,fontFamily:"inherit",boxSizing:"border-box"};
+    return(
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:isEditing?"flex-start":"center",padding:"10px 0",borderBottom:`1px solid ${C.border}`,gap:12}}>
+        <span style={{color:C.sub,fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:0.5,flexShrink:0}}>{label}</span>
+        {isEditing ? (
+          <div style={{display:"flex",gap:6,alignItems:"center",flex:1,minWidth:0}}>
+            {options ? (
+              <select value={draft[field]||""} onChange={e=>setDraft({[field]:e.target.value})} autoFocus
+                style={{...inputStyle,flex:1}}>
+                {options.map(o=><option key={o.val??o} value={o.val??o}>{o.label??o}</option>)}
+              </select>
+            ) : type==="textarea" ? (
+              <textarea value={draft[field]||""} onChange={e=>setDraft({[field]:e.target.value})} autoFocus rows={3}
+                style={{...inputStyle,flex:1,resize:"vertical"}}/>
+            ) : (
+              <input type={type} value={draft[field]||""} onChange={e=>setDraft({[field]:e.target.value})} autoFocus
+                onKeyDown={e=>{if(e.key==="Enter")commitEdit(field);if(e.key==="Escape")cancelEdit();}}
+                style={{...inputStyle,flex:1}}/>
+            )}
+            <button onClick={()=>commitEdit(field)} style={{background:C.accent,color:"#fff",border:"none",borderRadius:6,padding:"6px 10px",fontWeight:700,fontSize:12,cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>✓</button>
+            <button onClick={cancelEdit} style={{background:"none",border:`1px solid ${C.border}`,color:C.sub,borderRadius:6,padding:"6px 8px",fontWeight:600,fontSize:12,cursor:"pointer",fontFamily:"inherit"}}>✕</button>
+          </div>
+        ) : (
+          <div onClick={()=>startEdit(field, value)}
+            style={{display:"flex",gap:6,alignItems:"center",cursor:"text",flex:1,justifyContent:"flex-end",minWidth:0}}>
+            <span style={{color:value?C.text:C.muted,fontSize:13,fontWeight:value?500:400,textAlign:"right",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{value||<span style={{color:C.muted,fontStyle:"italic"}}>— tap to edit</span>}</span>
+            <span style={{color:C.muted,fontSize:11,flexShrink:0}}>✎</span>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const saveTenant = () => {
+    if(!newTenant.name) return;
+    updateJob({...job, tenants:[...(job.tenants||[]), {...newTenant, id:uid()}]});
+    setNewTenant({name:"",email:"",phone:""});
+    setShowAddTenant(false);
+  };
+
+  const createRecall = () => {
+    const baseNum = job.ref.replace(/[a-z]+$/,"");
+    const allFlat = allJobs(companies);
+    const existing = allFlat.filter(j => j.ref === baseNum || j.ref.match(new RegExp(`^${baseNum}[a-z]$`)));
+    const suffixes = existing.map(j => { const s=j.ref.replace(baseNum,""); return s||""; }).filter(s=>s);
+    const nextChar = suffixes.length===0 ? "a" : String.fromCharCode(97+suffixes.length);
+    const recall = {...job, id:uid(), ref:`${baseNum}${nextChar}`, status:"Open", closedDate:null,
+      createdDate:new Date().toISOString().split("T")[0], stage:"New", subStage:"",
+      tenants:[...(job.tenants||[])], appliances:[...(job.appliances||[])], additionalWorks:[], diary:[]};
+    setCompanies(companies.map(co => ({...co, branches: co.branches.map(br => ({...br,
+      agents: br.agents.map(ag => ({...ag,
+        jobs: (ag.jobs||[]).some(j=>j.id===job.id) ? [...ag.jobs, recall] : ag.jobs
+      }))
+    }))})));
+    onClose();
+  };
+
+  const panelW = expanded ? "100%" : "min(900px, 100%)";
+  const keyLabel = job.keyMethod==="tenant"?"🧑 Tenant":job.keyMethod==="office"?"🏢 Office":job.keyMethod==="other"?"🔑 Other":"";
+  const attFile = attachment?.file;
+  const isImg = attFile?.mime?.startsWith("image/");
+  const isPdf = attFile?.mime==="application/pdf";
+  const isVid = attFile?.mime?.startsWith("video/");
+  const attSibs = attachment?.siblings||[];
+  const attSibIdx = attSibs.findIndex(f=>f.id===attFile?.id);
+  const attHasPrev = attSibIdx > 0;
+  const attHasNext = attSibIdx < attSibs.length-1;
+
+
+  return (
+    <>
+      {!expanded && <div onClick={onClose} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.25)",zIndex:400}}/>}
+
+      <div style={{position:"fixed",top:0,right:0,bottom:0,width:panelW,background:"#fff",
+        boxShadow:"-4px 0 32px rgba(0,0,0,0.15)",zIndex:401,display:"flex",flexDirection:"column",
+        transition:"width 0.2s ease",borderLeft:`1px solid ${C.border}`}}>
+
+        {/* Sticky header */}
+        <div style={{padding:"14px 18px",borderBottom:`1px solid ${C.border}`,display:"flex",
+          justifyContent:"space-between",alignItems:"center",flexShrink:0,background:"#fff"}}>
+          <div>
+            <span style={{color:C.accent,fontWeight:800,fontSize:15}}>{job.ref}</span>
+            <span style={{color:C.muted,fontSize:12,marginLeft:10}}>{job.companyName||""} · {job.agentName||""}</span>
+          </div>
+          <div style={{display:"flex",gap:8,alignItems:"center"}}>
+            {attachment && (
+              <button onClick={closeAttachment}
+                style={{background:"#fef2f2",border:`1px solid #fecaca`,borderRadius:7,padding:"5px 10px",cursor:"pointer",fontSize:12,color:C.red,fontWeight:700,fontFamily:"inherit"}}>
+                ✕ Close Preview
+              </button>
+            )}
+            <button onClick={()=>setExpanded(!expanded)}
+              style={{background:"none",border:`1px solid ${C.border}`,borderRadius:7,padding:"5px 10px",cursor:"pointer",fontSize:13,color:C.sub,fontFamily:"inherit"}}>
+              {expanded?"⇥ Collapse":"⇤ Expand"}
+            </button>
+            <button onClick={onClose}
+              style={{background:"none",border:`1px solid ${C.border}`,borderRadius:7,padding:"5px 10px",cursor:"pointer",fontSize:18,color:C.muted,lineHeight:1,fontFamily:"inherit"}}>×</button>
+          </div>
+        </div>
+
+        {/* Body — 3-column when attachment open, 2-column always: left=info, right=diary */}
+        <div style={{flex:1,display:"flex",overflow:"hidden"}}>
+
+        {/* LEFT — compact job info */}
+        <div style={{flex:`0 0 ${attachment?"260px":"340px"}`,overflowY:"auto",padding:"14px 14px 40px",borderRight:`1px solid ${C.border}`,background:"#fafafa",transition:"flex-basis 0.2s"}}>
+
+          {/* Compact header card */}
+          <div style={{background:"#fff",border:`1px solid ${C.border}`,borderRadius:12,padding:"14px",marginBottom:10}}>
+            {editing==="address" ? (
+              <div style={{display:"flex",gap:6,marginBottom:10}}>
+                <input value={draft.address||""} onChange={e=>setDraft({address:e.target.value})} autoFocus
+                  onKeyDown={e=>{if(e.key==="Enter")commitEdit("address");if(e.key==="Escape")cancelEdit();}}
+                  style={{flex:1,background:"#fff",border:`2px solid ${C.accent}`,borderRadius:7,padding:"7px 10px",color:C.text,fontSize:13,fontWeight:700,fontFamily:"inherit",boxSizing:"border-box"}}/>
+                <button onClick={()=>commitEdit("address")} style={{background:C.accent,color:"#fff",border:"none",borderRadius:6,padding:"6px 10px",fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>✓</button>
+                <button onClick={cancelEdit} style={{background:"none",border:`1px solid ${C.border}`,color:C.sub,borderRadius:6,padding:"6px 8px",cursor:"pointer",fontFamily:"inherit"}}>✕</button>
+              </div>
+            ) : (
+              <div onClick={()=>startEdit("address",job.address)} style={{display:"flex",alignItems:"flex-start",gap:6,marginBottom:8,cursor:"text"}}>
+                <span style={{color:C.text,fontWeight:800,fontSize:13,flex:1,lineHeight:1.4}}>{job.address}</span>
+                <span style={{color:C.muted,fontSize:11,flexShrink:0,marginTop:2}}>✎</span>
+              </div>
+            )}
+            <div style={{display:"flex",gap:5,flexWrap:"wrap",marginBottom:10}}>
+              <Badge label={job.type} color={job.type==="HVAC"?"blue":job.type==="Plumbing"?"purple":"orange"}/>
+              <Badge label={job.status==="Open"?"Open":jobStatus(job)} color={statusColor(job.status==="Open"?"Open":jobStatus(job))}/>
+            </div>
+            <StageSelector job={job} onUpdate={updateJob} jobStages={jobStages} jobSubStages={jobSubStages}/>
+          </div>
+
+          {/* Editable fields — compact */}
+          <div style={{background:"#fff",border:`1px solid ${C.border}`,borderRadius:12,padding:"2px 14px",marginBottom:10}}>
+            <EF label="Description" field="description" value={job.description} type="textarea" placeholder="Describe the work…"/>
+            <EF label="Lead Tech" field="tech" value={job.tech}
+              options={[{val:"",label:"— Unassigned —"},...fieldStaff.filter(f=>f.status==="Active").map(f=>({val:f.name,label:`${f.name} – ${f.role}`}))]}/>
+            <EF label="Job Type" field="type" value={job.type} options={jobTypes.map(t=>({val:t,label:t}))}/>
+            <EF label="Key Access" field="keyMethod" value={keyLabel}
+              options={[{val:"",label:"— None —"},{val:"tenant",label:"🧑 Tenant"},{val:"office",label:"🏢 Office"},{val:"other",label:"🔑 Other"}]}/>
+            <EF label="Key Notes" field="keyNotes" value={job.keyNotes} type="textarea" placeholder="Access instructions…"/>
+            <div style={{display:"flex",justifyContent:"space-between",padding:"8px 0",borderBottom:`1px solid ${C.border}`,fontSize:12}}>
+              <span style={{color:C.sub,fontWeight:700,textTransform:"uppercase",letterSpacing:0.5,fontSize:10}}>Created</span>
+              <span style={{color:C.text}}>{fmtDate(job.createdDate)}</span>
+            </div>
+            {job.closedDate&&<div style={{display:"flex",justifyContent:"space-between",padding:"8px 0",borderBottom:`1px solid ${C.border}`,fontSize:12}}>
+              <span style={{color:C.sub,fontWeight:700,textTransform:"uppercase",letterSpacing:0.5,fontSize:10}}>Closed</span>
+              <span style={{color:C.text}}>{fmtDate(job.closedDate)}</span>
+            </div>}
+            <div style={{display:"flex",gap:6,padding:"10px 0",flexWrap:"wrap"}}>
+              {job.status==="Open"&&<Btn label="✓ Close Job" onClick={()=>updateJob({...job,status:"Closed",closedDate:new Date().toISOString().split("T")[0]})} color={C.orange} small/>}
+              <Btn label="🔁 Recall" onClick={createRecall} color={C.purple} small outline/>
+            </div>
+          </div>
+
+          {/* Tenants compact */}
+          <div style={{background:"#fff",border:`1px solid ${C.border}`,borderRadius:12,padding:"10px 14px",marginBottom:10}}>
+            <SectionHead title="👥 Tenants" count={(job.tenants||[]).length} action={{label:"+ Add",fn:()=>setShowAddTenant(true)}}/>
+            {(job.tenants||[]).length===0&&<p style={{color:C.muted,fontSize:12,margin:"4px 0 6px"}}>No tenants linked.</p>}
+            {(job.tenants||[]).map(t=>(
+              <div key={t.id} style={{display:"flex",gap:8,alignItems:"center",padding:"6px 0",borderBottom:`1px solid ${C.border}`}}>
+                <Avatar name={t.name} size={28} bg="#dcfce7" fg="#15803d"/>
+                <div style={{minWidth:0}}>
+                  <div style={{color:C.text,fontWeight:700,fontSize:12,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{t.name}</div>
+                  {t.phone&&<div style={{color:C.sub,fontSize:11}}>{t.phone}</div>}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Appliances compact */}
+          <div style={{background:"#fff",border:`1px solid ${C.border}`,borderRadius:12,padding:"10px 14px",marginBottom:10}}>
+            <AppliancesSection appliances={job.appliances||[]} onChange={ap=>updateJob({...job,appliances:ap})} applianceTypes={applianceTypes} onTypesChange={setApplianceTypes}/>
+          </div>
+
+          {/* Additional works compact */}
+          <div style={{background:"#fff",border:`1px solid ${C.border}`,borderRadius:12,padding:"10px 14px",marginBottom:10}}>
+            <AdditionalWorksSection works={job.additionalWorks||[]} onChange={ws=>updateJob({...job,additionalWorks:ws})} workPresets={workPresets} onPresetsChange={setWorkPresets}/>
+          </div>
+
+          {/* ══ VISITS ══ */}
+          <VisitsSection job={job} onUpdate={updateJob} fieldStaff={fieldStaff}/>
+
+        </div>{/* end left pane */}
+
+        {/* RIGHT — diary + reports tabs */}
+        <div style={{flex:attachment?"0 0 280px":"1",overflowY:"auto",padding:"14px 14px 40px",minWidth:0,borderRight:attachment?`1px solid ${C.border}`:"none",transition:"flex 0.2s"}}>
+          <ReportsPane job={job} onUpdate={updateJob} onOpenAttachment={openAttachment} reportTemplates={reportTemplates} fieldStaff={fieldStaff} vendors={vendors}/>
+        </div>{/* end diary pane */}
+
+        {/* Attachment preview panel */}
+        {attachment && attFile && (
+          <div style={{flex:"0 0 50%",background:"#0f172a",display:"flex",flexDirection:"column",overflow:"hidden"}}>
+            <div style={{padding:"12px 16px",borderBottom:"1px solid rgba(255,255,255,0.1)",display:"flex",justifyContent:"space-between",alignItems:"center",flexShrink:0}}>
+              <div style={{minWidth:0,flex:1}}>
+                <div style={{color:"#f1f5f9",fontWeight:700,fontSize:13,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{attFile.name}</div>
+                <div style={{color:"#64748b",fontSize:11,marginTop:2}}>
+                  {fileSizeFmt(attFile.size)}
+                  {attSibs.length>1 && <span style={{marginLeft:8,background:"rgba(255,255,255,0.1)",borderRadius:99,padding:"1px 7px",fontSize:10,fontWeight:700,color:"#94a3b8"}}>{attSibIdx+1} / {attSibs.length}</span>}
+                </div>
+              </div>
+              <div style={{display:"flex",gap:8,flexShrink:0,marginLeft:12,alignItems:"center"}}>
+                {(isPdf||isVid) && <a href={attFile.data} download={attFile.name} style={{background:"rgba(255,255,255,0.1)",color:"#94a3b8",border:"1px solid rgba(255,255,255,0.15)",borderRadius:6,padding:"5px 10px",fontSize:12,fontWeight:700,textDecoration:"none"}}>⬇</a>}
+                <button onClick={closeAttachment} style={{background:"rgba(255,255,255,0.1)",color:"#94a3b8",border:"1px solid rgba(255,255,255,0.15)",borderRadius:6,padding:"5px 10px",fontSize:14,cursor:"pointer",fontFamily:"inherit"}}>×</button>
+              </div>
+            </div>
+            <div style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",padding:20,overflow:"auto",position:"relative"}}>
+              {attSibs.length>1 && (
+                <button onClick={()=>setAttachment(a=>({...a,file:attSibs[attSibIdx-1]}))} disabled={!attHasPrev}
+                  style={{position:"absolute",left:8,top:"50%",transform:"translateY(-50%)",zIndex:2,background:attHasPrev?"rgba(255,255,255,0.15)":"rgba(255,255,255,0.04)",color:attHasPrev?"#f1f5f9":"#334155",border:"none",borderRadius:8,width:40,height:40,fontSize:22,cursor:attHasPrev?"pointer":"default",fontFamily:"inherit"}}>
+                  ‹
+                </button>
+              )}
+              <div style={{maxWidth:"100%",maxHeight:"100%",padding:attSibs.length>1?"0 50px":"0",display:"flex",alignItems:"center",justifyContent:"center",width:"100%",height:"100%"}}>
+                {isImg && <img src={attFile.data} alt={attFile.name} style={{maxWidth:"100%",maxHeight:"100%",borderRadius:10,boxShadow:"0 8px 32px rgba(0,0,0,0.6)",objectFit:"contain"}}/>}
+                {isVid && (
+                  <video controls autoPlay style={{maxWidth:"100%",maxHeight:"100%",borderRadius:10,boxShadow:"0 8px 32px rgba(0,0,0,0.6)"}}>
+                    <source src={attFile.data} type={attFile.mime}/>
+                  </video>
+                )}
+                {isPdf && <PdfViewer file={attFile}/>}
+              </div>
+              {attSibs.length>1 && (
+                <button onClick={()=>setAttachment(a=>({...a,file:attSibs[attSibIdx+1]}))} disabled={!attHasNext}
+                  style={{position:"absolute",right:8,top:"50%",transform:"translateY(-50%)",zIndex:2,background:attHasNext?"rgba(255,255,255,0.15)":"rgba(255,255,255,0.04)",color:attHasNext?"#f1f5f9":"#334155",border:"none",borderRadius:8,width:40,height:40,fontSize:22,cursor:attHasNext?"pointer":"default",fontFamily:"inherit"}}>
+                  ›
+                </button>
+              )}
+            </div>
+            {attSibs.length>1 && (
+              <div style={{display:"flex",gap:6,padding:"10px 14px",borderTop:"1px solid rgba(255,255,255,0.08)",overflowX:"auto",flexShrink:0}}>
+                {attSibs.map(s=>(
+                  <div key={s.id} onClick={()=>setAttachment(a=>({...a,file:s}))}
+                    style={{width:48,height:48,borderRadius:6,overflow:"hidden",flexShrink:0,cursor:"pointer",border:s.id===attFile.id?"2px solid #3b82f6":"2px solid transparent",opacity:s.id===attFile.id?1:0.5}}>
+                    <img src={s.data} alt={s.name} style={{width:"100%",height:"100%",objectFit:"cover"}}/>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        </div>{/* end body flex */}
+      </div>{/* end outer panel */}
+
+      {showAddTenant&&(
+        <Modal title="Add Tenant" onClose={()=>setShowAddTenant(false)} onSave={saveTenant}>
+          <FF label="Full Name" value={newTenant.name} onChange={v=>setNewTenant({...newTenant,name:v})} placeholder="e.g. John Smith" required/>
+          <FF label="Email" value={newTenant.email} onChange={v=>setNewTenant({...newTenant,email:v})} placeholder="john@email.com" type="email"/>
+          <FF label="Phone" value={newTenant.phone} onChange={v=>setNewTenant({...newTenant,phone:v})} placeholder="0400 000 000"/>
+        </Modal>
+      )}
+    </>
+  );
+}
+
+/* ═══════════════════════════════════════════
    JOB HISTORY
 ═══════════════════════════════════════════ */
-function HistoryTab() {
-  const jobs = allJobs();
-  const closed = jobs.filter(j=>j.status==="Closed");
+function HistoryTab({settings, companies, setCompanies}) {
+  const {jobStages,jobSubStages,fieldStaff,jobTypes,setJobTypes} = settings;
+  const allFlat = allJobs(companies);
+  const closed = allFlat.filter(j=>j.status==="Closed");
   const [search,setSearch]=useState("");
   const [typeFilter,setTypeFilter]=useState("All");
-  const filtered = closed.filter(j=>{
+  const [showNew,setShowNew]=useState(false);
+  const [drawerJob, setDrawerJob] = useState(null);
+
+  // New job form state
+  const emptyJob={type:"",address:"",description:"",tech:"",keyMethod:"",keyNotes:"",status:"Open",stage:"New",subStage:""};
+  const [nj,setNj]=useState(emptyJob);
+  const [selCo,setSelCo]=useState("");
+  const [selBr,setSelBr]=useState("");
+  const [selAg,setSelAg]=useState("");
+  const [tenants,setTenants]=useState([]);
+  const [tForm,setTForm]=useState({name:"",email:"",phone:""});
+
+  const addTenant=()=>{if(!tForm.name)return;setTenants([...tenants,{...tForm,id:uid()}]);setTForm({name:"",email:"",phone:""});};
+  const removeTenant=id=>setTenants(tenants.filter(t=>t.id!==id));
+
+  const openNew=()=>{
+    setNj(emptyJob);setSelCo("");setSelBr("");setSelAg("");setTenants([]);setTForm({name:"",email:"",phone:""});
+    setShowNew(true);
+  };
+
+  const saveNewJob=()=>{
+    if(!nj.address||!selCo||!selBr||!selAg)return;
+    const ref=nextJobRef();
+    const job={...nj,ref,id:uid(),type:nj.type||jobTypes[0]||"",
+      createdDate:new Date().toISOString().split("T")[0],
+      closedDate:nj.status==="Closed"?new Date().toISOString().split("T")[0]:null,
+      tenants,appliances:[],additionalWorks:[],diary:[]};
+    setCompanies(companies.map(co=>co.id===selCo?{...co,branches:co.branches.map(br=>br.id===selBr?{...br,agents:br.agents.map(ag=>ag.id===selAg?{...ag,jobs:[...(ag.jobs||[]),job]}:ag)}:br)}:co));
+    setShowNew(false);
+  };
+
+  // Update a job in place across companies
+  const updateDrawerJob = updated => {
+    setCompanies(companies.map(co=>({...co, branches:co.branches.map(br=>({...br,
+      agents:br.agents.map(ag=>({...ag,
+        jobs:(ag.jobs||[]).map(j=>j.id===updated.id?updated:j)
+      }))
+    }))})));
+    setDrawerJob(updated);
+  };
+
+  const filtered = allJobs(companies).filter(j=>{
     const matchType=typeFilter==="All"||j.type===typeFilter;
     const matchSearch=!search||j.ref.toLowerCase().includes(search.toLowerCase())||j.address.toLowerCase().includes(search.toLowerCase())||(j.tech||"").toLowerCase().includes(search.toLowerCase());
     return matchType&&matchSearch;
-  }).sort((a,b)=>new Date(b.closedDate)-new Date(a.closedDate));
+  }).sort((a,b)=>new Date(b.closedDate||b.createdDate)-new Date(a.closedDate||a.createdDate));
+
+  // Keep drawerJob in sync with latest companies state
+  const liveDrawerJob = drawerJob
+    ? allJobs(companies).find(j=>j.id===drawerJob.id) || drawerJob
+    : null;
 
   return(<div>
-    <div style={{marginBottom:16}}><h2 style={{fontSize:18,fontWeight:800,color:C.text}}>Job History</h2><p style={{color:C.sub,fontSize:12,marginTop:2}}>{closed.length} completed jobs</p></div>
-    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10,marginBottom:16}}>
-      <StatCard label="Total Jobs" value={jobs.length} icon="📋" color={C.accent}/>
-      <StatCard label="Completed" value={closed.length} icon="✅" color={C.green}/>
-      <StatCard label="Open" value={jobs.filter(j=>j.status==="Open").length} icon="🔓" color={C.orange}/>
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
+      <div><h2 style={{fontSize:18,fontWeight:800,color:C.text}}>Job History</h2><p style={{color:C.sub,fontSize:12,marginTop:2}}>{closed.length} completed · {allFlat.filter(j=>j.status==="Open").length} open</p></div>
+      <Btn label="+ New Job" onClick={openNew}/>
     </div>
-    <input placeholder="Search history…" value={search} onChange={e=>setSearch(e.target.value)} style={{width:"100%",background:"#fff",border:`1px solid ${C.border}`,borderRadius:9,padding:"10px 14px",color:C.text,fontSize:14,marginBottom:12,fontFamily:"inherit",boxSizing:"border-box"}}/>
+    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10,marginBottom:16}}>
+      <StatCard label="Total Jobs" value={allFlat.length} icon="📋" color={C.accent}/>
+      <StatCard label="Completed" value={closed.length} icon="✅" color={C.green}/>
+      <StatCard label="Open" value={allFlat.filter(j=>j.status==="Open").length} icon="🔓" color={C.orange}/>
+    </div>
+    <input placeholder="Search jobs…" value={search} onChange={e=>setSearch(e.target.value)} style={{width:"100%",background:"#fff",border:`1px solid ${C.border}`,borderRadius:9,padding:"10px 14px",color:C.text,fontSize:14,marginBottom:12,fontFamily:"inherit",boxSizing:"border-box"}}/>
     <div style={{display:"flex",gap:8,marginBottom:16,overflowX:"auto",paddingBottom:4}}>
       {["All","HVAC","Plumbing","Electrical"].map(t=><Pill key={t} label={t} active={typeFilter===t} onClick={()=>setTypeFilter(t)}/>)}
     </div>
     {filtered.map(job=>{
       const js=jobStatus(job);
-      return(<RowCard key={job.id}>
+      return(<RowCard key={job.id} onClick={()=>setDrawerJob(job)}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
           <div style={{flex:1,minWidth:0,marginRight:10}}>
-            <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
+            <div style={{display:"flex",gap:6,alignItems:"center",flexWrap:"wrap"}}>
               <span style={{color:C.accent,fontWeight:800,fontSize:13}}>{job.ref}</span>
               <Badge label={job.type} color={job.type==="HVAC"?"blue":job.type==="Plumbing"?"purple":"orange"}/>
+              <Badge label={js} color={statusColor(js)}/>
               {job.stage&&<Badge label={job.stage} color={stageColor(job.stage)}/>}
               {job.subStage&&<Badge label={job.subStage} color="purple"/>}
             </div>
@@ -595,13 +2316,69 @@ function HistoryTab() {
             <div style={{display:"flex",gap:10,marginTop:6,fontSize:12,color:C.sub,flexWrap:"wrap"}}>
               <span>👷 {job.tech||"Unassigned"}</span>
               <span>🏢 {job.companyName}</span>
-              <span>📅 Closed {fmtDate(job.closedDate)}</span>
+              <span>👤 {job.agentName}</span>
+              {job.closedDate&&<span>📅 Closed {fmtDate(job.closedDate)}</span>}
+              {job.tenants&&job.tenants.length>0&&<span>👥 {job.tenants.length} tenant{job.tenants.length!==1?"s":""}</span>}
             </div>
           </div>
+          <span style={{color:C.muted,fontSize:16,flexShrink:0}}>›</span>
         </div>
       </RowCard>);
     })}
-    {filtered.length===0&&<div style={{textAlign:"center",padding:"40px 0",color:C.muted}}><div style={{fontSize:32,marginBottom:8}}>📂</div><div style={{fontSize:14,fontWeight:600}}>No completed jobs found</div></div>}
+    {filtered.length===0&&<div style={{textAlign:"center",padding:"40px 0",color:C.muted}}><div style={{fontSize:32,marginBottom:8}}>📂</div><div style={{fontSize:14,fontWeight:600}}>No jobs found</div></div>}
+
+    {/* Job drawer */}
+    {liveDrawerJob&&(
+      <JobDrawer
+        job={liveDrawerJob}
+        onClose={()=>setDrawerJob(null)}
+        onUpdate={updateDrawerJob}
+        settings={settings}
+        companies={companies}
+        setCompanies={setCompanies}
+        vendors={vendors}
+      />
+    )}
+
+    {showNew&&(
+      <Modal title="New Job" onClose={()=>setShowNew(false)} onSave={saveNewJob} wide>
+        <div style={{background:"#eff6ff",border:`1px solid ${C.accent}`,borderRadius:8,padding:"8px 12px",marginBottom:16,fontSize:12,color:C.accent,fontWeight:600}}>🔢 Number assigned automatically on save</div>
+        <QuickAssignPicker
+          companies={companies} setCompanies={setCompanies}
+          selCo={selCo} setSelCo={v=>{setSelCo(v);setSelBr("");setSelAg("");}}
+          selBr={selBr} setSelBr={v=>{setSelBr(v);setSelAg("");}}
+          selAg={selAg} setSelAg={setSelAg}
+        />
+        <FF label="Property Address" value={nj.address} onChange={v=>setNj({...nj,address:v})} placeholder="e.g. 22 Oak St, Parramatta NSW" required/>
+        <FF label="Description" value={nj.description} onChange={v=>setNj({...nj,description:v})} placeholder="Describe the work needed..." type="textarea"/>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:14}}>
+          <div><label style={{display:"block",color:C.sub,fontSize:12,fontWeight:600,textTransform:"uppercase",letterSpacing:0.5,marginBottom:5}}>Job Type</label><select value={nj.type||jobTypes[0]} onChange={e=>setNj({...nj,type:e.target.value})} style={{width:"100%",background:C.raised,border:`1px solid ${C.border}`,borderRadius:8,padding:"9px 12px",color:C.text,fontSize:13,fontFamily:"inherit",boxSizing:"border-box"}}>{jobTypes.map(t=><option key={t}>{t}</option>)}</select></div>
+          <div><label style={{display:"block",color:C.sub,fontSize:12,fontWeight:600,textTransform:"uppercase",letterSpacing:0.5,marginBottom:5}}>Stage</label><select value={nj.stage} onChange={e=>setNj({...nj,stage:e.target.value})} style={{width:"100%",background:C.raised,border:`1px solid ${C.border}`,borderRadius:8,padding:"9px 12px",color:C.text,fontSize:13,fontFamily:"inherit",boxSizing:"border-box"}}>{jobStages.map(s=><option key={s}>{s}</option>)}</select></div>
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:14}}>
+          <div><label style={{display:"block",color:C.sub,fontSize:12,fontWeight:600,textTransform:"uppercase",letterSpacing:0.5,marginBottom:5}}>Sub-stage</label><select value={nj.subStage} onChange={e=>setNj({...nj,subStage:e.target.value})} style={{width:"100%",background:C.raised,border:`1px solid ${C.border}`,borderRadius:8,padding:"9px 12px",color:C.text,fontSize:13,fontFamily:"inherit",boxSizing:"border-box"}}><option value="">— None —</option>{jobSubStages.map(s=><option key={s}>{s}</option>)}</select></div>
+          <div><label style={{display:"block",color:C.sub,fontSize:12,fontWeight:600,textTransform:"uppercase",letterSpacing:0.5,marginBottom:5}}>Status</label><select value={nj.status} onChange={e=>setNj({...nj,status:e.target.value})} style={{width:"100%",background:C.raised,border:`1px solid ${C.border}`,borderRadius:8,padding:"9px 12px",color:C.text,fontSize:13,fontFamily:"inherit",boxSizing:"border-box"}}><option>Open</option><option>Closed</option></select></div>
+        </div>
+        <div style={{marginBottom:14}}><label style={{display:"block",color:C.sub,fontSize:12,fontWeight:600,textTransform:"uppercase",letterSpacing:0.5,marginBottom:5}}>Field Staff</label><select value={nj.tech} onChange={e=>setNj({...nj,tech:e.target.value})} style={{width:"100%",background:C.raised,border:`1px solid ${C.border}`,borderRadius:8,padding:"9px 12px",color:C.text,fontSize:13,fontFamily:"inherit",boxSizing:"border-box"}}><option value="">— Unassigned —</option>{fieldStaff.filter(f=>f.status==="Active").map(f=><option key={f.id} value={f.name}>{f.name} – {f.role}</option>)}</select></div>
+        <div style={{background:C.raised,border:`1px solid ${C.border}`,borderRadius:10,padding:"14px",marginBottom:14}}>
+          <div style={{fontWeight:700,fontSize:13,color:C.text,marginBottom:12}}>👥 Tenants</div>
+          {tenants.map(t=>(
+            <div key={t.id} style={{display:"flex",gap:10,alignItems:"center",padding:"8px 10px",background:"#fff",border:`1px solid ${C.border}`,borderRadius:8,marginBottom:8}}>
+              <Avatar name={t.name} size={28} bg="#dcfce7" fg="#15803d"/>
+              <div style={{flex:1,minWidth:0}}><div style={{fontWeight:600,fontSize:13,color:C.text}}>{t.name}</div><div style={{fontSize:12,color:C.sub}}>{t.email} {t.phone}</div></div>
+              <button onClick={()=>removeTenant(t.id)} style={{background:"none",border:"none",color:C.muted,cursor:"pointer",fontSize:16}}>✕</button>
+            </div>
+          ))}
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr auto",gap:8,alignItems:"end"}}>
+            <input value={tForm.name} onChange={e=>setTForm({...tForm,name:e.target.value})} placeholder="Name" style={{width:"100%",background:"#fff",border:`1px solid ${C.border}`,borderRadius:7,padding:"7px 10px",fontSize:12,color:C.text,fontFamily:"inherit",boxSizing:"border-box"}}/>
+            <input value={tForm.email} onChange={e=>setTForm({...tForm,email:e.target.value})} placeholder="Email" style={{width:"100%",background:"#fff",border:`1px solid ${C.border}`,borderRadius:7,padding:"7px 10px",fontSize:12,color:C.text,fontFamily:"inherit",boxSizing:"border-box"}}/>
+            <input value={tForm.phone} onChange={e=>setTForm({...tForm,phone:e.target.value})} placeholder="Phone" style={{width:"100%",background:"#fff",border:`1px solid ${C.border}`,borderRadius:7,padding:"7px 10px",fontSize:12,color:C.text,fontFamily:"inherit",boxSizing:"border-box"}}/>
+            <button onClick={addTenant} style={{background:C.accent,color:"#fff",border:"none",borderRadius:7,padding:"7px 12px",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>+ Add</button>
+          </div>
+        </div>
+        <div style={{marginBottom:14}}><label style={{display:"block",color:C.sub,fontSize:12,fontWeight:600,textTransform:"uppercase",letterSpacing:0.5,marginBottom:5}}>Key Access</label><div style={{display:"flex",flexDirection:"column",gap:6}}>{[{val:"tenant",label:"🧑 Tenant to give access"},{val:"office",label:"🏢 Collect from office"},{val:"other",label:"🔑 Other"}].map(opt=>(<label key={opt.val} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px",borderRadius:8,border:`1.5px solid ${nj.keyMethod===opt.val?C.accent:C.border}`,background:nj.keyMethod===opt.val?"#eff6ff":"#fff",cursor:"pointer"}}><input type="radio" name="histKeyMethod" checked={nj.keyMethod===opt.val} onChange={()=>setNj({...nj,keyMethod:opt.val})} style={{accentColor:C.accent}}/><span style={{fontSize:13,fontWeight:nj.keyMethod===opt.val?700:500,color:C.text}}>{opt.label}</span></label>))}</div>{nj.keyMethod&&<textarea value={nj.keyNotes||""} onChange={e=>setNj({...nj,keyNotes:e.target.value})} placeholder="Access notes…" rows={2} style={{width:"100%",marginTop:8,background:C.raised,border:`1px solid ${C.border}`,borderRadius:8,padding:"9px 12px",color:C.text,fontSize:13,fontFamily:"inherit",resize:"vertical",boxSizing:"border-box"}}/>}</div>
+      </Modal>
+    )}
   </div>);
 }
 
@@ -702,6 +2479,8 @@ export default function App() {
   const [tab,setTab]=useState("customers");
   const [isMobile,setIsMobile]=useState(window.innerWidth<768);
   const settings = useSettings();
+  const [companies,setCompanies]=useState(SEED_COMPANIES);
+  const [vendors,setVendors]=useState(SEED_VENDORS);
   useEffect(()=>{const h=()=>setIsMobile(window.innerWidth<768);window.addEventListener("resize",h);return()=>window.removeEventListener("resize",h);},[]);
 
   return(
@@ -755,15 +2534,15 @@ export default function App() {
             <div style={{color:C.sub,fontSize:12}}>/ {[...ALL_NAV,{id:"settings",label:"Settings"}].find(n=>n.id===tab)?.label}</div>
           </div>
         )}
-        {tab==="customers"&&<CustomersTab settings={settings}/>}
-        {tab==="vendors"&&<VendorsTab/>}
+        {tab==="customers"&&<CustomersTab settings={settings} companies={companies} setCompanies={setCompanies}/>}
+        {tab==="vendors"&&<VendorsTab vendors={vendors} setVendors={setVendors}/>}
         {tab==="products"&&<ProductsTab/>}
-        {tab==="dispatch"&&<DispatchTab settings={settings}/>}
-        {tab==="history"&&<HistoryTab/>}
+        {tab==="dispatch"&&<DispatchTab settings={settings} companies={companies}/>}
+        {tab==="history"&&<HistoryTab settings={settings} companies={companies} setCompanies={setCompanies}/>}
         {tab==="quotes"&&<QuotesTab/>}
         {tab==="invoices"&&<InvoicesTab/>}
         {tab==="inventory"&&<InventoryTab/>}
-        {tab==="reports"&&<ReportsTab/>}
+        {tab==="reports"&&<ReportsTab companies={companies}/>}
         {tab==="settings"&&<SettingsTab settings={settings}/>}
       </div>
 
