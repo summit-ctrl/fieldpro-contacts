@@ -147,23 +147,25 @@ const SEED_VENDORS = [
 const allJobs = (companies) => (companies||SEED_COMPANIES).flatMap(co=>co.branches.flatMap(b=>b.agents.flatMap(a=>(a.jobs||[]).map(j=>({...j,agentName:a.name,branchName:b.name,companyName:co.name})))));
 
 const SEED_QUOTES = [
-  {id:"q1",ref:"QUO-001",client:"Ray White Parramatta",contact:"Karen Lim",date:"2026-03-01",expiry:"2026-03-31",status:"Sent",total:2850,items:[
+  {id:"q1",ref:"QUO-001",jobRef:"1004",client:"Ray White Parramatta",contact:"Karen Lim",date:"2026-03-01",expiry:"2026-03-31",status:"Sent",total:2850,items:[
     {desc:"Replace kitchen mixer tap",qty:1,unit:"each",rate:320,amount:320,itemId:"in2"},
     {desc:"Labour – tap replacement",qty:2,unit:"hr",rate:120,amount:240},
     {desc:"Rinnai 25L Hot Water System",qty:1,unit:"each",rate:1450,amount:1450,itemId:"in1"},
     {desc:"Labour – HWS install",qty:7,unit:"hr",rate:120,amount:840},
   ]},
-  {id:"q2",ref:"QUO-002",client:"LJ Hooker Penrith",contact:"Rachel Park",date:"2026-03-05",expiry:"2026-04-05",status:"Draft",total:1560,items:[
+  {id:"q2",ref:"QUO-002",jobRef:"1021",client:"LJ Hooker Penrith",contact:"Rachel Park",date:"2026-03-05",expiry:"2026-04-05",status:"Draft",total:1560,items:[
     {desc:"Split system supply & install",qty:1,unit:"each",rate:899,amount:899,itemId:"in5"},
     {desc:"Labour – HVAC install",qty:4,unit:"hr",rate:120,amount:480},
     {desc:"Electrical connection",qty:1,unit:"each",rate:181,amount:181},
   ]},
-  {id:"q3",ref:"QUO-003",client:"Ray White Blacktown",contact:"Tom Nguyen",date:"2026-02-20",expiry:"2026-03-20",status:"Accepted",total:980,items:[
+  {id:"q3",ref:"QUO-003",jobRef:null,client:"Ray White Blacktown",contact:"Tom Nguyen",date:"2026-02-20",expiry:"2026-03-20",status:"Accepted",total:980,items:[
     {desc:"Smoke alarm x4 supply",qty:4,unit:"each",rate:85,amount:340,itemId:"in4"},
     {desc:"Labour – installation",qty:4,unit:"hr",rate:120,amount:480},
     {desc:"Compliance certificate",qty:1,unit:"each",rate:160,amount:160},
   ]},
 ];
+let _quoNum = 3;
+const nextQuoRef = () => `QUO-${String(++_quoNum).padStart(3,"0")}`;
 const SEED_INVOICES = [
   {id:"i1",ref:"INV-0041",client:"Ray White Parramatta",contact:"Karen Lim",jobRef:"1002",date:"2026-02-21",due:"2026-03-21",status:"Paid",paidDate:"2026-03-10",total:1380,items:[{desc:"Power point replacement x3",qty:3,unit:"each",rate:220,amount:660},{desc:"Labour – electrical",qty:3,unit:"hr",rate:120,amount:360},{desc:"Cable replacement",qty:1,unit:"each",rate:360,amount:360}]},
   {id:"i2",ref:"INV-0042",client:"Ray White Parramatta",contact:"Karen Lim",jobRef:"1003",date:"2026-03-01",due:"2026-03-31",status:"Overdue",paidDate:null,total:2240,items:[{desc:"HVAC full service – split system",qty:1,unit:"each",rate:480,amount:480},{desc:"Gas cooktop service",qty:1,unit:"each",rate:320,amount:320},{desc:"Labour – HVAC",qty:6,unit:"hr",rate:120,amount:720},{desc:"Parts & consumables",qty:1,unit:"each",rate:720,amount:720}]},
@@ -2490,7 +2492,7 @@ const CAL_START = 7*60; // 7am
 const CAL_END   = 19*60; // 7pm
 const CAL_SPAN  = CAL_END - CAL_START;
 
-function DispatchTab({settings, companies, setCompanies, vendors, fieldMode, setFieldMode}) {
+function DispatchTab({settings, companies, setCompanies, vendors, fieldMode, setFieldMode, quotes=[], setQuotes}) {
   const jobs = allJobs(companies);
   const open = jobs.filter(j=>j.status==="Open");
   const allTechNames = [...new Set(open.map(j=>j.tech).filter(Boolean))].sort();
@@ -2597,6 +2599,8 @@ function DispatchTab({settings, companies, setCompanies, vendors, fieldMode, set
           companies={companies}
           setCompanies={setCompanies}
           vendors={vendors}
+          quotes={quotes}
+          setQuotes={setQuotes}
         />
       )}
     </div>
@@ -4194,10 +4198,248 @@ function ReportForm({template, job, fieldStaff, vendors, onSave, onCancel}) {
 }
 
 /* ═══════════════════════════════════════════
-   REPORTS PANE — tabbed Diary | Reports
+/* ═══════════════════════════════════════════
+   JOB QUOTES SECTION — tab inside JobDrawer
+═══════════════════════════════════════════ */
+function JobQuotesSection({job, quotes, setQuotes}) {
+  const [view, setView] = useState("list"); // "list" | "new" | "detail"
+  const [sel, setSel] = useState(null);
+  const [form, setForm] = useState(null);
+  const {invItems=[]} = job.__invItems || {};
+
+  const jobQuotes = quotes.filter(q => q.jobRef === job.ref);
+  const statusCol = s => s==="Accepted"?"green":s==="Sent"?"blue":s==="Draft"?"gray":s==="Declined"?"red":"gray";
+
+  const emptyForm = () => ({
+    ref: nextQuoRef(),
+    jobRef: job.ref,
+    client: job.companyName || "",
+    contact: job.agentName || "",
+    date: new Date().toISOString().slice(0,10),
+    expiry: new Date(Date.now()+30*86400000).toISOString().slice(0,10),
+    status: "Draft",
+    items: [],
+    total: 0,
+  });
+
+  const openNew = () => { setForm(emptyForm()); setView("new"); };
+  const openDetail = q => { setSel(q); setView("detail"); };
+  const backToList = () => { setView("list"); setSel(null); setForm(null); };
+
+  // ── Line item helpers ──
+  const addLine = () => setForm(f => ({...f, items:[...f.items, {desc:"",qty:1,unit:"each",rate:0,amount:0}]}));
+  const updateLine = (i, field, val) => setForm(f => {
+    const items = f.items.map((ln,idx) => {
+      if(idx!==i) return ln;
+      const updated = {...ln, [field]: field==="qty"||field==="rate" ? Number(val)||0 : val};
+      updated.amount = Math.round(updated.qty * updated.rate * 100) / 100;
+      return updated;
+    });
+    return {...f, items, total: Math.round(items.reduce((s,l)=>s+l.amount,0)*100)/100};
+  });
+  const removeLine = i => setForm(f => {
+    const items = f.items.filter((_,idx)=>idx!==i);
+    return {...f, items, total: Math.round(items.reduce((s,l)=>s+l.amount,0)*100)/100};
+  });
+
+  const saveQuote = () => {
+    if(!form.items.length) return;
+    setQuotes(prev => {
+      const exists = prev.find(q=>q.ref===form.ref);
+      return exists ? prev.map(q=>q.ref===form.ref?form:q) : [...prev, {...form, id:`q${Date.now()}`}];
+    });
+    backToList();
+  };
+
+  const updateStatus = (q, newStatus) => {
+    setQuotes(prev => prev.map(x => x.id===q.id ? {...x, status:newStatus} : x));
+    setSel(s => s?.id===q.id ? {...s, status:newStatus} : s);
+  };
+
+  const inputStyle = {width:"100%",background:"#fff",border:`1px solid ${C.border}`,borderRadius:8,padding:"8px 10px",color:C.text,fontSize:13,fontFamily:"inherit",boxSizing:"border-box"};
+
+  // ── DETAIL VIEW ──
+  if(view==="detail" && sel) {
+    const live = quotes.find(q=>q.id===sel.id) || sel;
+    return (
+      <div>
+        <button onClick={backToList} style={{background:"none",border:`1px solid ${C.border}`,borderRadius:7,padding:"5px 10px",cursor:"pointer",fontSize:12,color:C.sub,fontFamily:"inherit",marginBottom:14}}>← Back</button>
+        <div style={{background:"#fff",border:`1px solid ${C.border}`,borderRadius:12,padding:"14px",marginBottom:12}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:12}}>
+            <div>
+              <div style={{color:C.accent,fontWeight:800,fontSize:13}}>{live.ref}</div>
+              <div style={{color:C.text,fontWeight:800,fontSize:16,marginTop:2}}>{live.client}</div>
+              <div style={{color:C.sub,fontSize:12,marginTop:2}}>Contact: {live.contact}</div>
+            </div>
+            <Badge label={live.status} color={statusCol(live.status)}/>
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,fontSize:12}}>
+            <div><span style={{color:C.sub,fontWeight:700,textTransform:"uppercase",fontSize:10,letterSpacing:0.5}}>Date</span><div style={{color:C.text,marginTop:2}}>{fmtDate(live.date)}</div></div>
+            <div><span style={{color:C.sub,fontWeight:700,textTransform:"uppercase",fontSize:10,letterSpacing:0.5}}>Expires</span><div style={{color:C.text,marginTop:2}}>{fmtDate(live.expiry)}</div></div>
+          </div>
+        </div>
+
+        {/* Line items */}
+        <div style={{background:"#fff",border:`1px solid ${C.border}`,borderRadius:12,padding:"14px",marginBottom:12}}>
+          <div style={{fontWeight:700,fontSize:12,color:C.sub,textTransform:"uppercase",letterSpacing:0.5,marginBottom:10}}>Line Items</div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr auto auto auto",gap:6,marginBottom:6}}>
+            {["Description","Qty","Rate","Amount"].map(h=><span key={h} style={{color:C.muted,fontSize:10,fontWeight:700,textTransform:"uppercase"}}>{h}</span>)}
+          </div>
+          {live.items.map((item,i)=>(
+            <div key={i} style={{display:"grid",gridTemplateColumns:"1fr auto auto auto",gap:6,padding:"7px 0",borderTop:`1px solid ${C.border}`}}>
+              <span style={{color:C.text,fontSize:13}}>{item.desc}</span>
+              <span style={{color:C.sub,fontSize:13,textAlign:"right"}}>{item.qty} {item.unit}</span>
+              <span style={{color:C.sub,fontSize:13,textAlign:"right"}}>{fmtMoney(item.rate)}</span>
+              <span style={{color:C.text,fontSize:13,fontWeight:700,textAlign:"right"}}>{fmtMoney(item.amount)}</span>
+            </div>
+          ))}
+          <div style={{display:"flex",justifyContent:"flex-end",marginTop:12,paddingTop:10,borderTop:`2px solid ${C.border}`}}>
+            <div style={{textAlign:"right"}}>
+              <div style={{color:C.sub,fontSize:11,fontWeight:700,textTransform:"uppercase"}}>Total</div>
+              <div style={{color:C.text,fontWeight:900,fontSize:20}}>{fmtMoney(live.total)}</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Status actions */}
+        <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+          {live.status==="Draft"&&(
+            <button onClick={()=>updateStatus(live,"Sent")} style={{background:C.accent,color:"#fff",border:"none",borderRadius:8,padding:"8px 14px",fontWeight:700,fontSize:12,cursor:"pointer",fontFamily:"inherit"}}>📤 Mark Sent</button>
+          )}
+          {live.status==="Sent"&&(<>
+            <button onClick={()=>updateStatus(live,"Accepted")} style={{background:C.green,color:"#fff",border:"none",borderRadius:8,padding:"8px 14px",fontWeight:700,fontSize:12,cursor:"pointer",fontFamily:"inherit"}}>✅ Approve</button>
+            <button onClick={()=>updateStatus(live,"Declined")} style={{background:C.red,color:"#fff",border:"none",borderRadius:8,padding:"8px 14px",fontWeight:700,fontSize:12,cursor:"pointer",fontFamily:"inherit"}}>✕ Decline</button>
+          </>)}
+          {live.status==="Accepted"&&(
+            <div style={{background:"#f0fdf4",border:`1px solid #bbf7d0`,borderRadius:8,padding:"8px 14px",fontSize:12,color:"#15803d",fontWeight:700}}>✅ Approved — inventory reserved</div>
+          )}
+          {live.status==="Declined"&&(
+            <button onClick={()=>updateStatus(live,"Draft")} style={{background:"none",border:`1px solid ${C.border}`,borderRadius:8,padding:"8px 14px",fontWeight:700,fontSize:12,cursor:"pointer",fontFamily:"inherit",color:C.sub}}>↩ Reopen as Draft</button>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // ── NEW QUOTE FORM ──
+  if(view==="new" && form) {
+    return (
+      <div>
+        <button onClick={backToList} style={{background:"none",border:`1px solid ${C.border}`,borderRadius:7,padding:"5px 10px",cursor:"pointer",fontSize:12,color:C.sub,fontFamily:"inherit",marginBottom:14}}>← Cancel</button>
+        <div style={{fontWeight:800,fontSize:14,color:C.text,marginBottom:14}}>New Quote · {form.ref}</div>
+
+        <div style={{background:"#fff",border:`1px solid ${C.border}`,borderRadius:12,padding:"14px",marginBottom:12}}>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:10}}>
+            <div>
+              <label style={{display:"block",color:C.sub,fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:0.5,marginBottom:4}}>Client</label>
+              <input value={form.client} onChange={e=>setForm(f=>({...f,client:e.target.value}))} style={inputStyle} placeholder="Client name"/>
+            </div>
+            <div>
+              <label style={{display:"block",color:C.sub,fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:0.5,marginBottom:4}}>Contact</label>
+              <input value={form.contact} onChange={e=>setForm(f=>({...f,contact:e.target.value}))} style={inputStyle} placeholder="Contact person"/>
+            </div>
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+            <div>
+              <label style={{display:"block",color:C.sub,fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:0.5,marginBottom:4}}>Quote Date</label>
+              <input type="date" value={form.date} onChange={e=>setForm(f=>({...f,date:e.target.value}))} style={inputStyle}/>
+            </div>
+            <div>
+              <label style={{display:"block",color:C.sub,fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:0.5,marginBottom:4}}>Expiry Date</label>
+              <input type="date" value={form.expiry} onChange={e=>setForm(f=>({...f,expiry:e.target.value}))} style={inputStyle}/>
+            </div>
+          </div>
+        </div>
+
+        {/* Line items */}
+        <div style={{background:"#fff",border:`1px solid ${C.border}`,borderRadius:12,padding:"14px",marginBottom:12}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+            <div style={{fontWeight:700,fontSize:12,color:C.sub,textTransform:"uppercase",letterSpacing:0.5}}>Line Items</div>
+            <button onClick={addLine} style={{background:C.accent,color:"#fff",border:"none",borderRadius:7,padding:"5px 12px",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>+ Add Line</button>
+          </div>
+          {form.items.length===0&&<div style={{color:C.muted,fontSize:13,textAlign:"center",padding:"16px 0"}}>No items yet — add a line</div>}
+          {form.items.map((ln,i)=>(
+            <div key={i} style={{background:C.raised,borderRadius:10,padding:"10px",marginBottom:8,border:`1px solid ${C.border}`}}>
+              <div style={{display:"flex",gap:6,marginBottom:8,alignItems:"flex-start"}}>
+                <input value={ln.desc} onChange={e=>updateLine(i,"desc",e.target.value)} placeholder="Description" style={{...inputStyle,flex:1}}/>
+                <button onClick={()=>removeLine(i)} style={{background:"none",border:"none",color:C.muted,fontSize:16,cursor:"pointer",flexShrink:0,paddingTop:6}}>✕</button>
+              </div>
+              <div style={{display:"grid",gridTemplateColumns:"auto 1fr 1fr auto",gap:6,alignItems:"center"}}>
+                <select value={ln.unit} onChange={e=>updateLine(i,"unit",e.target.value)} style={{...inputStyle,width:"auto"}}>
+                  {["each","hr","m","m²","set","lot"].map(u=><option key={u}>{u}</option>)}
+                </select>
+                <div>
+                  <label style={{display:"block",color:C.muted,fontSize:10,marginBottom:2}}>Qty</label>
+                  <input type="number" min="0" step="0.5" value={ln.qty} onChange={e=>updateLine(i,"qty",e.target.value)} style={inputStyle}/>
+                </div>
+                <div>
+                  <label style={{display:"block",color:C.muted,fontSize:10,marginBottom:2}}>Rate ($)</label>
+                  <input type="number" min="0" step="0.01" value={ln.rate} onChange={e=>updateLine(i,"rate",e.target.value)} style={inputStyle}/>
+                </div>
+                <div style={{textAlign:"right",paddingTop:14}}>
+                  <div style={{color:C.text,fontWeight:700,fontSize:13}}>{fmtMoney(ln.amount)}</div>
+                </div>
+              </div>
+            </div>
+          ))}
+          {form.items.length>0&&(
+            <div style={{display:"flex",justifyContent:"flex-end",paddingTop:10,borderTop:`2px solid ${C.border}`,marginTop:4}}>
+              <div style={{textAlign:"right"}}>
+                <div style={{color:C.sub,fontSize:11,fontWeight:700,textTransform:"uppercase"}}>Total</div>
+                <div style={{color:C.text,fontWeight:900,fontSize:20}}>{fmtMoney(form.total)}</div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <button onClick={saveQuote} disabled={!form.items.length}
+          style={{width:"100%",background:form.items.length?C.purple:"#e2e8f0",color:form.items.length?"#fff":C.muted,border:"none",borderRadius:10,padding:"12px",fontWeight:800,fontSize:14,cursor:form.items.length?"pointer":"default",fontFamily:"inherit"}}>
+          💾 Save Quote
+        </button>
+      </div>
+    );
+  }
+
+  // ── LIST VIEW ──
+  return (
+    <div>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+        <div style={{color:C.sub,fontSize:12}}>{jobQuotes.length} quote{jobQuotes.length!==1?"s":""} for this job</div>
+        <button onClick={openNew} style={{background:C.purple,color:"#fff",border:"none",borderRadius:8,padding:"7px 14px",fontWeight:700,fontSize:12,cursor:"pointer",fontFamily:"inherit"}}>+ New Quote</button>
+      </div>
+
+      {jobQuotes.length===0&&(
+        <div style={{textAlign:"center",padding:"32px 0",color:C.muted}}>
+          <div style={{fontSize:32,marginBottom:8}}>📝</div>
+          <div style={{fontSize:13,fontWeight:600,marginBottom:4}}>No quotes yet</div>
+          <div style={{fontSize:12}}>Create a quote to reserve inventory and send to the client</div>
+        </div>
+      )}
+
+      {jobQuotes.map(q=>(
+        <div key={q.id} onClick={()=>openDetail(q)}
+          style={{background:"#fff",border:`1px solid ${C.border}`,borderRadius:12,padding:"12px 14px",marginBottom:8,cursor:"pointer",transition:"border-color 0.15s"}}
+          onMouseEnter={e=>e.currentTarget.style.borderColor=C.accent}
+          onMouseLeave={e=>e.currentTarget.style.borderColor=C.border}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:6}}>
+            <div style={{display:"flex",gap:8,alignItems:"center"}}>
+              <span style={{color:C.accent,fontWeight:800,fontSize:12}}>{q.ref}</span>
+              <Badge label={q.status} color={statusCol(q.status)}/>
+            </div>
+            <span style={{color:C.text,fontWeight:900,fontSize:15}}>{fmtMoney(q.total)}</span>
+          </div>
+          <div style={{color:C.sub,fontSize:12}}>Expires {fmtDate(q.expiry)} · {q.items.length} item{q.items.length!==1?"s":""}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════
+   REPORTS PANE — tabbed Diary | Quotes | Reports
    Lives in the right pane of JobDrawer
 ═══════════════════════════════════════════ */
-function ReportsPane({job, onUpdate, onOpenAttachment, reportTemplates, fieldStaff, vendors, emailTemplates}) {
+function ReportsPane({job, onUpdate, onOpenAttachment, reportTemplates, fieldStaff, vendors, emailTemplates, quotes=[], setQuotes}) {
   const [activeTab, setActiveTab] = useState("diary");
   const [fillingTemplate, setFillingTemplate] = useState(null);
   const [viewReport, setViewReport] = useState(null);
@@ -4281,11 +4523,13 @@ function ReportsPane({job, onUpdate, onOpenAttachment, reportTemplates, fieldSta
     );
   }
 
+  const jobQuotes = quotes.filter(q => q.jobRef === job.ref);
+
   return (
     <div>
       {/* Tab switcher */}
       <div style={{display:"flex",gap:0,marginBottom:14,background:C.raised,border:`1px solid ${C.border}`,borderRadius:10,padding:3}}>
-        {[{id:"diary",icon:"📒",label:"Diary"},{id:"reports",icon:"📋",label:`Reports${reports.length>0?` (${reports.length})`:""}`}].map(t=>(
+        {[{id:"diary",icon:"📒",label:"Diary"},{id:"quotes",icon:"📝",label:`Quotes${jobQuotes.length>0?` (${jobQuotes.length})`:""}`},{id:"reports",icon:"📋",label:`Reports${reports.length>0?` (${reports.length})`:""}`}].map(t=>(
           <button key={t.id} onClick={()=>setActiveTab(t.id)}
             style={{flex:1,padding:"7px 12px",borderRadius:8,border:"none",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",
               background:activeTab===t.id?"#fff":"transparent",
@@ -4298,6 +4542,10 @@ function ReportsPane({job, onUpdate, onOpenAttachment, reportTemplates, fieldSta
 
       {activeTab==="diary"&&(
         <JobDiary job={job} onUpdate={onUpdate} onOpenAttachment={onOpenAttachment} emailTemplates={emailTemplates}/>
+      )}
+
+      {activeTab==="quotes"&&(
+        <JobQuotesSection job={job} quotes={quotes} setQuotes={setQuotes}/>
       )}
 
       {activeTab==="reports"&&(
@@ -4381,7 +4629,7 @@ function PdfViewer({file}) {
 /* ═══════════════════════════════════════════
    JOB DRAWER — slide-in panel, expandable
 ═══════════════════════════════════════════ */
-function JobDrawer({job, onClose, onUpdate, settings, companies, setCompanies, vendors}) {
+function JobDrawer({job, onClose, onUpdate, settings, companies, setCompanies, vendors, quotes=[], setQuotes}) {
   const [expanded, setExpanded] = useState(false);
   const {jobStages, jobSubStages, fieldStaff, jobTypes, reportTemplates=DEFAULT_REPORT_TEMPLATES, emailTemplates=DEFAULT_EMAIL_TEMPLATES, fieldForms=DEFAULT_FIELD_FORMS} = settings;
   const [applianceTypes, setApplianceTypes] = useState(DEFAULT_APPLIANCE_TYPES);
@@ -4620,7 +4868,7 @@ function JobDrawer({job, onClose, onUpdate, settings, companies, setCompanies, v
 
         {/* RIGHT — diary + reports tabs */}
         <div style={{flex:attachment?"0 0 280px":"1",overflowY:"auto",padding:"14px 14px 40px",minWidth:0,borderRight:attachment?`1px solid ${C.border}`:"none",transition:"flex 0.2s"}}>
-          <ReportsPane job={job} onUpdate={updateJob} onOpenAttachment={openAttachment} reportTemplates={reportTemplates} fieldStaff={fieldStaff} vendors={vendors} emailTemplates={emailTemplates}/>
+          <ReportsPane job={job} onUpdate={updateJob} onOpenAttachment={openAttachment} reportTemplates={reportTemplates} fieldStaff={fieldStaff} vendors={vendors} emailTemplates={emailTemplates} quotes={quotes} setQuotes={setQuotes}/>
         </div>{/* end diary pane */}
 
         {/* Attachment preview panel */}
@@ -4692,7 +4940,7 @@ function JobDrawer({job, onClose, onUpdate, settings, companies, setCompanies, v
 /* ═══════════════════════════════════════════
    JOB HISTORY
 ═══════════════════════════════════════════ */
-function HistoryTab({settings, companies, setCompanies, vendors}) {
+function HistoryTab({settings, companies, setCompanies, vendors, quotes=[], setQuotes}) {
   const {jobStages,jobSubStages,fieldStaff,jobTypes,setJobTypes} = settings;
   const allFlat = allJobs(companies);
   const closed = allFlat.filter(j=>j.status==="Closed");
@@ -4802,6 +5050,8 @@ function HistoryTab({settings, companies, setCompanies, vendors}) {
         companies={companies}
         setCompanies={setCompanies}
         vendors={vendors}
+        quotes={quotes}
+        setQuotes={setQuotes}
       />
     )}
 
@@ -6723,8 +6973,8 @@ function App() {
         {tab==="customers"&&<CustomersTab settings={settings} companies={companies} setCompanies={setCompanies}/>}
         {tab==="vendors"&&<VendorsTab vendors={vendors} setVendors={setVendors}/>}
         {tab==="products"&&<ProductsTab/>}
-        {tab==="dispatch"&&<DispatchTab settings={settings} companies={companies} setCompanies={setCompanies} vendors={vendors} fieldMode={fieldMode} setFieldMode={setFieldMode}/>}
-        {tab==="history"&&<HistoryTab settings={settings} companies={companies} setCompanies={setCompanies} vendors={vendors}/>}
+        {tab==="dispatch"&&<DispatchTab settings={settings} companies={companies} setCompanies={setCompanies} vendors={vendors} fieldMode={fieldMode} setFieldMode={setFieldMode} quotes={quotes} setQuotes={setQuotes}/>}
+        {tab==="history"&&<HistoryTab settings={settings} companies={companies} setCompanies={setCompanies} vendors={vendors} quotes={quotes} setQuotes={setQuotes}/>}
         {tab==="quotes"&&<QuotesTab quotes={quotes} setQuotes={setQuotes}/>}
         {tab==="invoices"&&<InvoicesTab/>}
         {tab==="inventory"&&<InventoryTab settings={settings} companies={companies} setCompanies={setCompanies} quotes={quotes}/>}
