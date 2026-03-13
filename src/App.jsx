@@ -2266,45 +2266,26 @@ function DispatchCalendar({jobs, allTechNames, onOpen}) {
 ═══════════════════════════════════════════ */
 
 /* ═══════════════════════════════════════════
-   GOOGLE MAPS LOADER
-   Uses the modern importLibrary pattern from Google's official docs.
-   Call loadGoogleMaps() once — safe to call multiple times.
+   GOOGLE MAPS LOADER — simple script tag, no async IIFE
 ═══════════════════════════════════════════ */
 function loadGoogleMaps() {
   if(GMAPS_KEY === "YOUR_GOOGLE_MAPS_API_KEY") return Promise.reject("no-key");
-  // Already loaded
-  if(window.google?.maps?.importLibrary) return Promise.resolve();
-  // Already loading
   if(window.__gmapsPromise__) return window.__gmapsPromise__;
 
   window.__gmapsPromise__ = new Promise((resolve, reject) => {
-    // Official Google Maps bootstrap loader snippet
-    (g => {
-      var h,a,k,p="The Google Maps JavaScript API",c="google",l="importLibrary",
-          q="__ib__",m=document,b=window;
-      b=b[c]||(b[c]={});
-      var d=b.maps||(b.maps={}),r=new Set,e=new URLSearchParams,
-          u=()=>h||(h=new Promise(async(f,n)=>{
-            a=m.createElement("script");
-            e.set("libraries",[...r]+"");
-            for(k in g) e.set(k.replace(/[A-Z]/g,t=>"_"+t[0].toLowerCase()),g[k]);
-            e.set("callback",c+".maps."+q);
-            a.src=`https://maps.${c}apis.com/maps/api/js?`+e;
-            d[q]=f; a.onerror=()=>h=n(Error(p+" could not load."));
-            a.nonce=m.querySelector("script[nonce]")?.nonce||"";
-            m.head.append(a);
-          }));
-      d[l]?console.warn(p+" only loads once. Ignoring:",g):d[l]=(f,...n)=>r.add(f)&&u().then(()=>d[l](f,...n));
-    })({key: GMAPS_KEY, v: "weekly"});
+    if(window.google && window.google.maps) { resolve(); return; }
 
-    // Poll until importLibrary is available
-    const iv = setInterval(() => {
-      if(window.google?.maps?.importLibrary) {
-        clearInterval(iv);
-        resolve();
-      }
-    }, 100);
-    setTimeout(() => { clearInterval(iv); reject(new Error("timeout")); }, 15000);
+    const callbackName = "__gmapsReady__";
+    window[callbackName] = resolve;
+
+    const script = document.createElement("script");
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${GMAPS_KEY}&libraries=places&callback=${callbackName}&loading=async`;
+    script.async = true;
+    script.defer = true;
+    script.onerror = () => reject(new Error("Google Maps failed to load"));
+    document.head.appendChild(script);
+
+    setTimeout(() => reject(new Error("timeout")), 15000);
   });
 
   return window.__gmapsPromise__;
@@ -2331,10 +2312,9 @@ function AddressAutocomplete({value, onChange, placeholder, required}) {
   useEffect(() => {
     let cancelled = false;
     loadGoogleMaps()
-      .then(() => google.maps.importLibrary("places"))
       .then(() => {
         if(cancelled || !inputRef.current || acRef.current) return;
-        acRef.current = new google.maps.places.Autocomplete(inputRef.current, {
+        acRef.current = new window.google.maps.places.Autocomplete(inputRef.current, {
           componentRestrictions: {country: "au"},
           fields: ["formatted_address", "address_components", "geometry"],
           types: ["address"],
@@ -2342,8 +2322,6 @@ function AddressAutocomplete({value, onChange, placeholder, required}) {
         acRef.current.addListener("place_changed", () => {
           const place = acRef.current.getPlace();
           if(!place.formatted_address) return;
-
-          // Build a clean AU address string from components
           let streetNum = "", route = "", suburb = "", state = "", postcode = "";
           for(const c of (place.address_components || [])) {
             const t = c.types[0];
@@ -2357,15 +2335,13 @@ function AddressAutocomplete({value, onChange, placeholder, required}) {
             [streetNum, route].filter(Boolean).join(" "),
             suburb, state, postcode
           ].filter(Boolean).join(", ");
-
           const lat = place.geometry?.location?.lat();
           const lng = place.geometry?.location?.lng();
           onChange(addr || place.formatted_address, lat && lng ? {lat, lng} : null);
         });
         if(!cancelled) setReady(true);
       })
-      .catch(() => {}); // no key or load error — silent fallback to plain input
-
+      .catch(() => {});
     return () => { cancelled = true; };
   }, []);
 
@@ -2416,12 +2392,11 @@ function DispatchMap({jobs, allTechNames, onOpen}) {
       .map(j => ({...j, coords: jobCoords(j)})),
   })).filter(r => r.stops.length > 0);
 
-  // Load Google Maps using the official importLibrary pattern
+  // Load Google Maps
   useEffect(() => {
     if(GMAPS_KEY === "YOUR_GOOGLE_MAPS_API_KEY") { setStatus("nokey"); return; }
     setStatus("loading");
     loadGoogleMaps()
-      .then(() => google.maps.importLibrary("maps"))
       .then(() => setStatus("ready"))
       .catch(() => setStatus("error"));
   }, []);
@@ -2429,27 +2404,25 @@ function DispatchMap({jobs, allTechNames, onOpen}) {
   // Init map once status=ready and div is mounted
   useEffect(() => {
     if(status !== "ready" || !mapDivRef.current || gMapRef.current) return;
-    google.maps.importLibrary("maps").then(({Map}) => {
-      gMapRef.current = new Map(mapDivRef.current, {
-        center: {lat: -33.83, lng: 150.95},
-        zoom: 10,
-        mapTypeId: "roadmap",
-        streetViewControl: false,
-        mapTypeControl: false,
-        fullscreenControl: true,
-        styles: [
-          {elementType:"geometry",       stylers:[{color:"#1a2744"}]},
-          {elementType:"labels.text.fill",stylers:[{color:"#8ec3b9"}]},
-          {elementType:"labels.text.stroke",stylers:[{color:"#1a3646"}]},
-          {featureType:"road",elementType:"geometry",stylers:[{color:"#304a7d"}]},
-          {featureType:"road.highway",elementType:"geometry",stylers:[{color:"#2c6675"}]},
-          {featureType:"water",elementType:"geometry",stylers:[{color:"#0e1626"}]},
-          {featureType:"poi",stylers:[{visibility:"off"}]},
-          {featureType:"transit",stylers:[{visibility:"off"}]},
-        ],
-      });
-      infoWinRef.current = new google.maps.InfoWindow();
+    gMapRef.current = new window.google.maps.Map(mapDivRef.current, {
+      center: {lat: -33.83, lng: 150.95},
+      zoom: 10,
+      mapTypeId: "roadmap",
+      streetViewControl: false,
+      mapTypeControl: false,
+      fullscreenControl: true,
+      styles: [
+        {elementType:"geometry",        stylers:[{color:"#1a2744"}]},
+        {elementType:"labels.text.fill",stylers:[{color:"#8ec3b9"}]},
+        {elementType:"labels.text.stroke",stylers:[{color:"#1a3646"}]},
+        {featureType:"road",elementType:"geometry",stylers:[{color:"#304a7d"}]},
+        {featureType:"road.highway",elementType:"geometry",stylers:[{color:"#2c6675"}]},
+        {featureType:"water",elementType:"geometry",stylers:[{color:"#0e1626"}]},
+        {featureType:"poi",stylers:[{visibility:"off"}]},
+        {featureType:"transit",stylers:[{visibility:"off"}]},
+      ],
     });
+    infoWinRef.current = new window.google.maps.InfoWindow();
   }, [status]);
 
   // Draw/redraw markers and polylines whenever routes change
@@ -2463,7 +2436,7 @@ function DispatchMap({jobs, allTechNames, onOpen}) {
 
   function drawMarkers() {
     if(!gMapRef.current) return;
-    const gm = google.maps;
+    const gm = window.google.maps;
 
     markersRef.current.forEach(m => m.setMap(null));
     polylinesRef.current.forEach(p => p.setMap(null));
