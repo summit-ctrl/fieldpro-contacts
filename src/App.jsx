@@ -1,4 +1,4 @@
-import { useState, useEffect, Component } from "react";
+import { useState, useEffect, useRef, Component } from "react";
 
 class ErrorBoundary extends Component {
   constructor(props) { super(props); this.state = {error:null}; }
@@ -2305,8 +2305,8 @@ function loadGoogleMaps() {
      required    bool
 ═══════════════════════════════════════════ */
 function AddressAutocomplete({value, onChange, placeholder, required}) {
-  const inputRef = React.useRef(null);
-  const acRef    = React.useRef(null);
+  const inputRef = useRef(null);
+  const acRef    = useRef(null);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
@@ -2374,11 +2374,11 @@ function AddressAutocomplete({value, onChange, placeholder, required}) {
    Google Maps when key is set, friendly placeholder when not.
 ═══════════════════════════════════════════ */
 function DispatchMap({jobs, allTechNames, onOpen}) {
-  const mapDivRef    = React.useRef(null);
-  const gMapRef      = React.useRef(null);
-  const markersRef   = React.useRef([]);
-  const polylinesRef = React.useRef([]);
-  const infoWinRef   = React.useRef(null);
+  const mapDivRef    = useRef(null);
+  const gMapRef      = useRef(null);
+  const markersRef   = useRef([]);
+  const polylinesRef = useRef([]);
+  const infoWinRef   = useRef(null);
   const [status, setStatus] = useState("idle"); // idle | loading | ready | error | nokey
 
   const openJobs = jobs.filter(j => j.status === "Open");
