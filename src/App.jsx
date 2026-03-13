@@ -1673,90 +1673,16 @@ function FieldMode({job, fieldStaff, fieldForms, onClose, onJobUpdate}) {
         )}
 
         {/* Inline form filler */}
-        {activeFormId&&(()=>{
-          const form = (fieldForms||[]).find(f=>f.id===activeFormId);
-          if(!form) return null;
-          const ans = formAnswers[activeFormId]||{};
-          const setAns = (qId,val) => setFormAnswers(prev=>({...prev,[activeFormId]:{...(prev[activeFormId]||{}),[qId]:val}}));
-          const mandatoryDone = form.questions.filter(q=>q.mandatory).every(q=>ans[q.id]);
-          const submitForm = () => {
-            setCompletedForms(prev=>[...prev.filter(x=>x!==form.id),form.id]);
-            setActiveFormId(null);
-          };
-          return(
-            <div style={{position:"fixed",inset:0,background:"#0f172a",zIndex:1100,overflowY:"auto",fontFamily:"'Inter','Segoe UI',sans-serif",color:"#f1f5f9"}}>
-              <div style={{padding:"16px 20px",borderBottom:"1px solid rgba(255,255,255,0.08)",display:"flex",alignItems:"center",gap:12,position:"sticky",top:0,background:"#0f172a",zIndex:1}}>
-                <button onClick={()=>setActiveFormId(null)} style={{background:"none",border:"none",color:"#94a3b8",fontSize:20,cursor:"pointer",fontFamily:"inherit",padding:0}}>←</button>
-                <div style={{flex:1}}>
-                  <div style={{fontWeight:800,fontSize:15}}>{form.name}</div>
-                  <div style={{fontSize:11,color:"#64748b"}}>{job.ref} · {form.questions.length} questions</div>
-                </div>
-              </div>
-              <div style={{padding:"20px",maxWidth:520,margin:"0 auto",display:"flex",flexDirection:"column",gap:16}}>
-                {form.questions.map((q,qi)=>{
-                  const val = ans[q.id];
-                  return(
-                    <div key={q.id} style={{background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:14,padding:"16px 18px"}}>
-                      <div style={{fontSize:13,fontWeight:700,marginBottom:4,lineHeight:1.4}}>
-                        {qi+1}. {q.text}
-                        {q.mandatory&&<span style={{color:"#f87171",marginLeft:4}}>*</span>}
-                      </div>
-                      <div style={{fontSize:10,color:"#475569",marginBottom:10,textTransform:"uppercase",letterSpacing:0.5}}>{FORM_Q_TYPES.find(t=>t.id===q.type)?.icon} {q.type}</div>
-
-                      {q.type==="yesno"&&(
-                        <div style={{display:"flex",gap:8}}>
-                          {["Yes","No"].map(opt=>(
-                            <button key={opt} onClick={()=>setAns(q.id,opt)}
-                              style={{flex:1,padding:"10px",borderRadius:10,border:`2px solid ${val===opt?(opt==="Yes"?"#22c55e":"#ef4444"):"rgba(255,255,255,0.15)"}`,background:val===opt?(opt==="Yes"?"rgba(34,197,94,0.15)":"rgba(239,68,68,0.15)"):"transparent",color:val===opt?(opt==="Yes"?"#4ade80":"#fca5a5"):"#94a3b8",fontWeight:700,fontSize:14,cursor:"pointer",fontFamily:"inherit"}}>
-                              {opt==="Yes"?"✓ Yes":"✗ No"}
-                            </button>
-                          ))}
-                        </div>
-                      )}
-
-                      {q.type==="multi"&&(
-                        <div style={{display:"flex",flexDirection:"column",gap:6}}>
-                          {(q.options||[]).map(opt=>(
-                            <button key={opt} onClick={()=>setAns(q.id,opt)}
-                              style={{textAlign:"left",padding:"10px 14px",borderRadius:10,border:`2px solid ${val===opt?"#0ea5e9":"rgba(255,255,255,0.1)"}`,background:val===opt?"rgba(14,165,233,0.15)":"transparent",color:val===opt?"#7dd3fc":"#94a3b8",fontSize:13,fontWeight:val===opt?700:400,cursor:"pointer",fontFamily:"inherit"}}>
-                              {val===opt?"✓ ":""}{opt}
-                            </button>
-                          ))}
-                        </div>
-                      )}
-
-                      {(q.type==="text"||q.type==="number")&&(
-                        q.type==="text"
-                          ? <textarea rows={3} value={val||""} onChange={e=>setAns(q.id,e.target.value)}
-                              placeholder="Type your answer…"
-                              style={{width:"100%",background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:8,padding:"10px 12px",color:"#f1f5f9",fontSize:13,fontFamily:"inherit",resize:"vertical",boxSizing:"border-box"}}/>
-                          : <input type="number" value={val||""} onChange={e=>setAns(q.id,e.target.value)}
-                              placeholder="Enter number…"
-                              style={{width:"100%",background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:8,padding:"10px 12px",color:"#f1f5f9",fontSize:13,fontFamily:"inherit",boxSizing:"border-box"}}/>
-                      )}
-
-                      {q.type==="photo"&&(
-                        <div>
-                          <label style={{display:"inline-flex",alignItems:"center",gap:8,background:"rgba(14,165,233,0.15)",border:"1px solid rgba(14,165,233,0.3)",borderRadius:10,padding:"10px 16px",cursor:"pointer",fontSize:13,fontWeight:700,color:"#7dd3fc"}}>
-                            📷 {val?"Photo captured ✓":"Take Photo"}
-                            <input type="file" accept="image/*" capture="environment" style={{display:"none"}}
-                              onChange={e=>{if(e.target.files[0]){const r=new FileReader();r.onload=ev=>setAns(q.id,ev.target.result);r.readAsDataURL(e.target.files[0]);}}}/>
-                          </label>
-                          {val&&<img src={val} alt="captured" style={{marginTop:10,width:"100%",borderRadius:8,maxHeight:200,objectFit:"cover"}}/>}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-                <button onClick={submitForm} disabled={!mandatoryDone}
-                  style={{background:mandatoryDone?"#0ea5e9":"#334155",color:"#fff",border:"none",borderRadius:14,padding:"16px",fontSize:15,fontWeight:800,cursor:mandatoryDone?"pointer":"not-allowed",fontFamily:"inherit",marginTop:8}}>
-                  {mandatoryDone?"✓ Submit Form":"Complete required questions first"}
-                </button>
-                <div style={{height:40}}/>
-              </div>
-            </div>
-          );
-        })()}
+        {activeFormId&&(
+          <FieldFormFiller
+            form={(fieldForms||[]).find(f=>f.id===activeFormId)||null}
+            jobRef={job.ref}
+            answers={formAnswers[activeFormId]||{}}
+            onAnswer={(qId,val)=>setFormAnswers(prev=>({...prev,[activeFormId]:{...(prev[activeFormId]||{}),[qId]:val}}))}
+            onSubmit={()=>{setCompletedForms(prev=>[...prev.filter(x=>x!==activeFormId),activeFormId]);setActiveFormId(null);}}
+            onBack={()=>setActiveFormId(null)}
+          />
+        )}
 
         {/* Outcome */}
         <div style={S.card}>
@@ -1839,6 +1765,100 @@ function FieldMode({job, fieldStaff, fieldForms, onClose, onJobUpdate}) {
     );
   }
   return null;
+}
+
+/* ═══════════════════════════════════════════
+   FIELD FORM FILLER (extracted from FieldMode to avoid IIFE)
+═══════════════════════════════════════════ */
+function FieldFormFiller({form, jobRef, answers, onAnswer, onSubmit, onBack}) {
+  if(!form) return null;
+  const mandatoryDone = form.questions.filter(q=>q.mandatory).every(q=>answers[q.id]);
+  return(
+    <div style={{position:"fixed",inset:0,background:"#0f172a",zIndex:1100,overflowY:"auto",fontFamily:"'Inter','Segoe UI',sans-serif",color:"#f1f5f9"}}>
+      <div style={{padding:"16px 20px",borderBottom:"1px solid rgba(255,255,255,0.08)",display:"flex",alignItems:"center",gap:12,position:"sticky",top:0,background:"#0f172a",zIndex:1}}>
+        <button onClick={onBack} style={{background:"none",border:"none",color:"#94a3b8",fontSize:20,cursor:"pointer",fontFamily:"inherit",padding:0}}>←</button>
+        <div style={{flex:1}}>
+          <div style={{fontWeight:800,fontSize:15}}>{form.name}</div>
+          <div style={{fontSize:11,color:"#64748b"}}>{jobRef} · {form.questions.length} questions</div>
+        </div>
+      </div>
+      <div style={{padding:"20px",maxWidth:520,margin:"0 auto",display:"flex",flexDirection:"column",gap:16}}>
+        {form.questions.map((q,qi)=>{
+          const val = answers[q.id];
+          return(
+            <div key={q.id} style={{background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:14,padding:"16px 18px"}}>
+              <div style={{fontSize:13,fontWeight:700,marginBottom:4,lineHeight:1.4}}>
+                {qi+1}. {q.text}
+                {q.mandatory&&<span style={{color:"#f87171",marginLeft:4}}>*</span>}
+              </div>
+              <div style={{fontSize:10,color:"#475569",marginBottom:10,textTransform:"uppercase",letterSpacing:0.5}}>{FORM_Q_TYPES.find(t=>t.id===q.type)?.icon} {q.type}</div>
+              {q.type==="yesno"&&(
+                <div style={{display:"flex",gap:8}}>
+                  {["Yes","No"].map(opt=>(
+                    <button key={opt} onClick={()=>onAnswer(q.id,opt)}
+                      style={{flex:1,padding:"10px",borderRadius:10,border:`2px solid ${val===opt?(opt==="Yes"?"#22c55e":"#ef4444"):"rgba(255,255,255,0.15)"}`,background:val===opt?(opt==="Yes"?"rgba(34,197,94,0.15)":"rgba(239,68,68,0.15)"):"transparent",color:val===opt?(opt==="Yes"?"#4ade80":"#fca5a5"):"#94a3b8",fontWeight:700,fontSize:14,cursor:"pointer",fontFamily:"inherit"}}>
+                      {opt==="Yes"?"✓ Yes":"✗ No"}
+                    </button>
+                  ))}
+                </div>
+              )}
+              {q.type==="multi"&&(
+                <div style={{display:"flex",flexDirection:"column",gap:6}}>
+                  {(q.options||[]).map(opt=>(
+                    <button key={opt} onClick={()=>onAnswer(q.id,opt)}
+                      style={{textAlign:"left",padding:"10px 14px",borderRadius:10,border:`2px solid ${val===opt?"#0ea5e9":"rgba(255,255,255,0.1)"}`,background:val===opt?"rgba(14,165,233,0.15)":"transparent",color:val===opt?"#7dd3fc":"#94a3b8",fontSize:13,fontWeight:val===opt?700:400,cursor:"pointer",fontFamily:"inherit"}}>
+                      {val===opt?"✓ ":""}{opt}
+                    </button>
+                  ))}
+                </div>
+              )}
+              {(q.type==="text"||q.type==="number")&&(
+                q.type==="text"
+                  ? <textarea rows={3} value={val||""} onChange={e=>onAnswer(q.id,e.target.value)} placeholder="Type your answer…"
+                      style={{width:"100%",background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:8,padding:"10px 12px",color:"#f1f5f9",fontSize:13,fontFamily:"inherit",resize:"vertical",boxSizing:"border-box"}}/>
+                  : <input type="number" value={val||""} onChange={e=>onAnswer(q.id,e.target.value)} placeholder="Enter number…"
+                      style={{width:"100%",background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:8,padding:"10px 12px",color:"#f1f5f9",fontSize:13,fontFamily:"inherit",boxSizing:"border-box"}}/>
+              )}
+              {q.type==="photo"&&(
+                <div>
+                  <label style={{display:"inline-flex",alignItems:"center",gap:8,background:"rgba(14,165,233,0.15)",border:"1px solid rgba(14,165,233,0.3)",borderRadius:10,padding:"10px 16px",cursor:"pointer",fontSize:13,fontWeight:700,color:"#7dd3fc"}}>
+                    📷 {val?"Photo captured ✓":"Take Photo"}
+                    <input type="file" accept="image/*" capture="environment" style={{display:"none"}}
+                      onChange={e=>{if(e.target.files[0]){const r=new FileReader();r.onload=ev=>onAnswer(q.id,ev.target.result);r.readAsDataURL(e.target.files[0]);}}}/>
+                  </label>
+                  {val&&<img src={val} alt="captured" style={{marginTop:10,width:"100%",borderRadius:8,maxHeight:200,objectFit:"cover"}}/>}
+                </div>
+              )}
+            </div>
+          );
+        })}
+        <button onClick={onSubmit} disabled={!mandatoryDone}
+          style={{background:mandatoryDone?"#0ea5e9":"#334155",color:"#fff",border:"none",borderRadius:14,padding:"16px",fontSize:15,fontWeight:800,cursor:mandatoryDone?"pointer":"not-allowed",fontFamily:"inherit",marginTop:8}}>
+          {mandatoryDone?"✓ Submit Form":"Complete required questions first"}
+        </button>
+        <div style={{height:40}}/>
+      </div>
+    </div>
+  );
+}
+
+/* Map tooltip SVG element (extracted to avoid IIFE in JSX) */
+function MapJobTooltip({job, project, allTechNames, mapW, mapH}) {
+  const p = project(job.coords);
+  const ti = allTechNames.indexOf(job.tech);
+  const col = TECH_COLORS[ti%TECH_COLORS.length]||"#64748b";
+  const tx = Math.min(p.x, mapW-180);
+  const ty = p.y>mapH/2 ? p.y-75 : p.y+18;
+  const addrShort = (job.address||"").length>26 ? (job.address||"").slice(0,26)+"…" : (job.address||"");
+  return(
+    <g>
+      <rect x={tx} y={ty} width={175} height={65} rx={8} fill="#0f172a" stroke={col} strokeWidth={1.5}/>
+      <text x={tx+10} y={ty+18} fontSize={11} fill={col} fontWeight="bold" fontFamily="sans-serif">{job.ref} · {job.scheduledTime||"Unscheduled"}</text>
+      <text x={tx+10} y={ty+32} fontSize={10} fill="#94a3b8" fontFamily="sans-serif">{addrShort}</text>
+      <text x={tx+10} y={ty+46} fontSize={10} fill="#64748b" fontFamily="sans-serif">{job.tech}</text>
+      <text x={tx+10} y={ty+58} fontSize={9} fill="#475569" fontFamily="sans-serif">Click to open</text>
+    </g>
+  );
 }
 
 /* ═══════════════════════════════════════════
@@ -2286,22 +2306,7 @@ function DispatchMap({jobs, allTechNames, onOpen}) {
             })}
 
             {/* Hovered job tooltip */}
-            {hoveredJob&&(()=>{
-              const p = project(hoveredJob.coords);
-              const ti = allTechNames.indexOf(hoveredJob.tech);
-              const col = TECH_COLORS[ti%TECH_COLORS.length]||"#64748b";
-              const tx = Math.min(p.x, MAP_W-180);
-              const ty = p.y>MAP_H/2 ? p.y-75 : p.y+18;
-              return(
-                <g>
-                  <rect x={tx} y={ty} width={175} height={65} rx={8} fill="#0f172a" stroke={col} strokeWidth={1.5}/>
-                  <text x={tx+10} y={ty+18} fontSize={11} fill={col} fontWeight="bold" fontFamily="sans-serif">{hoveredJob.ref} · {hoveredJob.scheduledTime||"Unscheduled"}</text>
-                  <text x={tx+10} y={ty+32} fontSize={10} fill="#94a3b8" fontFamily="sans-serif">{(hoveredJob.address||"").slice(0,26)}…</text>
-                  <text x={tx+10} y={ty+46} fontSize={10} fill="#64748b" fontFamily="sans-serif">{hoveredJob.tech}</text>
-                  <text x={tx+10} y={ty+58} fontSize={9} fill="#475569" fontFamily="sans-serif">Click to open</text>
-                </g>
-              );
-            })()}
+            {hoveredJob&&<MapJobTooltip job={hoveredJob} project={project} allTechNames={allTechNames} mapW={MAP_W} mapH={MAP_H}/>}
           </svg>
         </div>
 
