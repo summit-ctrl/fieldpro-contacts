@@ -97,17 +97,17 @@ const SEED_COMPANIES = [
         agents:[
           {id:"a1",name:"James Okafor",email:"jokafor@raywhite.com",phone:"0412 111 222",properties:12,
             jobs:[
-              {id:"j1",ref:"1001",type:"Plumbing",address:"22 Oak St, Parramatta NSW",description:"Leaking tap in kitchen and bathroom",tech:"Jake Rivera",keyMethod:"other",keyNotes:"Key in lockbox – code 4421",createdDate:"2026-03-01",status:"Open",stage:"In Progress",subStage:"Waiting on tenant",closedDate:null,tenants:[{id:"t1",name:"Wei & Fang Liu",email:"wliu@gmail.com",phone:"0400 111 333"}],appliances:[{id:"ap1",appType:"Dishwasher",brand:"Bosch",model:"SMS46KI01A",serial:"BSH2024-001",condition:"Leaking from door seal"}],additionalWorks:[{id:"aw1",description:"Add power point",custom:false,notes:"Behind dishwasher cavity"}]},
+              {id:"j1",ref:"1001",type:"Plumbing",address:"22 Oak St, Parramatta NSW",scheduledTime:"09:00",durationHrs:1.5,lat:-33.8150,lng:151.0011,description:"Leaking tap in kitchen and bathroom",tech:"Jake Rivera",keyMethod:"other",keyNotes:"Key in lockbox – code 4421",createdDate:"2026-03-01",status:"Open",stage:"In Progress",subStage:"Waiting on tenant",closedDate:null,tenants:[{id:"t1",name:"Wei & Fang Liu",email:"wliu@gmail.com",phone:"0400 111 333"}],appliances:[{id:"ap1",appType:"Dishwasher",brand:"Bosch",model:"SMS46KI01A",serial:"BSH2024-001",condition:"Leaking from door seal"}],additionalWorks:[{id:"aw1",description:"Add power point",custom:false,notes:"Behind dishwasher cavity"}]},
               {id:"j2",ref:"1002",type:"Electrical",address:"7/15 Church St, Parramatta NSW",description:"Power point replacement x3",tech:"Tom Yuen",keyMethod:"office",keyNotes:"Ask for Maria at reception",createdDate:"2026-02-10",status:"Closed",stage:"Invoiced",subStage:"",closedDate:"2026-02-20",tenants:[{id:"t2",name:"Priya Menon",email:"pmenon@hotmail.com",phone:"0400 222 444"}],appliances:[],additionalWorks:[{id:"aw2",description:"Replace cables",custom:false,notes:"3x double GPO"},{id:"aw3",description:"Update circuit breaker",custom:false,notes:""}]},
               {id:"j3",ref:"1003",type:"HVAC",address:"22 Oak St, Parramatta NSW",description:"AC unit not cooling – full service",tech:"Maria Flores",keyMethod:"tenant",keyNotes:"Call 30 mins prior",createdDate:"2025-11-15",status:"Closed",stage:"Completed",subStage:"Follow-up required",closedDate:"2025-11-20",tenants:[{id:"t1",name:"Wei & Fang Liu",email:"wliu@gmail.com",phone:"0400 111 333"},{id:"t2",name:"Priya Menon",email:"pmenon@hotmail.com",phone:"0400 222 444"}],appliances:[{id:"ap2",appType:"Cooktop – Gas",brand:"Smeg",model:"SR264GH",serial:"SMG2022-887",condition:"One burner igniter faulty"},{id:"ap3",appType:"Oven",brand:"Smeg",model:"SF6341GVX",serial:"SMG2022-888",condition:"Good – general service"}],additionalWorks:[]},
             ]},
           {id:"a2",name:"Sofia Reyes",email:"sreyes@raywhite.com",phone:"0413 333 444",properties:8,
-            jobs:[{id:"j4",ref:"1004",type:"Plumbing",address:"3 Rose Ave, Parramatta NSW",description:"Hot water system replacement",tech:"Anita Shaw",keyMethod:"office",keyNotes:"",createdDate:"2026-03-05",status:"Open",stage:"Scheduled",subStage:"",closedDate:null,tenants:[{id:"t3",name:"Ahmed & Sara Hassan",email:"ahassan@gmail.com",phone:"0400 333 555"}],appliances:[],additionalWorks:[{id:"aw4",description:"Close off gas (gas shutdown)",custom:false,notes:"Old HWS – gas line to be capped"}]}]},
+            jobs:[{id:"j4",ref:"1004",type:"Plumbing",address:"3 Rose Ave, Parramatta NSW",scheduledTime:"11:00",durationHrs:2,lat:-33.8140,lng:151.0030,description:"Hot water system replacement",tech:"Anita Shaw",keyMethod:"office",keyNotes:"",createdDate:"2026-03-05",status:"Open",stage:"Scheduled",subStage:"",closedDate:null,tenants:[{id:"t3",name:"Ahmed & Sara Hassan",email:"ahassan@gmail.com",phone:"0400 333 555"}],appliances:[],additionalWorks:[{id:"aw4",description:"Close off gas (gas shutdown)",custom:false,notes:"Old HWS – gas line to be capped"}]}]},
         ]},
-      {id:"b2",name:"Ray White Blacktown",address:"1 Flushcombe Rd, Blacktown NSW 2148",phone:"(02) 9622 4400",email:"blacktown@raywhite.com",billing:{name:"Tom Nguyen",email:"tnguyen@raywhite.com",phone:"(02) 9622 4401"},agents:[{id:"a3",name:"Mia Chang",email:"mchang@raywhite.com",phone:"0414 555 666",properties:15,jobs:[{id:"j5",ref:"1005",type:"Electrical",address:"12 Main St, Blacktown NSW",description:"Smoke alarm replacement x4",tech:"Tom Yuen",keyMethod:"tenant",keyNotes:"Tenant works from home",createdDate:"2026-03-09",status:"Open",stage:"New",subStage:"",closedDate:null,tenants:[{id:"t4",name:"Carlos Fernandez",email:"cfernandez@gmail.com",phone:"0400 444 666"}],appliances:[],additionalWorks:[{id:"aw5",description:"Smoke alarm replacement",custom:false,notes:"4x units throughout"}]}]}]},
+      {id:"b2",name:"Ray White Blacktown",address:"1 Flushcombe Rd, Blacktown NSW 2148",phone:"(02) 9622 4400",email:"blacktown@raywhite.com",billing:{name:"Tom Nguyen",email:"tnguyen@raywhite.com",phone:"(02) 9622 4401"},agents:[{id:"a3",name:"Mia Chang",email:"mchang@raywhite.com",phone:"0414 555 666",properties:15,jobs:[{id:"j5",ref:"1005",type:"Electrical",address:"12 Main St, Blacktown NSW",scheduledTime:"08:00",durationHrs:1.5,lat:-33.7690,lng:150.9054,description:"Smoke alarm replacement x4",tech:"Tom Yuen",keyMethod:"tenant",keyNotes:"Tenant works from home",createdDate:"2026-03-09",status:"Open",stage:"New",subStage:"",closedDate:null,tenants:[{id:"t4",name:"Carlos Fernandez",email:"cfernandez@gmail.com",phone:"0400 444 666"}],appliances:[],additionalWorks:[{id:"aw5",description:"Smoke alarm replacement",custom:false,notes:"4x units throughout"}]}]}]},
     ]},
   {id:"c2",name:"LJ Hooker Corporate",abn:"31 000 007 922",phone:"(02) 8244 4444",email:"accounts@ljhooker.com.au",website:"ljhooker.com.au",status:"Active",
-    branches:[{id:"b3",name:"LJ Hooker Penrith",address:"345 High St, Penrith NSW 2750",phone:"(02) 4732 1100",email:"penrith@ljhooker.com.au",billing:{name:"Rachel Park",email:"rpark@ljhooker.com.au",phone:"(02) 4732 1101"},agents:[{id:"a4",name:"David Tran",email:"dtran@ljhooker.com.au",phone:"0415 777 888",properties:10,jobs:[{id:"j6",ref:"1006",type:"HVAC",address:"88 Woodriff St, Penrith NSW",description:"Split system install – bedroom",tech:"Maria Flores",keyMethod:"tenant",keyNotes:"Call Maya on 0400 555 777",createdDate:"2026-03-08",status:"Open",stage:"On Hold",subStage:"Parts ordered",closedDate:null,tenants:[{id:"t5",name:"Maya & Luke Patel",email:"mpatel@gmail.com",phone:"0400 555 777"}],appliances:[{id:"ap4",appType:"Washing Machine",brand:"Samsung",model:"WW80T504DAW",serial:"SAM2023-441",condition:"Not spinning – needs service"}],additionalWorks:[]}]}]}]},
+    branches:[{id:"b3",name:"LJ Hooker Penrith",address:"345 High St, Penrith NSW 2750",phone:"(02) 4732 1100",email:"penrith@ljhooker.com.au",billing:{name:"Rachel Park",email:"rpark@ljhooker.com.au",phone:"(02) 4732 1101"},agents:[{id:"a4",name:"David Tran",email:"dtran@ljhooker.com.au",phone:"0415 777 888",properties:10,jobs:[{id:"j6",ref:"1006",type:"HVAC",address:"88 Woodriff St, Penrith NSW",scheduledTime:"10:00",durationHrs:3,lat:-33.7510,lng:150.6942,description:"Split system install – bedroom",tech:"Maria Flores",keyMethod:"tenant",keyNotes:"Call Maya on 0400 555 777",createdDate:"2026-03-08",status:"Open",stage:"On Hold",subStage:"Parts ordered",closedDate:null,tenants:[{id:"t5",name:"Maya & Luke Patel",email:"mpatel@gmail.com",phone:"0400 555 777"}],appliances:[{id:"ap4",appType:"Washing Machine",brand:"Samsung",model:"WW80T504DAW",serial:"SAM2023-441",condition:"Not spinning – needs service"}],additionalWorks:[]}]}]}]},
 ];
 
 const SEED_VENDORS = [
@@ -1842,75 +1842,500 @@ function FieldMode({job, fieldStaff, fieldForms, onClose, onJobUpdate}) {
 }
 
 /* ═══════════════════════════════════════════
-   DISPATCH BOARD
+   DISPATCH BOARD — Board / Calendar / Map views
 ═══════════════════════════════════════════ */
+
+// Colour palette per tech (cycles)
+const TECH_COLORS = ["#3b82f6","#f97316","#10b981","#8b5cf6","#ec4899","#14b8a6","#f59e0b","#6366f1"];
+const techColor = (techName, allTechs) => {
+  const idx = allTechs.indexOf(techName);
+  return TECH_COLORS[idx % TECH_COLORS.length] || "#64748b";
+};
+
+// Approx Sydney suburb coords for jobs without lat/lng
+const SUBURB_COORDS = {
+  "parramatta":{lat:-33.8150,lng:151.0011},
+  "blacktown":{lat:-33.7690,lng:150.9054},
+  "penrith":{lat:-33.7510,lng:150.6942},
+  "sydney":{lat:-33.8688,lng:151.2093},
+  "chatswood":{lat:-33.7969,lng:151.1808},
+  "hornsby":{lat:-33.7028,lng:151.0988},
+  "liverpool":{lat:-33.9200,lng:150.9231},
+  "campbelltown":{lat:-34.0651,lng:150.8141},
+};
+
+const jobCoords = (job) => {
+  if(job.lat && job.lng) return {lat:job.lat, lng:job.lng};
+  const addr = (job.address||"").toLowerCase();
+  for(const [suburb, coords] of Object.entries(SUBURB_COORDS)){
+    if(addr.includes(suburb)) return coords;
+  }
+  // Jitter around Sydney CBD as fallback
+  return {lat:-33.8688 + (Math.random()-0.5)*0.15, lng:151.2093 + (Math.random()-0.5)*0.15};
+};
+
+// Calendar helpers
+const timeToMinutes = t => { if(!t) return null; const [h,m]=(t||"").split(":").map(Number); return h*60+(m||0); };
+const minutesToTime = m => { const h=Math.floor(m/60); const min=m%60; return `${String(h).padStart(2,"0")}:${String(min).padStart(2,"0")}`; };
+const CAL_START = 7*60; // 7am
+const CAL_END   = 19*60; // 7pm
+const CAL_SPAN  = CAL_END - CAL_START;
+
 function DispatchTab({settings, companies, setCompanies, fieldMode, setFieldMode}) {
   const jobs = allJobs(companies);
   const open = jobs.filter(j=>j.status==="Open");
-  const techs = [...new Set(open.map(j=>j.tech||"Unassigned"))];
+  const allTechNames = [...new Set(open.map(j=>j.tech).filter(Boolean))].sort();
+  const [dispView, setDispView] = useState("board"); // "board"|"calendar"|"map"
   const [filter,setFilter]=useState("All");
-  const [stageFilter,setStageFilter]=useState("All");
   const [search,setSearch]=useState("");
-  const {jobStages} = settings;
+  const [drawerJob, setDrawerJob] = useState(null);
+  const {jobStages, fieldStaff} = settings;
+
+  const updateJob = (updated) => {
+    setCompanies(prev => prev.map(co=>({...co, branches:co.branches.map(b=>({...b, agents:b.agents.map(a=>({...a, jobs:(a.jobs||[]).map(j=>j.id===updated.id?updated:j)}))}))})));
+    setDrawerJob(updated);
+  };
+
+  const liveDrawerJob = drawerJob ? allJobs(companies).find(j=>j.id===drawerJob.id)||drawerJob : null;
 
   const filtered = open.filter(j=>{
     const matchTech = filter==="All" || (j.tech||"Unassigned")===filter;
-    const matchStage = stageFilter==="All" || j.stage===stageFilter;
-    const matchSearch = !search || j.ref.toLowerCase().includes(search.toLowerCase()) || j.address.toLowerCase().includes(search.toLowerCase()) || (j.tech||"").toLowerCase().includes(search.toLowerCase());
-    return matchTech && matchStage && matchSearch;
+    const matchSearch = !search || j.ref.toLowerCase().includes(search.toLowerCase()) || (j.address||"").toLowerCase().includes(search.toLowerCase()) || (j.tech||"").toLowerCase().includes(search.toLowerCase());
+    return matchTech && matchSearch;
   });
 
-  return(<div>
-    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
-      <div><h2 style={{fontSize:18,fontWeight:800,color:C.text}}>Dispatch Board</h2><p style={{color:C.sub,fontSize:12,marginTop:2}}>{open.length} open jobs across {techs.length} technicians</p></div>
-    </div>
-    <input placeholder="Search jobs, address, technician…" value={search} onChange={e=>setSearch(e.target.value)} style={{width:"100%",background:"#fff",border:`1px solid ${C.border}`,borderRadius:9,padding:"10px 14px",color:C.text,fontSize:14,marginBottom:12,fontFamily:"inherit",boxSizing:"border-box"}}/>
-    <div style={{marginBottom:8}}><div style={{color:C.sub,fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:0.5,marginBottom:6}}>Filter by Technician</div><div style={{display:"flex",gap:8,overflowX:"auto",paddingBottom:4}}><Pill label="All" active={filter==="All"} onClick={()=>setFilter("All")}/>{techs.map(t=><Pill key={t} label={t} active={filter===t} onClick={()=>setFilter(t)}/>)}</div></div>
-    <div style={{marginBottom:16}}><div style={{color:C.sub,fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:0.5,marginBottom:6}}>Filter by Stage</div><div style={{display:"flex",gap:8,overflowX:"auto",paddingBottom:4}}><Pill label="All" active={stageFilter==="All"} onClick={()=>setStageFilter("All")}/>{jobStages.map(s=><Pill key={s} label={s} active={stageFilter===s} onClick={()=>setStageFilter(s)}/>)}</div></div>
-    {filter==="All" && stageFilter==="All" ? (
-      techs.map(tech=>{
-        const techJobs=filtered.filter(j=>(j.tech||"Unassigned")===tech);
-        if(techJobs.length===0)return null;
-        return(<div key={tech} style={{marginBottom:20}}>
-          <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10}}>
-            <Avatar name={tech} size={32} bg="#dbeafe" fg="#1d4ed8"/>
-            <span style={{color:C.text,fontWeight:700,fontSize:14}}>{tech}</span>
-            <span style={{background:C.raised,border:`1px solid ${C.border}`,color:C.sub,borderRadius:99,padding:"1px 8px",fontSize:11,fontWeight:700}}>{techJobs.length}</span>
+  const ViewBtn = ({id,label,icon}) => (
+    <button onClick={()=>setDispView(id)} style={{display:"flex",alignItems:"center",gap:5,padding:"7px 14px",borderRadius:8,border:`1.5px solid ${dispView===id?C.accent:C.border}`,background:dispView===id?"#eff6ff":"#fff",color:dispView===id?C.accent:C.sub,fontWeight:dispView===id?700:500,fontSize:13,cursor:"pointer",fontFamily:"inherit"}}>
+      <span>{icon}</span>{label}
+    </button>
+  );
+
+  return(
+    <div>
+      {/* Header */}
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14,flexWrap:"wrap",gap:10}}>
+        <div>
+          <h2 style={{fontSize:18,fontWeight:800,color:C.text}}>Dispatch Board</h2>
+          <p style={{color:C.sub,fontSize:12,marginTop:2}}>{open.length} open jobs · {allTechNames.length} techs scheduled today</p>
+        </div>
+        <div style={{display:"flex",gap:6}}>
+          <ViewBtn id="board" label="Board" icon="📋"/>
+          <ViewBtn id="calendar" label="Calendar" icon="📅"/>
+          <ViewBtn id="map" label="Map" icon="🗺️"/>
+        </div>
+      </div>
+
+      {/* Search + tech filter (board/map only) */}
+      {dispView!=="calendar"&&(
+        <div style={{marginBottom:12}}>
+          <input placeholder="Search jobs, address, technician…" value={search} onChange={e=>setSearch(e.target.value)}
+            style={{width:"100%",background:"#fff",border:`1px solid ${C.border}`,borderRadius:9,padding:"10px 14px",color:C.text,fontSize:14,marginBottom:10,fontFamily:"inherit",boxSizing:"border-box"}}/>
+          <div style={{display:"flex",gap:8,overflowX:"auto",paddingBottom:4}}>
+            <Pill label="All Techs" active={filter==="All"} onClick={()=>setFilter("All")}/>
+            {allTechNames.map(t=>(
+              <button key={t} onClick={()=>setFilter(t)}
+                style={{display:"flex",alignItems:"center",gap:6,padding:"5px 12px",borderRadius:99,border:`2px solid ${filter===t?techColor(t,allTechNames):C.border}`,background:filter===t?techColor(t,allTechNames)+"22":"#fff",color:filter===t?techColor(t,allTechNames):C.sub,fontWeight:filter===t?700:500,fontSize:12,cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>
+                <span style={{width:8,height:8,borderRadius:"50%",background:techColor(t,allTechNames),display:"inline-block",flexShrink:0}}/>
+                {t}
+              </button>
+            ))}
           </div>
-          {techJobs.map(job=>(<DispatchCard key={job.id} job={job} onStartDriving={()=>setFieldMode(job)}/>))}
-        </div>);
-      })
-    ):(
-      filtered.map(job=><DispatchCard key={job.id} job={job} onStartDriving={()=>setFieldMode(job)}/>)
-    )}
-    {filtered.length===0&&<div style={{textAlign:"center",padding:"40px 0",color:C.muted}}><div style={{fontSize:32,marginBottom:8}}>📋</div><div style={{fontSize:14,fontWeight:600}}>No open jobs found</div></div>}
-  </div>);
+        </div>
+      )}
+
+      {/* BOARD VIEW */}
+      {dispView==="board"&&(
+        <div>
+          {filter==="All" ? (
+            allTechNames.map(tech=>{
+              const techJobs=filtered.filter(j=>j.tech===tech);
+              if(techJobs.length===0)return null;
+              const col = techColor(tech, allTechNames);
+              return(
+                <div key={tech} style={{marginBottom:20}}>
+                  <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10,padding:"10px 14px",background:`${col}11`,borderRadius:10,border:`1.5px solid ${col}33`}}>
+                    <div style={{width:32,height:32,borderRadius:"50%",background:col,display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontWeight:800,fontSize:13,flexShrink:0}}>
+                      {tech.split(" ").map(w=>w[0]).join("").slice(0,2)}
+                    </div>
+                    <span style={{color:C.text,fontWeight:700,fontSize:14,flex:1}}>{tech}</span>
+                    <span style={{background:col,color:"#fff",borderRadius:99,padding:"2px 10px",fontSize:11,fontWeight:700}}>{techJobs.length} job{techJobs.length!==1?"s":""}</span>
+                  </div>
+                  {techJobs.map(job=>(<DispatchCard key={job.id} job={job} techCol={col} onOpen={()=>setDrawerJob(job)} onStartDriving={()=>setFieldMode(job)}/>))}
+                </div>
+              );
+            })
+          ):(
+            filtered.map(job=><DispatchCard key={job.id} job={job} techCol={techColor(job.tech,allTechNames)} onOpen={()=>setDrawerJob(job)} onStartDriving={()=>setFieldMode(job)}/>)
+          )}
+          {filtered.length===0&&<div style={{textAlign:"center",padding:"40px 0",color:C.muted}}><div style={{fontSize:32,marginBottom:8}}>📋</div><div style={{fontSize:14,fontWeight:600}}>No open jobs found</div></div>}
+        </div>
+      )}
+
+      {/* CALENDAR VIEW */}
+      {dispView==="calendar"&&(
+        <DispatchCalendar jobs={open} allTechNames={allTechNames} onOpen={setDrawerJob} onStartDriving={setFieldMode}/>
+      )}
+
+      {/* MAP VIEW */}
+      {dispView==="map"&&(
+        <DispatchMap jobs={filtered} allTechNames={allTechNames} onOpen={setDrawerJob}/>
+      )}
+
+      {/* Job Drawer */}
+      {liveDrawerJob&&(
+        <JobDrawer
+          job={liveDrawerJob}
+          onClose={()=>setDrawerJob(null)}
+          onUpdate={updateJob}
+          settings={settings}
+          companies={companies}
+          setCompanies={setCompanies}
+        />
+      )}
+    </div>
+  );
 }
 
-function DispatchCard({job, onStartDriving}) {
+function DispatchCard({job, techCol, onOpen, onStartDriving}) {
   const keyLabel = job.keyMethod==="tenant"?"🧑 Tenant":job.keyMethod==="office"?"🏢 Office":"🔑 Other";
+  const col = techCol||C.accent;
   return(
-    <div style={{background:"#fff",border:`1px solid ${C.border}`,borderRadius:12,padding:"14px 16px",marginBottom:10,boxShadow:"0 1px 3px rgba(0,0,0,0.04)"}}>
+    <div onClick={onOpen} style={{background:"#fff",border:`1px solid ${C.border}`,borderRadius:12,padding:"14px 16px",marginBottom:10,boxShadow:"0 1px 3px rgba(0,0,0,0.04)",cursor:"pointer",transition:"box-shadow 0.15s",borderLeft:`4px solid ${col}`}}
+      onMouseEnter={e=>e.currentTarget.style.boxShadow="0 4px 12px rgba(0,0,0,0.1)"}
+      onMouseLeave={e=>e.currentTarget.style.boxShadow="0 1px 3px rgba(0,0,0,0.04)"}>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}}>
         <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
-          <span style={{color:C.accent,fontWeight:800,fontSize:13}}>{job.ref}</span>
+          <span style={{color:col,fontWeight:800,fontSize:13}}>{job.ref}</span>
           <Badge label={job.type} color={job.type==="HVAC"?"blue":job.type==="Plumbing"?"purple":"orange"}/>
           {job.stage&&<Badge label={job.stage} color={stageColor(job.stage)}/>}
-          {job.subStage&&<Badge label={job.subStage} color="purple"/>}
         </div>
-        <button onClick={onStartDriving}
-          style={{background:"#0ea5e9",color:"#fff",border:"none",borderRadius:8,padding:"6px 14px",fontSize:12,fontWeight:800,cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap",marginLeft:8,flexShrink:0}}>
+        <button onClick={e=>{e.stopPropagation();onStartDriving(job);}}
+          style={{background:col,color:"#fff",border:"none",borderRadius:8,padding:"6px 14px",fontSize:12,fontWeight:800,cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap",marginLeft:8,flexShrink:0}}>
           🚗 Start
         </button>
       </div>
       <div style={{color:C.text,fontWeight:700,fontSize:14,marginBottom:2}}>{job.address}</div>
       <div style={{color:C.sub,fontSize:12,marginBottom:8}}>{job.description}</div>
-      <div style={{display:"flex",gap:8,flexWrap:"wrap",paddingTop:8,borderTop:`1px solid ${C.border}`}}>
+      <div style={{display:"flex",gap:8,flexWrap:"wrap",paddingTop:8,borderTop:`1px solid ${C.border}`,alignItems:"center"}}>
+        {job.scheduledTime&&<span style={{fontSize:12,color:col,fontWeight:700}}>🕐 {job.scheduledTime}{job.durationHrs?` (${job.durationHrs}hr)`:""}</span>}
         <span style={{fontSize:12,color:C.sub}}>🏢 {job.companyName}</span>
-        <span style={{fontSize:12,color:C.sub}}>👤 {job.agentName}</span>
-        <span style={{fontSize:12,color:C.sub}}>👥 {(job.tenants||[]).length} tenant{(job.tenants||[]).length!==1?"s":""}</span>
+        <span style={{fontSize:12,color:C.sub}}>👥 {(job.tenants||[]).length} tenants</span>
         {job.keyMethod&&<span style={{fontSize:12,color:C.sub}}>{keyLabel}</span>}
-        <span style={{fontSize:12,color:C.sub}}>📅 {job.createdDate}</span>
+        <span style={{fontSize:11,color:C.muted,marginLeft:"auto"}}>Click to open ›</span>
+      </div>
+    </div>
+  );
+}
+
+/* ─── CALENDAR VIEW ──────────────────────────────────── */
+function DispatchCalendar({jobs, allTechNames, onOpen, onStartDriving}) {
+  const hours = [];
+  for(let h=7;h<=18;h++) hours.push(h);
+  const ROW_H = 64; // px per tech row
+  const LABEL_W = 110;
+  const PX_PER_MIN = 3.5; // px per minute — controls block width
+
+  // Jobs with scheduled time only
+  const scheduled = jobs.filter(j=>j.scheduledTime);
+  const unscheduled = jobs.filter(j=>!j.scheduledTime);
+
+  return(
+    <div>
+      {/* Unscheduled banner */}
+      {unscheduled.length>0&&(
+        <div style={{background:"#fef9c3",border:"1px solid #fde047",borderRadius:10,padding:"10px 14px",marginBottom:14}}>
+          <div style={{fontWeight:700,fontSize:12,color:"#854d0e",marginBottom:6}}>⚠️ {unscheduled.length} job{unscheduled.length!==1?"s":""} not yet scheduled</div>
+          <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+            {unscheduled.map(j=>(
+              <button key={j.id} onClick={()=>onOpen(j)}
+                style={{background:"#fff",border:"1px solid #fde047",borderRadius:7,padding:"4px 10px",fontSize:12,color:"#92400e",fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>
+                {j.ref} — {(j.address||"").split(",")[0]}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Calendar grid */}
+      <div style={{overflowX:"auto",borderRadius:12,border:`1px solid ${C.border}`,background:"#fff",boxShadow:"0 2px 8px rgba(0,0,0,0.06)"}}>
+        {/* Time header */}
+        <div style={{display:"flex",borderBottom:`2px solid ${C.border}`,position:"sticky",top:0,background:"#f8fafc",zIndex:5}}>
+          <div style={{width:LABEL_W,flexShrink:0,padding:"10px 14px",fontSize:11,fontWeight:700,color:C.sub,textTransform:"uppercase",letterSpacing:0.5}}>Staff</div>
+          <div style={{flex:1,position:"relative",minWidth:hours.length*60*PX_PER_MIN}}>
+            <div style={{display:"flex"}}>
+              {hours.map(h=>(
+                <div key={h} style={{width:60*PX_PER_MIN,flexShrink:0,padding:"10px 0 10px 6px",borderLeft:`1px solid ${C.border}`,fontSize:11,fontWeight:600,color:C.sub}}>
+                  {h===12?"12pm":h<12?`${h}am`:`${h-12}pm`}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Tech rows */}
+        {allTechNames.map((tech,ti)=>{
+          const col = TECH_COLORS[ti%TECH_COLORS.length];
+          const techJobs = scheduled.filter(j=>j.tech===tech);
+          return(
+            <div key={tech} style={{display:"flex",borderBottom:`1px solid ${C.border}`,minHeight:ROW_H}}>
+              {/* Name cell */}
+              <div style={{width:LABEL_W,flexShrink:0,padding:"12px 10px",borderRight:`1px solid ${C.border}`,display:"flex",alignItems:"center",gap:8,background:"#fafafa"}}>
+                <div style={{width:28,height:28,borderRadius:"50%",background:col,color:"#fff",fontWeight:800,fontSize:11,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                  {tech.split(" ").map(w=>w[0]).join("").slice(0,2)}
+                </div>
+                <div style={{minWidth:0}}>
+                  <div style={{fontSize:12,fontWeight:700,color:C.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{tech.split(" ")[0]}</div>
+                  <div style={{fontSize:10,color:C.muted,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{tech.split(" ").slice(1).join(" ")}</div>
+                </div>
+              </div>
+
+              {/* Timeline */}
+              <div style={{flex:1,position:"relative",minWidth:hours.length*60*PX_PER_MIN,background:ti%2===0?"#fff":"#fafafa"}}>
+                {/* Hour grid lines */}
+                {hours.map(h=>(
+                  <div key={h} style={{position:"absolute",top:0,bottom:0,left:(h-7)*60*PX_PER_MIN,width:1,background:C.border}}/>
+                ))}
+                {/* 30-min lines */}
+                {hours.map(h=>(
+                  <div key={h+"h"} style={{position:"absolute",top:0,bottom:0,left:(h-7)*60*PX_PER_MIN+30*PX_PER_MIN,width:1,background:"#f1f5f9"}}/>
+                ))}
+
+                {/* Job blocks */}
+                {techJobs.map(job=>{
+                  const startMins = timeToMinutes(job.scheduledTime);
+                  const dur = (job.durationHrs||1)*60;
+                  const left = (startMins - CAL_START)*PX_PER_MIN;
+                  const width = dur*PX_PER_MIN - 3;
+                  const stCol = stageColor(job.stage);
+                  return(
+                    <div key={job.id} onClick={()=>onOpen(job)}
+                      title={`${job.ref} · ${job.address}\n${job.scheduledTime} (${job.durationHrs||1}hr)`}
+                      style={{position:"absolute",left,top:6,height:ROW_H-12,width,borderRadius:8,background:col,cursor:"pointer",padding:"5px 8px",overflow:"hidden",boxSizing:"border-box",boxShadow:"0 2px 6px rgba(0,0,0,0.15)",transition:"opacity 0.15s"}}
+                      onMouseEnter={e=>{e.currentTarget.style.opacity="0.85";e.currentTarget.style.zIndex=10;}}
+                      onMouseLeave={e=>{e.currentTarget.style.opacity="1";e.currentTarget.style.zIndex=1;}}>
+                      <div style={{fontSize:10,fontWeight:800,color:"rgba(255,255,255,0.9)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{job.scheduledTime} — {minutesToTime(startMins+dur)}</div>
+                      <div style={{fontSize:11,fontWeight:700,color:"#fff",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",marginTop:2}}>{job.ref} {(job.address||"").split(",")[0]}</div>
+                      {width>120&&<div style={{fontSize:10,color:"rgba(255,255,255,0.75)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",marginTop:1}}>{job.description}</div>}
+                    </div>
+                  );
+                })}
+
+                {techJobs.length===0&&(
+                  <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center"}}>
+                    <span style={{fontSize:11,color:C.muted}}>No jobs scheduled</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })}
+
+        {allTechNames.length===0&&(
+          <div style={{padding:"40px",textAlign:"center",color:C.muted}}>
+            <div style={{fontSize:32,marginBottom:8}}>📅</div>
+            <div style={{fontSize:14,fontWeight:600}}>No technicians assigned to open jobs</div>
+          </div>
+        )}
+      </div>
+
+      {/* Legend */}
+      <div style={{display:"flex",gap:16,marginTop:12,flexWrap:"wrap"}}>
+        {allTechNames.map((t,i)=>(
+          <div key={t} style={{display:"flex",alignItems:"center",gap:6,fontSize:12,color:C.sub}}>
+            <span style={{width:12,height:12,borderRadius:3,background:TECH_COLORS[i%TECH_COLORS.length],display:"inline-block"}}/>
+            {t}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ─── MAP VIEW ───────────────────────────────────────── */
+function DispatchMap({jobs, allTechNames, onOpen}) {
+  const [hoveredJob, setHoveredJob] = useState(null);
+  const [hoveredTech, setHoveredTech] = useState(null);
+
+  // Sydney bounds for SVG projection
+  const MAP_W = 800, MAP_H = 520;
+  const LNG_MIN=150.60, LNG_MAX=151.40;
+  const LAT_MIN=-34.10, LAT_MAX=-33.60;
+
+  const project = ({lat,lng}) => ({
+    x: ((lng-LNG_MIN)/(LNG_MAX-LNG_MIN))*MAP_W,
+    y: ((lat-LAT_MIN)/(LAT_MAX-LAT_MIN))*MAP_H, // flip y since SVG y is top-down
+  });
+
+  // Jobs with coords
+  const jobsWithCoords = jobs.map(j=>({...j, coords:jobCoords(j)}));
+
+  // Group by tech and sort by scheduled time
+  const techRoutes = allTechNames.map((tech,ti)=>{
+    const techJobs = jobsWithCoords
+      .filter(j=>j.tech===tech)
+      .sort((a,b)=>(timeToMinutes(a.scheduledTime)||0)-(timeToMinutes(b.scheduledTime)||0));
+    return {tech, jobs:techJobs, color:TECH_COLORS[ti%TECH_COLORS.length]};
+  });
+
+  // Sydney suburb labels for context
+  const LABELS = [
+    {name:"Sydney CBD",lat:-33.8688,lng:151.2093},
+    {name:"Parramatta",lat:-33.8150,lng:151.0011},
+    {name:"Blacktown",lat:-33.7690,lng:150.9054},
+    {name:"Penrith",lat:-33.7510,lng:150.6942},
+    {name:"Liverpool",lat:-33.9200,lng:150.9231},
+    {name:"Chatswood",lat:-33.7969,lng:151.1808},
+    {name:"Hornsby",lat:-33.7028,lng:151.0988},
+  ];
+
+  const activeTechs = techRoutes.filter(r=>r.jobs.length>0);
+
+  return(
+    <div>
+      <div style={{display:"flex",gap:12,alignItems:"flex-start",flexWrap:"wrap"}}>
+        {/* SVG Map */}
+        <div style={{flex:1,minWidth:300,background:"#1e293b",borderRadius:14,overflow:"hidden",boxShadow:"0 4px 20px rgba(0,0,0,0.2)"}}>
+          <svg width="100%" viewBox={`0 0 ${MAP_W} ${MAP_H}`} style={{display:"block"}}>
+            {/* Background */}
+            <rect width={MAP_W} height={MAP_H} fill="#0f172a"/>
+            {/* Grid lines (lat/lng) */}
+            {[0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8].map(f=>(
+              <g key={f}>
+                <line x1={f*MAP_W} y1={0} x2={f*MAP_W} y2={MAP_H} stroke="#1e293b" strokeWidth={1}/>
+                <line x1={0} y1={f*MAP_H} x2={MAP_W} y2={f*MAP_H} stroke="#1e293b" strokeWidth={1}/>
+              </g>
+            ))}
+            {/* Simulated roads/coastline using bezier paths */}
+            {/* M1 Motorway ish: Parramatta to Penrith */}
+            <path d={`M ${project({lat:-33.815,lng:151.001}).x} ${project({lat:-33.815,lng:151.001}).y} Q ${project({lat:-33.77,lng:150.85}).x} ${project({lat:-33.77,lng:150.85}).y} ${project({lat:-33.751,lng:150.694}).x} ${project({lat:-33.751,lng:150.694}).y}`}
+              fill="none" stroke="#334155" strokeWidth={3}/>
+            {/* Pacific Highway: Sydney to Chatswood/Hornsby */}
+            <path d={`M ${project({lat:-33.8688,lng:151.2093}).x} ${project({lat:-33.8688,lng:151.2093}).y} L ${project({lat:-33.797,lng:151.181}).x} ${project({lat:-33.797,lng:151.181}).y} L ${project({lat:-33.703,lng:151.099}).x} ${project({lat:-33.703,lng:151.099}).y}`}
+              fill="none" stroke="#334155" strokeWidth={2.5}/>
+            {/* Parramatta Rd: Sydney to Parramatta */}
+            <path d={`M ${project({lat:-33.8688,lng:151.2093}).x} ${project({lat:-33.8688,lng:151.2093}).y} L ${project({lat:-33.815,lng:151.001}).x} ${project({lat:-33.815,lng:151.001}).y}`}
+              fill="none" stroke="#334155" strokeWidth={2.5}/>
+            {/* Hume Hwy: Sydney to Liverpool */}
+            <path d={`M ${project({lat:-33.8688,lng:151.2093}).x} ${project({lat:-33.8688,lng:151.2093}).y} L ${project({lat:-33.92,lng:150.923}).x} ${project({lat:-33.92,lng:150.923}).y}`}
+              fill="none" stroke="#334155" strokeWidth={2.5}/>
+            {/* Western: Parramatta to Blacktown */}
+            <path d={`M ${project({lat:-33.815,lng:151.001}).x} ${project({lat:-33.815,lng:151.001}).y} L ${project({lat:-33.769,lng:150.905}).x} ${project({lat:-33.769,lng:150.905}).y}`}
+              fill="none" stroke="#334155" strokeWidth={2}/>
+            {/* Coastline hint */}
+            <path d={`M ${project({lat:-33.62,lng:151.33}).x} ${project({lat:-33.62,lng:151.33}).y} Q ${project({lat:-33.75,lng:151.29}).x} ${project({lat:-33.75,lng:151.29}).y} ${project({lat:-33.87,lng:151.27}).x} ${project({lat:-33.87,lng:151.27}).y} Q ${project({lat:-33.95,lng:151.25}).x} ${project({lat:-33.95,lng:151.25}).y} ${project({lat:-34.05,lng:151.15}).x} ${project({lat:-34.05,lng:151.15}).y}`}
+              fill="none" stroke="#1e3a5f" strokeWidth={4} opacity={0.6}/>
+
+            {/* Suburb labels */}
+            {LABELS.map(l=>{
+              const p=project(l);
+              return(
+                <g key={l.name}>
+                  <circle cx={p.x} cy={p.y} r={3} fill="#334155"/>
+                  <text x={p.x+6} y={p.y+4} fontSize={9} fill="#475569" fontFamily="'Inter','Segoe UI',sans-serif">{l.name}</text>
+                </g>
+              );
+            })}
+
+            {/* Tech routes */}
+            {techRoutes.map(({tech,jobs:tJobs,color})=>{
+              if(tJobs.length<2) return null;
+              const isHovered = hoveredTech===tech;
+              const points = tJobs.map(j=>project(j.coords));
+              return(
+                <g key={tech} opacity={hoveredTech&&!isHovered?0.2:1} style={{transition:"opacity 0.2s"}}>
+                  {points.slice(0,-1).map((p,i)=>{
+                    const next=points[i+1];
+                    const mx=(p.x+next.x)/2, my=(p.y+next.y)/2;
+                    return(
+                      <g key={i}>
+                        {/* Route line */}
+                        <path d={`M${p.x},${p.y} Q${mx},${p.y} ${next.x},${next.y}`}
+                          fill="none" stroke={color} strokeWidth={isHovered?3:2}
+                          strokeDasharray={isHovered?"none":"6 3"} opacity={0.8}/>
+                        {/* Arrow midpoint */}
+                        <circle cx={mx} cy={(p.y+next.y)/2} r={3} fill={color} opacity={0.6}/>
+                        <text x={mx+3} y={(p.y+next.y)/2-3} fontSize={8} fill={color} fontFamily="sans-serif" opacity={0.8}>{i+1}→{i+2}</text>
+                      </g>
+                    );
+                  })}
+                </g>
+              );
+            })}
+
+            {/* Job pins */}
+            {jobsWithCoords.map(job=>{
+              const ti = allTechNames.indexOf(job.tech);
+              const col = TECH_COLORS[ti%TECH_COLORS.length]||"#64748b";
+              const p = project(job.coords);
+              const isHov = hoveredJob?.id===job.id;
+              const techHov = hoveredTech===job.tech;
+              const fade = (hoveredTech&&!techHov)||(hoveredJob&&hoveredJob.id!==job.id&&hoveredTech!==job.tech);
+              return(
+                <g key={job.id} style={{cursor:"pointer"}} opacity={fade?0.25:1}
+                  onMouseEnter={()=>setHoveredJob(job)}
+                  onMouseLeave={()=>setHoveredJob(null)}
+                  onClick={()=>onOpen(job)}>
+                  {/* Pin shadow */}
+                  <circle cx={p.x} cy={p.y+1} r={isHov?12:8} fill="rgba(0,0,0,0.3)" opacity={0.4}/>
+                  {/* Pin circle */}
+                  <circle cx={p.x} cy={p.y} r={isHov?12:8} fill={col} stroke="#fff" strokeWidth={2}/>
+                  {/* Ref label */}
+                  <text x={p.x} y={p.y+4} textAnchor="middle" fontSize={isHov?9:7} fill="#fff" fontWeight="bold" fontFamily="sans-serif">{job.ref}</text>
+                </g>
+              );
+            })}
+
+            {/* Hovered job tooltip */}
+            {hoveredJob&&(()=>{
+              const p = project(hoveredJob.coords);
+              const ti = allTechNames.indexOf(hoveredJob.tech);
+              const col = TECH_COLORS[ti%TECH_COLORS.length]||"#64748b";
+              const tx = Math.min(p.x, MAP_W-180);
+              const ty = p.y>MAP_H/2 ? p.y-75 : p.y+18;
+              return(
+                <g>
+                  <rect x={tx} y={ty} width={175} height={65} rx={8} fill="#0f172a" stroke={col} strokeWidth={1.5}/>
+                  <text x={tx+10} y={ty+18} fontSize={11} fill={col} fontWeight="bold" fontFamily="sans-serif">{hoveredJob.ref} · {hoveredJob.scheduledTime||"Unscheduled"}</text>
+                  <text x={tx+10} y={ty+32} fontSize={10} fill="#94a3b8" fontFamily="sans-serif">{(hoveredJob.address||"").slice(0,26)}…</text>
+                  <text x={tx+10} y={ty+46} fontSize={10} fill="#64748b" fontFamily="sans-serif">{hoveredJob.tech}</text>
+                  <text x={tx+10} y={ty+58} fontSize={9} fill="#475569" fontFamily="sans-serif">Click to open</text>
+                </g>
+              );
+            })()}
+          </svg>
+        </div>
+
+        {/* Side panel: tech route summary */}
+        <div style={{width:220,flexShrink:0,display:"flex",flexDirection:"column",gap:10}}>
+          <div style={{fontSize:12,fontWeight:700,color:C.sub,textTransform:"uppercase",letterSpacing:0.5}}>Today's Routes</div>
+          {activeTechs.map(({tech,jobs:tJobs,color})=>(
+            <div key={tech}
+              style={{background:"#fff",border:`1.5px solid ${hoveredTech===tech?color:C.border}`,borderRadius:12,padding:"12px",cursor:"pointer",transition:"border-color 0.15s"}}
+              onMouseEnter={()=>setHoveredTech(tech)}
+              onMouseLeave={()=>setHoveredTech(null)}>
+              <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
+                <div style={{width:10,height:10,borderRadius:"50%",background:color,flexShrink:0}}/>
+                <span style={{fontWeight:700,fontSize:13,color:C.text}}>{tech.split(" ")[0]}</span>
+                <span style={{marginLeft:"auto",fontSize:11,color:C.sub}}>{tJobs.length} jobs</span>
+              </div>
+              {tJobs.map((j,i)=>(
+                <div key={j.id} onClick={()=>onOpen(j)} style={{display:"flex",gap:6,alignItems:"flex-start",padding:"5px 0",borderTop:i>0?`1px solid ${C.border}`:"none"}}>
+                  <div style={{width:16,height:16,borderRadius:"50%",background:color,color:"#fff",fontSize:9,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginTop:1}}>{i+1}</div>
+                  <div style={{minWidth:0}}>
+                    <div style={{fontSize:11,fontWeight:700,color:C.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{(j.address||"").split(",")[0]}</div>
+                    <div style={{fontSize:10,color:C.muted}}>{j.scheduledTime||"TBD"} · {j.ref}</div>
+                  </div>
+                </div>
+              ))}
+              <div style={{marginTop:8,paddingTop:8,borderTop:`1px solid ${C.border}`,fontSize:10,color:C.muted}}>
+                🗺️ Route optimisation coming soon
+              </div>
+            </div>
+          ))}
+          {activeTechs.length===0&&(
+            <div style={{color:C.muted,fontSize:13,padding:"20px 0",textAlign:"center"}}>No jobs on map</div>
+          )}
+        </div>
       </div>
     </div>
   );
