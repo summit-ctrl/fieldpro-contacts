@@ -26,7 +26,7 @@ const C = {
 const DEFAULT_APPLIANCE_TYPES = ["Oven","Dishwasher","Cooktop – Gas","Cooktop – Electric","Upright Cooker","Washing Machine","Dryer","Fridge","Microwave","Other"];
 const DEFAULT_WORK_PRESETS = ["Add power point","Close off gas (gas shutdown)","Replace cables","Update circuit breaker","Modify cabinets","Cut benchtop","Install rangehood","Replace hot water system","Install exhaust fan","Smoke alarm replacement"];
 const DEFAULT_JOB_TYPES = ["HVAC","Plumbing","Electrical"];
-const DEFAULT_JOB_STAGES = ["New","Scheduled","In Progress","On Hold","Completed","Invoiced"];
+const DEFAULT_JOB_STAGES = ["New","Scheduled","In Progress","Waiting on Parts","Parts Received","On Hold","Completed","Invoiced"];
 
 /* ─── DEFAULT REPORT TEMPLATES ─── */
 const DEFAULT_REPORT_TEMPLATES = [
@@ -156,15 +156,97 @@ const SEED_INVOICES = [
   {id:"i2",ref:"INV-0042",client:"Ray White Parramatta",contact:"Karen Lim",jobRef:"1003",date:"2026-03-01",due:"2026-03-31",status:"Overdue",paidDate:null,total:2240,items:[{desc:"HVAC full service – split system",qty:1,unit:"each",rate:480,amount:480},{desc:"Gas cooktop service",qty:1,unit:"each",rate:320,amount:320},{desc:"Labour – HVAC",qty:6,unit:"hr",rate:120,amount:720},{desc:"Parts & consumables",qty:1,unit:"each",rate:720,amount:720}]},
   {id:"i3",ref:"INV-0043",client:"LJ Hooker Penrith",contact:"Rachel Park",jobRef:"1006",date:"2026-03-09",due:"2026-04-09",status:"Sent",paidDate:null,total:1379,items:[{desc:"Samsung washing machine service",qty:1,unit:"each",rate:299,amount:299},{desc:"Split system supply",qty:1,unit:"each",rate:899,amount:899},{desc:"Labour",qty:1.5,unit:"hr",rate:120,amount:181}]},
 ];
-const SEED_INVENTORY = [
-  {id:"in1",sku:"RIN-HW25",name:"Rinnai 25L Hot Water System",category:"Plumbing",qty:3,minQty:2,unitCost:1450,location:"Warehouse A",supplier:"The Good Guys"},
-  {id:"in2",sku:"BSH-DW60",name:"Bosch 60cm Dishwasher Serie 6",category:"Appliances",qty:1,minQty:2,unitCost:1199,location:"Warehouse A",supplier:"The Good Guys"},
-  {id:"in3",sku:"GRO-MIX1",name:"Grohe Eurosmart Mixer Tap",category:"Plumbing",qty:8,minQty:3,unitCost:320,location:"Van – Jake Rivera",supplier:"Reece Plumbing"},
-  {id:"in4",sku:"PVC-90EL",name:"PVC 90° Elbow 100mm",category:"Plumbing",qty:45,minQty:20,unitCost:8.50,location:"Warehouse A",supplier:"Reece Plumbing"},
-  {id:"in5",sku:"SMK-AL9V",name:"Smoke Alarm 9V Hardwired",category:"Electrical",qty:12,minQty:10,unitCost:85,location:"Van – Tom Yuen",supplier:"Harvey Norman"},
-  {id:"in6",sku:"LG-AC25",name:"LG 2.5kW Reverse Cycle Split",category:"HVAC",qty:0,minQty:1,unitCost:799,location:"Warehouse A",supplier:"Harvey Norman"},
-  {id:"in7",sku:"CAE-HW50",name:"Caroma 50L Storage HWS",category:"Plumbing",qty:2,minQty:2,unitCost:1100,location:"Warehouse A",supplier:"Reece Plumbing"},
+/* ─── INVENTORY SEED DATA ─── */
+const SEED_SUPPLIERS = [
+  {id:"sup1",name:"Reece Plumbing",contact:"sales@reece.com.au",phone:"1300 555 000",terms:"Net 30",leadDays:3,abn:"12 345 678 901"},
+  {id:"sup2",name:"Harvey Norman Commercial",contact:"commercial@harveynorman.com.au",phone:"1300 464 278",terms:"Net 14",leadDays:5,abn:"98 765 432 100"},
+  {id:"sup3",name:"Tradelink",contact:"orders@tradelink.com.au",phone:"13 23 53",terms:"Net 30",leadDays:2,abn:"55 123 456 789"},
+  {id:"sup4",name:"Online / Ad Hoc",contact:"",phone:"",terms:"Prepay",leadDays:7,abn:""},
 ];
+
+const SEED_INV_ITEMS = [
+  {id:"in1",code:"RIN-HW25",barcode:"9312345001001",name:"Rinnai 25L Hot Water System",description:"Rinnai B26 continuous flow gas HWS 25L/min",category:"Hot Water",supplierId:"sup1",supplierCode:"RIN-B26",
+   purchasePrice:1450,sellPrice:2100,markup:44.8,
+   clientMarkups:[{clientId:"",markupPct:10}],
+   qtyOnHand:{warehouse:3,van_fs1:0,van_fs2:0,van_fs3:0,van_fs4:1},
+   reorderPoint:2,reorderQty:5,
+   priceHistory:[{date:"2025-09-01",price:1380,supplierId:"sup1",note:"Last price"},{date:"2026-01-15",price:1450,supplierId:"sup1",note:"Price increase"}],
+   status:"active"},
+  {id:"in2",code:"GRO-MIX1",barcode:"9312345002002",name:"Grohe Eurosmart Mixer Tap",description:"Grohe Eurosmart single-lever basin mixer chrome",category:"Tapware",supplierId:"sup1",supplierCode:"GRO-33265",
+   purchasePrice:320,sellPrice:520,markup:62.5,
+   clientMarkups:[],
+   qtyOnHand:{warehouse:8,van_fs1:2,van_fs2:0,van_fs3:0,van_fs4:0},
+   reorderPoint:5,reorderQty:10,
+   priceHistory:[{date:"2025-08-01",price:295,supplierId:"sup1",note:""},{date:"2026-02-01",price:320,supplierId:"sup1",note:"Supplier price review"}],
+   status:"active"},
+  {id:"in3",code:"PVC-90EL",barcode:"9312345003003",name:"PVC 90° Elbow 100mm",description:"PVC pressure 90 degree elbow 100mm BSP",category:"Fittings",supplierId:"sup3",supplierCode:"PVC-9010",
+   purchasePrice:8.50,sellPrice:18,markup:111.8,
+   clientMarkups:[],
+   qtyOnHand:{warehouse:45,van_fs1:12,van_fs2:0,van_fs3:0,van_fs4:8},
+   reorderPoint:20,reorderQty:50,
+   priceHistory:[{date:"2026-01-01",price:8.50,supplierId:"sup3",note:""}],
+   status:"active"},
+  {id:"in4",code:"SMK-AL9V",barcode:"9312345004004",name:"Smoke Alarm 9V Hardwired",description:"240V hardwired smoke alarm with 9V battery backup",category:"Electrical",supplierId:"sup2",supplierCode:"SMK-HW9",
+   purchasePrice:85,sellPrice:145,markup:70.6,
+   clientMarkups:[{clientId:"c1",markupPct:12}],
+   qtyOnHand:{warehouse:12,van_fs1:0,van_fs2:4,van_fs3:0,van_fs4:0},
+   reorderPoint:10,reorderQty:20,
+   priceHistory:[{date:"2025-11-01",price:79,supplierId:"sup2",note:""},{date:"2026-01-10",price:85,supplierId:"sup2",note:"Supplier increase"}],
+   status:"active"},
+  {id:"in5",code:"LG-AC25",barcode:"9312345005005",name:"LG 2.5kW Split System",description:"LG Artcool 2.5kW reverse cycle inverter split",category:"HVAC",supplierId:"sup2",supplierCode:"LG-S09ET",
+   purchasePrice:799,sellPrice:1350,markup:69,
+   clientMarkups:[],
+   qtyOnHand:{warehouse:0,van_fs1:0,van_fs2:0,van_fs3:1,van_fs4:0},
+   reorderPoint:1,reorderQty:3,
+   priceHistory:[{date:"2025-10-01",price:749,supplierId:"sup2",note:""},{date:"2026-02-15",price:799,supplierId:"sup2",note:"Model year update"}],
+   status:"active"},
+  {id:"in6",code:"CAE-HW50",barcode:"9312345006006",name:"Caroma 50L Storage HWS",description:"Caroma 50L electric storage hot water system",category:"Hot Water",supplierId:"sup1",supplierCode:"CAE-HW50E",
+   purchasePrice:1100,sellPrice:1750,markup:59,
+   clientMarkups:[],
+   qtyOnHand:{warehouse:2,van_fs1:0,van_fs2:0,van_fs3:0,van_fs4:0},
+   reorderPoint:2,reorderQty:4,
+   priceHistory:[{date:"2026-01-01",price:1100,supplierId:"sup1",note:""}],
+   status:"active"},
+  {id:"in7",code:"FLX-HOSE",barcode:"9312345007007",name:"Flexible Hose 300mm",description:"Stainless braided flexible hose 300mm 15mm",category:"Fittings",supplierId:"sup3",supplierCode:"FLX-300",
+   purchasePrice:12,sellPrice:28,markup:133,
+   clientMarkups:[],
+   qtyOnHand:{warehouse:60,van_fs1:10,van_fs2:10,van_fs3:5,van_fs4:10},
+   reorderPoint:30,reorderQty:100,
+   priceHistory:[{date:"2026-01-01",price:12,supplierId:"sup3",note:""}],
+   status:"active"},
+];
+
+const SEED_PURCHASE_ORDERS = [
+  {id:"po1",ref:"PO-001",supplierId:"sup1",supplierName:"Reece Plumbing",date:"2026-03-01",status:"received",jobId:"1005",
+   lines:[
+     {itemId:"in1",itemCode:"RIN-HW25",itemName:"Rinnai 25L Hot Water System",qtyOrdered:5,qtyReceived:5,unitCost:1450},
+     {itemId:"in3",itemCode:"PVC-90EL",itemName:"PVC 90° Elbow 100mm",qtyOrdered:50,qtyReceived:50,unitCost:8.50},
+   ],
+   notes:"Standard restock order",receivedDate:"2026-03-05"},
+  {id:"po2",ref:"PO-002",supplierId:"sup2",supplierName:"Harvey Norman Commercial",date:"2026-03-10",status:"sent",jobId:"1006",
+   lines:[
+     {itemId:"in5",itemCode:"LG-AC25",itemName:"LG 2.5kW Split System",qtyOrdered:3,qtyReceived:0,unitCost:799},
+     {itemId:"in4",itemCode:"SMK-AL9V",itemName:"Smoke Alarm 9V Hardwired",qtyOrdered:20,qtyReceived:0,unitCost:85},
+   ],
+   notes:"Urgent — job waiting on LG units",receivedDate:null},
+  {id:"po3",ref:"PO-003",supplierId:"sup4",supplierName:"Online / Ad Hoc",date:"2026-03-12",status:"draft",jobId:null,
+   lines:[
+     {itemId:"in2",itemCode:"GRO-MIX1",itemName:"Grohe Eurosmart Mixer Tap",qtyOrdered:10,qtyReceived:0,unitCost:310},
+   ],
+   notes:"Sourced from eBay — awaiting confirmation",receivedDate:null},
+];
+
+const SEED_MOVEMENTS = [
+  {id:"mv1",type:"receive",itemId:"in1",qty:5,fromLocation:null,toLocation:"warehouse",jobId:null,techId:null,poId:"po1",date:"2026-03-05",note:"PO-001 received"},
+  {id:"mv2",type:"collect",itemId:"in1",qty:1,fromLocation:"warehouse",toLocation:"van_fs4",jobId:"1006",techId:"fs4",poId:null,date:"2026-03-06",note:"Anita collected for job 1006"},
+  {id:"mv3",type:"transfer",itemId:"in3",qty:12,fromLocation:"warehouse",toLocation:"van_fs1",jobId:null,techId:"fs1",poId:null,date:"2026-03-07",note:"Van restock for Jake"},
+  {id:"mv4",type:"return",itemId:"in2",qty:1,fromLocation:"van_fs1",toLocation:"warehouse",jobId:"1001",techId:"fs1",poId:null,date:"2026-03-08",note:"Unused part returned"},
+];
+
+let _poNum = 3;
+const nextPORef = () => `PO-${String(++_poNum).padStart(3,"0")}`;
+let _mvNum = 4;
+const nextMvId = () => `mv${++_mvNum}`;
 
 /* ─── SHARED UI ─── */
 const Badge = ({label,color}) => {const map={green:{bg:"#dcfce7",text:"#15803d"},blue:{bg:"#dbeafe",text:"#1d4ed8"},orange:{bg:"#ffedd5",text:"#c2410c"},red:{bg:"#fee2e2",text:"#b91c1c"},purple:{bg:"#ede9fe",text:"#6d28d9"},gray:{bg:"#f1f5f9",text:"#475569"},yellow:{bg:"#fef9c3",text:"#854d0e"}};const s=map[color]||map.gray;return <span style={{background:s.bg,color:s.text,padding:"3px 10px",borderRadius:20,fontSize:11,fontWeight:700,letterSpacing:0.3,whiteSpace:"nowrap"}}>{label}</span>;};
@@ -242,9 +324,15 @@ const useSettings = () => {
     smsTemplate:"Hi {tenant}, your technician is on the way. Job ref: {ref}.",
     customOutcomes:[],
   });
+  const [invItems, setInvItems] = useState(SEED_INV_ITEMS);
+  const [invSuppliers, setInvSuppliers] = useState(SEED_SUPPLIERS);
+  const [purchaseOrders, setPurchaseOrders] = useState(SEED_PURCHASE_ORDERS);
+  const [stockMovements, setStockMovements] = useState(SEED_MOVEMENTS);
   return { jobStages,setJobStages, jobSubStages,setJobSubStages, fieldStaff,setFieldStaff,
     jobTypes,setJobTypes, reportTemplates,setReportTemplates,
-    fieldForms,setFieldForms, emailTemplates,setEmailTemplates, fieldApp,setFieldApp };
+    fieldForms,setFieldForms, emailTemplates,setEmailTemplates, fieldApp,setFieldApp,
+    invItems, setInvItems, invSuppliers, setInvSuppliers, purchaseOrders, setPurchaseOrders,
+    stockMovements, setStockMovements };
 };
 
 /* ─── LIST MANAGER ─── */
@@ -4639,18 +4727,794 @@ function InvoicesTab() {
 }
 
 /* ═══════════════════════════════════════════
-   INVENTORY
+   INVENTORY — Full WMS
 ═══════════════════════════════════════════ */
-function InventoryTab() {
-  const [inventory]=useState(SEED_INVENTORY);
-  const [catFilter,setCatFilter]=useState("All");
-  const [search,setSearch]=useState("");
-  const cats=["All",...new Set(inventory.map(i=>i.category))];
-  const filtered=inventory.filter(i=>{const mc=catFilter==="All"||i.category===catFilter;const ms=!search||i.name.toLowerCase().includes(search.toLowerCase())||i.sku.toLowerCase().includes(search.toLowerCase());return mc&&ms;});
-  const lowStock=inventory.filter(i=>i.qty<=i.minQty);
-  const outOfStock=inventory.filter(i=>i.qty===0);
-  const stockColor=item=>item.qty===0?"red":item.qty<=item.minQty?"orange":"green";
-  return(<div><div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}><div><h2 style={{fontSize:18,fontWeight:800,color:C.text}}>Inventory</h2><p style={{color:C.sub,fontSize:12,marginTop:2}}>{inventory.length} items tracked</p></div><Btn label="+ Add Item" color={C.purple}/></div><div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10,marginBottom:16}}><StatCard label="Total Items" value={inventory.length} icon="📦" color={C.accent}/><StatCard label="Low Stock" value={lowStock.length} sub="at or below minimum" icon="⚠️" color={C.orange}/><StatCard label="Out of Stock" value={outOfStock.length} icon="🚫" color={C.red}/></div>{lowStock.length>0&&(<div style={{background:"#fef9c3",border:"1px solid #fde047",borderRadius:10,padding:"12px 14px",marginBottom:14}}><div style={{fontWeight:700,fontSize:13,color:"#854d0e",marginBottom:6}}>⚠️ Low Stock Alert</div>{lowStock.map(i=><div key={i.id} style={{fontSize:12,color:"#92400e",marginTop:3}}>• {i.name} — {i.qty} remaining (min {i.minQty})</div>)}</div>)}<input placeholder="Search inventory…" value={search} onChange={e=>setSearch(e.target.value)} style={{width:"100%",background:"#fff",border:`1px solid ${C.border}`,borderRadius:9,padding:"10px 14px",color:C.text,fontSize:14,marginBottom:12,fontFamily:"inherit",boxSizing:"border-box"}}/><div style={{display:"flex",gap:8,marginBottom:14,overflowX:"auto",paddingBottom:4}}>{cats.map(c=><Pill key={c} label={c} active={catFilter===c} onClick={()=>setCatFilter(c)}/>)}</div>{filtered.map(item=>(<RowCard key={item.id}><div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}><div style={{flex:1,minWidth:0,marginRight:10}}><div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}><span style={{color:C.accent,fontWeight:700,fontSize:11}}>{item.sku}</span><Badge label={item.category} color="blue"/><Badge label={item.qty===0?"Out of Stock":item.qty<=item.minQty?"Low Stock":"In Stock"} color={stockColor(item)}/></div><div style={{color:C.text,fontWeight:700,fontSize:14,marginTop:4}}>{item.name}</div><div style={{display:"flex",gap:10,marginTop:4,fontSize:12,color:C.sub,flexWrap:"wrap"}}><span>📍 {item.location}</span><span>🏭 {item.supplier}</span><span>Min qty: {item.minQty}</span></div></div><div style={{textAlign:"right",flexShrink:0}}><div style={{color:stockColor(item)==="red"?C.red:stockColor(item)==="orange"?C.orange:C.green,fontWeight:900,fontSize:24}}>{item.qty}</div><div style={{color:C.muted,fontSize:11,marginTop:2}}>{fmtMoney(item.unitCost)} each</div></div></div></RowCard>))}</div>);
+
+/* ── Barcode SVG renderer (Code 128 simplified — alternating bars) ── */
+function BarcodeDisplay({value, width=200, height=50}) {
+  if(!value) return null;
+  // Simple visual barcode from char codes — decorative but scannable with real lib in future
+  const bars = value.split("").flatMap(ch => {
+    const n = ch.charCodeAt(0) % 16;
+    return [1,0,1,0,1,0,1,0].map((b,i)=> b ? ((n>>i&1)?3:1) : ((n>>i&1)?2:1));
+  });
+  const total = bars.reduce((s,b)=>s+b,0);
+  const scale = width / total;
+  let x = 0;
+  const rects = bars.map((w,i) => {
+    const rx = x; x += w*scale;
+    return i%2===0 ? <rect key={i} x={rx} y={0} width={w*scale-0.5} height={height-14} fill="#000"/> : null;
+  }).filter(Boolean);
+  return (
+    <svg width={width} height={height} xmlns="http://www.w3.org/2000/svg">
+      <rect width={width} height={height} fill="white"/>
+      {rects}
+      <text x={width/2} y={height-2} textAnchor="middle" fontSize={9} fontFamily="monospace" fill="#000">{value}</text>
+    </svg>
+  );
+}
+
+/* ── Item Add/Edit Modal ── */
+function ItemModal({item, suppliers, onSave, onClose}) {
+  const isNew = !item?.id;
+  const [f, setF] = useState(item || {
+    code:"", barcode:"", name:"", description:"", category:"",
+    supplierId:"", supplierCode:"", purchasePrice:"", sellPrice:"", markup:"",
+    clientMarkups:[], reorderPoint:"", reorderQty:"", status:"active",
+    qtyOnHand:{warehouse:0}, priceHistory:[],
+  });
+  const set = (k,v) => setF(p=>({...p,[k]:v}));
+  const calcMarkup = (pp,sp) => pp&&sp ? (((sp-pp)/pp)*100).toFixed(1) : "";
+  const calcSell = (pp,mu) => pp&&mu ? (Number(pp)*(1+Number(mu)/100)).toFixed(2) : "";
+
+  return (
+    <Modal title={isNew?"Add Stock Item":"Edit Item"} onClose={onClose} wide
+      onSave={()=>{
+        const id = item?.id || "in"+Date.now();
+        const priceH = [...(f.priceHistory||[])];
+        if(!isNew && Number(f.purchasePrice) !== item.purchasePrice) {
+          priceH.push({date:new Date().toISOString().slice(0,10), price:Number(f.purchasePrice), supplierId:f.supplierId, note:"Updated"});
+        }
+        if(isNew && f.purchasePrice) priceH.push({date:new Date().toISOString().slice(0,10), price:Number(f.purchasePrice), supplierId:f.supplierId, note:"Initial"});
+        onSave({...f, id, purchasePrice:Number(f.purchasePrice), sellPrice:Number(f.sellPrice),
+          markup:Number(f.markup), reorderPoint:Number(f.reorderPoint), reorderQty:Number(f.reorderQty),
+          priceHistory:priceH,
+          qtyOnHand: f.qtyOnHand||{warehouse:0}});
+      }}>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"0 16px"}}>
+        <FF label="Item Code / SKU *" value={f.code} onChange={v=>set("code",v)} placeholder="e.g. RIN-HW25"/>
+        <FF label="Barcode" value={f.barcode} onChange={v=>set("barcode",v)} placeholder="e.g. 9312345001001"/>
+        <div style={{gridColumn:"1/-1"}}><FF label="Name *" value={f.name} onChange={v=>set("name",v)}/></div>
+        <div style={{gridColumn:"1/-1"}}><FF label="Description" value={f.description} onChange={v=>set("description",v)} type="textarea"/></div>
+        <FF label="Category" value={f.category} onChange={v=>set("category",v)} placeholder="e.g. Hot Water, HVAC"/>
+        <div style={{marginBottom:14}}>
+          <label style={{display:"block",color:C.sub,fontSize:12,fontWeight:600,textTransform:"uppercase",letterSpacing:0.5,marginBottom:5}}>Supplier</label>
+          <select value={f.supplierId} onChange={e=>set("supplierId",e.target.value)}
+            style={{width:"100%",background:C.raised,border:`1px solid ${C.border}`,borderRadius:8,padding:"9px 12px",color:C.text,fontSize:13,fontFamily:"inherit"}}>
+            <option value="">— Select supplier —</option>
+            {suppliers.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}
+          </select>
+        </div>
+        <FF label="Supplier Code" value={f.supplierCode} onChange={v=>set("supplierCode",v)}/>
+        <div/>
+        <FF label="Purchase Price ($)" value={f.purchasePrice} onChange={v=>{set("purchasePrice",v);set("markup",calcMarkup(v,f.sellPrice));}} type="number" placeholder="0.00"/>
+        <FF label="Sell Price ($)" value={f.sellPrice} onChange={v=>{set("sellPrice",v);set("markup",calcMarkup(f.purchasePrice,v));}} type="number" placeholder="0.00"/>
+        <div style={{marginBottom:14,gridColumn:"1/-1"}}>
+          <label style={{display:"block",color:C.sub,fontSize:12,fontWeight:600,textTransform:"uppercase",letterSpacing:0.5,marginBottom:5}}>Markup %</label>
+          <div style={{display:"flex",gap:8,alignItems:"center"}}>
+            <input type="number" value={f.markup} onChange={e=>{set("markup",e.target.value);set("sellPrice",calcSell(f.purchasePrice,e.target.value));}}
+              style={{width:100,background:C.raised,border:`1px solid ${C.border}`,borderRadius:8,padding:"9px 12px",color:C.text,fontSize:13,fontFamily:"inherit"}}/>
+            <span style={{fontSize:12,color:C.muted}}>Sell = {fmtMoney(calcSell(f.purchasePrice,f.markup)||0)}</span>
+          </div>
+        </div>
+        <FF label="Reorder Point" value={f.reorderPoint} onChange={v=>set("reorderPoint",v)} type="number" placeholder="e.g. 5"/>
+        <FF label="Reorder Qty" value={f.reorderQty} onChange={v=>set("reorderQty",v)} type="number" placeholder="e.g. 20"/>
+      </div>
+      {f.barcode && <div style={{marginTop:8,padding:12,background:C.raised,borderRadius:10,display:"inline-block"}}><BarcodeDisplay value={f.barcode}/></div>}
+    </Modal>
+  );
+}
+
+/* ── Purchase Order Modal ── */
+function POModal({po, items, suppliers, jobs, onSave, onClose}) {
+  const isNew = !po?.id;
+  const [f, setF] = useState(po || {
+    ref: nextPORef(), supplierId:"", supplierName:"", date: new Date().toISOString().slice(0,10),
+    status:"draft", jobId:"", lines:[], notes:"",
+  });
+  const [lineItemId, setLineItemId] = useState("");
+  const [lineQty, setLineQty] = useState(1);
+  const [lineCost, setLineCost] = useState("");
+
+  const addLine = () => {
+    const item = items.find(i=>i.id===lineItemId);
+    if(!item) return;
+    setF(p=>({...p, lines:[...p.lines, {itemId:item.id,itemCode:item.code,itemName:item.name,qtyOrdered:Number(lineQty),qtyReceived:0,unitCost:Number(lineCost)||item.purchasePrice}]}));
+    setLineItemId(""); setLineQty(1); setLineCost("");
+  };
+  const removeLine = idx => setF(p=>({...p,lines:p.lines.filter((_,i)=>i!==idx)}));
+  const total = f.lines.reduce((s,l)=>s+l.qtyOrdered*l.unitCost,0);
+
+  return (
+    <Modal title={isNew?"New Purchase Order":"Edit PO"} onClose={onClose} wide
+      onSave={()=>{
+        const sup = suppliers.find(s=>s.id===f.supplierId);
+        onSave({...f, supplierName:sup?.name||f.supplierName||"Unknown", id:po?.id||"po"+Date.now()});
+      }}>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"0 16px"}}>
+        <FF label="PO Reference" value={f.ref} onChange={v=>setF(p=>({...p,ref:v}))}/>
+        <FF label="Date" value={f.date} onChange={v=>setF(p=>({...p,date:v}))} type="date"/>
+        <div style={{marginBottom:14}}>
+          <label style={{display:"block",color:C.sub,fontSize:12,fontWeight:600,textTransform:"uppercase",letterSpacing:0.5,marginBottom:5}}>Supplier *</label>
+          <select value={f.supplierId} onChange={e=>setF(p=>({...p,supplierId:e.target.value}))}
+            style={{width:"100%",background:C.raised,border:`1px solid ${C.border}`,borderRadius:8,padding:"9px 12px",color:C.text,fontSize:13,fontFamily:"inherit"}}>
+            <option value="">— Select supplier —</option>
+            {suppliers.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}
+          </select>
+        </div>
+        <div style={{marginBottom:14}}>
+          <label style={{display:"block",color:C.sub,fontSize:12,fontWeight:600,textTransform:"uppercase",letterSpacing:0.5,marginBottom:5}}>Linked Job</label>
+          <select value={f.jobId} onChange={e=>setF(p=>({...p,jobId:e.target.value}))}
+            style={{width:"100%",background:C.raised,border:`1px solid ${C.border}`,borderRadius:8,padding:"9px 12px",color:C.text,fontSize:13,fontFamily:"inherit"}}>
+            <option value="">— No job —</option>
+            {jobs.map(j=><option key={j.id} value={j.ref}>{j.ref} — {(j.address||"").split(",")[0]}</option>)}
+          </select>
+        </div>
+        <div style={{gridColumn:"1/-1"}}><FF label="Notes" value={f.notes} onChange={v=>setF(p=>({...p,notes:v}))} type="textarea"/></div>
+      </div>
+
+      {/* Line items */}
+      <div style={{marginTop:4,marginBottom:12}}>
+        <div style={{fontWeight:700,fontSize:13,color:C.text,marginBottom:10}}>Line Items</div>
+        {f.lines.length>0&&(
+          <div style={{marginBottom:10}}>
+            <div style={{display:"grid",gridTemplateColumns:"1fr auto auto auto",gap:8,padding:"6px 0",borderBottom:`1px solid ${C.border}`}}>
+              {["Item","Qty","Unit Cost",""].map(h=><span key={h} style={{fontSize:11,fontWeight:700,color:C.sub,textTransform:"uppercase"}}>{h}</span>)}
+            </div>
+            {f.lines.map((l,i)=>(
+              <div key={i} style={{display:"grid",gridTemplateColumns:"1fr auto auto auto",gap:8,padding:"8px 0",borderBottom:`1px solid ${C.border}`,alignItems:"center"}}>
+                <span style={{fontSize:13,color:C.text}}>{l.itemName} <span style={{color:C.muted,fontSize:11}}>({l.itemCode})</span></span>
+                <span style={{fontSize:13,color:C.sub,textAlign:"right"}}>{l.qtyOrdered}</span>
+                <span style={{fontSize:13,color:C.sub,textAlign:"right"}}>{fmtMoney(l.unitCost)}</span>
+                <button onClick={()=>removeLine(i)} style={{background:"none",border:"none",color:C.red,cursor:"pointer",fontSize:16,fontFamily:"inherit"}}>×</button>
+              </div>
+            ))}
+            <div style={{textAlign:"right",marginTop:8,fontWeight:800,color:C.text}}>Total: {fmtMoney(total)}</div>
+          </div>
+        )}
+        {/* Add line row */}
+        <div style={{display:"flex",gap:8,alignItems:"flex-end",flexWrap:"wrap",padding:12,background:C.raised,borderRadius:10,border:`1px solid ${C.border}`}}>
+          <div style={{flex:2,minWidth:140}}>
+            <label style={{display:"block",color:C.sub,fontSize:11,fontWeight:700,marginBottom:4}}>ITEM</label>
+            <select value={lineItemId} onChange={e=>{ setLineItemId(e.target.value); const it=items.find(i=>i.id===e.target.value); if(it) setLineCost(it.purchasePrice); }}
+              style={{width:"100%",background:"#fff",border:`1px solid ${C.border}`,borderRadius:8,padding:"8px 10px",color:C.text,fontSize:13,fontFamily:"inherit"}}>
+              <option value="">— Select item —</option>
+              {items.map(i=><option key={i.id} value={i.id}>{i.name} ({i.code})</option>)}
+            </select>
+          </div>
+          <div style={{width:70}}>
+            <label style={{display:"block",color:C.sub,fontSize:11,fontWeight:700,marginBottom:4}}>QTY</label>
+            <input type="number" value={lineQty} onChange={e=>setLineQty(e.target.value)} min={1}
+              style={{width:"100%",background:"#fff",border:`1px solid ${C.border}`,borderRadius:8,padding:"8px 10px",color:C.text,fontSize:13,fontFamily:"inherit"}}/>
+          </div>
+          <div style={{width:100}}>
+            <label style={{display:"block",color:C.sub,fontSize:11,fontWeight:700,marginBottom:4}}>UNIT COST</label>
+            <input type="number" value={lineCost} onChange={e=>setLineCost(e.target.value)}
+              style={{width:"100%",background:"#fff",border:`1px solid ${C.border}`,borderRadius:8,padding:"8px 10px",color:C.text,fontSize:13,fontFamily:"inherit"}}/>
+          </div>
+          <Btn label="+ Add" onClick={addLine} small/>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
+/* ── Receive Stock Modal ── */
+function ReceiveModal({po, onSave, onClose}) {
+  const [lines, setLines] = useState(po.lines.map(l=>({...l, receiving: l.qtyOrdered-l.qtyReceived})));
+  const updateQty = (i,v) => setLines(ls=>ls.map((l,li)=>li===i?{...l,receiving:Number(v)}:l));
+  return (
+    <Modal title={`Receive Stock — ${po.ref}`} onClose={onClose}
+      onSave={()=>onSave(lines)}>
+      <p style={{color:C.sub,fontSize:13,marginBottom:16}}>Enter quantities received for each line. Stock will be added to warehouse and linked jobs updated.</p>
+      {lines.map((l,i)=>(
+        <div key={i} style={{display:"flex",gap:12,alignItems:"center",padding:"10px 0",borderBottom:`1px solid ${C.border}`}}>
+          <div style={{flex:1}}>
+            <div style={{fontWeight:700,fontSize:13,color:C.text}}>{l.itemName}</div>
+            <div style={{fontSize:11,color:C.muted}}>Ordered: {l.qtyOrdered} · Previously received: {l.qtyReceived}</div>
+          </div>
+          <div style={{width:90}}>
+            <label style={{display:"block",color:C.sub,fontSize:11,fontWeight:700,marginBottom:4}}>RECEIVE NOW</label>
+            <input type="number" value={l.receiving} min={0} max={l.qtyOrdered-l.qtyReceived}
+              onChange={e=>updateQty(i,e.target.value)}
+              style={{width:"100%",background:C.raised,border:`1px solid ${C.border}`,borderRadius:8,padding:"8px 10px",fontSize:13,fontFamily:"inherit",color:C.text}}/>
+          </div>
+        </div>
+      ))}
+    </Modal>
+  );
+}
+
+/* ── Transfer Modal ── */
+function TransferModal({items, fieldStaff, onSave, onClose}) {
+  const [itemId, setItemId] = useState("");
+  const [qty, setQty] = useState(1);
+  const [from, setFrom] = useState("warehouse");
+  const [to, setTo] = useState("");
+  const locs = ["warehouse",...fieldStaff.filter(f=>f.status==="Active").map(f=>"van_"+f.id)];
+  const locName = l => l==="warehouse" ? "🏠 Warehouse" : "🚐 "+fieldStaff.find(f=>"van_"+f.id===l)?.name||l;
+  const selItem = items.find(i=>i.id===itemId);
+  const avail = selItem ? (selItem.qtyOnHand[from]||0) : 0;
+  return (
+    <Modal title="Transfer Stock" onClose={onClose}
+      onSave={()=>{ if(!itemId||!to||from===to) return; onSave({itemId,qty:Number(qty),from,to}); }}>
+      <div style={{marginBottom:14}}>
+        <label style={{display:"block",color:C.sub,fontSize:12,fontWeight:600,textTransform:"uppercase",letterSpacing:0.5,marginBottom:5}}>Item</label>
+        <select value={itemId} onChange={e=>setItemId(e.target.value)}
+          style={{width:"100%",background:C.raised,border:`1px solid ${C.border}`,borderRadius:8,padding:"9px 12px",color:C.text,fontSize:13,fontFamily:"inherit"}}>
+          <option value="">— Select item —</option>
+          {items.map(i=><option key={i.id} value={i.id}>{i.name} ({i.code})</option>)}
+        </select>
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16,marginBottom:14}}>
+        <div>
+          <label style={{display:"block",color:C.sub,fontSize:12,fontWeight:600,textTransform:"uppercase",letterSpacing:0.5,marginBottom:5}}>From</label>
+          <select value={from} onChange={e=>setFrom(e.target.value)}
+            style={{width:"100%",background:C.raised,border:`1px solid ${C.border}`,borderRadius:8,padding:"9px 12px",color:C.text,fontSize:13,fontFamily:"inherit"}}>
+            {locs.map(l=><option key={l} value={l}>{locName(l)}</option>)}
+          </select>
+          {selItem&&<div style={{fontSize:11,color:avail<1?C.red:C.green,marginTop:4,fontWeight:600}}>Available: {avail}</div>}
+        </div>
+        <div>
+          <label style={{display:"block",color:C.sub,fontSize:12,fontWeight:600,textTransform:"uppercase",letterSpacing:0.5,marginBottom:5}}>To</label>
+          <select value={to} onChange={e=>setTo(e.target.value)}
+            style={{width:"100%",background:C.raised,border:`1px solid ${C.border}`,borderRadius:8,padding:"9px 12px",color:C.text,fontSize:13,fontFamily:"inherit"}}>
+            <option value="">— Select destination —</option>
+            {locs.filter(l=>l!==from).map(l=><option key={l} value={l}>{locName(l)}</option>)}
+          </select>
+        </div>
+      </div>
+      <FF label="Quantity" value={qty} onChange={v=>setQty(v)} type="number"/>
+    </Modal>
+  );
+}
+
+/* ── Collect / Scan Modal ── */
+function CollectModal({items, fieldStaff, jobs, onSave, onClose}) {
+  const [scan, setScan] = useState("");
+  const [techId, setTechId] = useState("");
+  const [jobRef, setJobRef] = useState("");
+  const [collected, setCollected] = useState([]); // [{item, qty}]
+  const [err, setErr] = useState("");
+  const inputRef = useRef(null);
+
+  const handleScan = (e) => {
+    if(e.key !== "Enter") return;
+    const code = scan.trim();
+    const item = items.find(i=>i.barcode===code||i.code===code);
+    if(!item){ setErr("Item not found: "+code); setScan(""); return; }
+    const loc = techId ? "van_"+techId : "warehouse";
+    const avail = item.qtyOnHand[loc]||0;
+    if(avail < 1){ setErr(`${item.name} — none available at ${loc==="warehouse"?"Warehouse":"this van"}`); setScan(""); return; }
+    setCollected(c=>{const ex=c.find(x=>x.item.id===item.id); return ex ? c.map(x=>x.item.id===item.id?{...x,qty:x.qty+1}:x) : [...c,{item,qty:1}];});
+    setErr(""); setScan("");
+    inputRef.current?.focus();
+  };
+
+  return (
+    <Modal title="📦 Collect Items" onClose={onClose} wide
+      onSave={()=>{ if(collected.length===0) return; onSave({collected, techId, jobRef}); }}>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"0 16px",marginBottom:12}}>
+        <div>
+          <label style={{display:"block",color:C.sub,fontSize:12,fontWeight:600,textTransform:"uppercase",letterSpacing:0.5,marginBottom:5}}>Technician *</label>
+          <select value={techId} onChange={e=>setTechId(e.target.value)}
+            style={{width:"100%",background:C.raised,border:`1px solid ${C.border}`,borderRadius:8,padding:"9px 12px",color:C.text,fontSize:13,fontFamily:"inherit"}}>
+            <option value="">— Select tech —</option>
+            {fieldStaff.filter(f=>f.status==="Active").map(f=><option key={f.id} value={f.id}>{f.name}</option>)}
+          </select>
+        </div>
+        <div>
+          <label style={{display:"block",color:C.sub,fontSize:12,fontWeight:600,textTransform:"uppercase",letterSpacing:0.5,marginBottom:5}}>Linked Job</label>
+          <select value={jobRef} onChange={e=>setJobRef(e.target.value)}
+            style={{width:"100%",background:C.raised,border:`1px solid ${C.border}`,borderRadius:8,padding:"9px 12px",color:C.text,fontSize:13,fontFamily:"inherit"}}>
+            <option value="">— Optional —</option>
+            {jobs.map(j=><option key={j.id} value={j.ref}>{j.ref}</option>)}
+          </select>
+        </div>
+      </div>
+
+      <div style={{background:"#f0fdf4",border:"1px solid #bbf7d0",borderRadius:10,padding:12,marginBottom:12}}>
+        <div style={{fontWeight:700,fontSize:12,color:C.green,marginBottom:6}}>🔍 Scan or type barcode/SKU — press Enter</div>
+        <input ref={inputRef} autoFocus value={scan} onChange={e=>setScan(e.target.value)} onKeyDown={handleScan}
+          placeholder="Scan barcode or type item code…"
+          style={{width:"100%",background:"#fff",border:`2px solid ${C.green}`,borderRadius:8,padding:"10px 14px",color:C.text,fontSize:14,fontFamily:"inherit",boxSizing:"border-box"}}/>
+        {err&&<div style={{color:C.red,fontSize:12,marginTop:6,fontWeight:600}}>⚠️ {err}</div>}
+      </div>
+
+      {collected.length>0&&(
+        <div>
+          <div style={{fontWeight:700,fontSize:13,color:C.text,marginBottom:8}}>Items to collect ({collected.length})</div>
+          {collected.map((c,i)=>(
+            <div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"8px 0",borderBottom:`1px solid ${C.border}`}}>
+              <div>
+                <div style={{fontWeight:600,fontSize:13,color:C.text}}>{c.item.name}</div>
+                <div style={{fontSize:11,color:C.muted}}>{c.item.code}</div>
+              </div>
+              <div style={{display:"flex",gap:8,alignItems:"center"}}>
+                <button onClick={()=>setCollected(cl=>cl.map((x,xi)=>xi===i?{...x,qty:Math.max(1,x.qty-1)}:x))}
+                  style={{width:24,height:24,borderRadius:4,border:`1px solid ${C.border}`,background:C.raised,cursor:"pointer",fontFamily:"inherit",fontSize:14}}>−</button>
+                <span style={{fontWeight:800,fontSize:15,minWidth:20,textAlign:"center"}}>{c.qty}</span>
+                <button onClick={()=>setCollected(cl=>cl.map((x,xi)=>xi===i?{...x,qty:x.qty+1}:x))}
+                  style={{width:24,height:24,borderRadius:4,border:`1px solid ${C.border}`,background:C.raised,cursor:"pointer",fontFamily:"inherit",fontSize:14}}>+</button>
+                <button onClick={()=>setCollected(cl=>cl.filter((_,xi)=>xi!==i))}
+                  style={{background:"none",border:"none",color:C.red,cursor:"pointer",fontSize:18,fontFamily:"inherit"}}>×</button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </Modal>
+  );
+}
+
+/* ── Return Modal ── */
+function ReturnModal({items, fieldStaff, jobs, onSave, onClose}) {
+  const [itemId, setItemId] = useState("");
+  const [qty, setQty] = useState(1);
+  const [from, setFrom] = useState("");
+  const [jobRef, setJobRef] = useState("");
+  const [note, setNote] = useState("");
+  const locs = ["warehouse",...fieldStaff.filter(f=>f.status==="Active").map(f=>"van_"+f.id)];
+  const locName = l => l==="warehouse" ? "🏠 Warehouse" : "🚐 "+fieldStaff.find(f=>"van_"+f.id===l)?.name||l;
+  return (
+    <Modal title="Return Stock to Warehouse" onClose={onClose}
+      onSave={()=>{ if(!itemId||!from) return; onSave({itemId, qty:Number(qty), from, jobRef, note}); }}>
+      <div style={{marginBottom:14}}>
+        <label style={{display:"block",color:C.sub,fontSize:12,fontWeight:600,textTransform:"uppercase",letterSpacing:0.5,marginBottom:5}}>Item</label>
+        <select value={itemId} onChange={e=>setItemId(e.target.value)}
+          style={{width:"100%",background:C.raised,border:`1px solid ${C.border}`,borderRadius:8,padding:"9px 12px",color:C.text,fontSize:13,fontFamily:"inherit"}}>
+          <option value="">— Select item —</option>
+          {items.map(i=><option key={i.id} value={i.id}>{i.name} ({i.code})</option>)}
+        </select>
+      </div>
+      <div style={{marginBottom:14}}>
+        <label style={{display:"block",color:C.sub,fontSize:12,fontWeight:600,textTransform:"uppercase",letterSpacing:0.5,marginBottom:5}}>Return From</label>
+        <select value={from} onChange={e=>setFrom(e.target.value)}
+          style={{width:"100%",background:C.raised,border:`1px solid ${C.border}`,borderRadius:8,padding:"9px 12px",color:C.text,fontSize:13,fontFamily:"inherit"}}>
+          <option value="">— Select source —</option>
+          {locs.map(l=><option key={l} value={l}>{locName(l)}</option>)}
+        </select>
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16}}>
+        <FF label="Quantity" value={qty} onChange={v=>setQty(v)} type="number"/>
+        <div>
+          <label style={{display:"block",color:C.sub,fontSize:12,fontWeight:600,textTransform:"uppercase",letterSpacing:0.5,marginBottom:5}}>Linked Job</label>
+          <select value={jobRef} onChange={e=>setJobRef(e.target.value)}
+            style={{width:"100%",background:C.raised,border:`1px solid ${C.border}`,borderRadius:8,padding:"9px 12px",color:C.text,fontSize:13,fontFamily:"inherit"}}>
+            <option value="">— Optional —</option>
+            {jobs.map(j=><option key={j.id} value={j.ref}>{j.ref}</option>)}
+          </select>
+        </div>
+      </div>
+      <FF label="Notes" value={note} onChange={setNote} type="textarea" placeholder="Reason for return…"/>
+    </Modal>
+  );
+}
+
+/* ── Item Detail View ── */
+function ItemDetail({item, suppliers, fieldStaff, onBack, onEdit}) {
+  const sup = suppliers.find(s=>s.id===item.supplierId);
+  const totalQty = Object.values(item.qtyOnHand||{}).reduce((s,v)=>s+(v||0),0);
+  const stockStatus = totalQty===0?"red":totalQty<=item.reorderPoint?"orange":"green";
+  const locs = [["warehouse","🏠 Warehouse"],...fieldStaff.filter(f=>f.status==="Active").map(f=>["van_"+f.id,"🚐 "+f.name])];
+  return (
+    <div>
+      <Breadcrumb items={[{label:"Inventory",fn:onBack},{label:item.name}]}/>
+      <div style={{display:"flex",gap:12,flexWrap:"wrap",marginBottom:16}}>
+        <div style={{flex:2,minWidth:260}}>
+          <Card style={{marginBottom:12}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:12}}>
+              <div>
+                <div style={{color:C.accent,fontWeight:800,fontSize:12,marginBottom:2}}>{item.code}</div>
+                <div style={{color:C.text,fontWeight:800,fontSize:18}}>{item.name}</div>
+                <div style={{color:C.muted,fontSize:13,marginTop:2}}>{item.description}</div>
+              </div>
+              <div style={{display:"flex",gap:8,flexShrink:0}}>
+                <Badge label={item.category} color="blue"/>
+                <Badge label={totalQty===0?"Out of Stock":totalQty<=item.reorderPoint?"Low Stock":"In Stock"} color={stockStatus}/>
+              </div>
+            </div>
+            <Field label="Supplier" value={sup?.name||"—"}/>
+            <Field label="Supplier Code" value={item.supplierCode||"—"}/>
+            <Field label="Purchase Price" value={fmtMoney(item.purchasePrice)}/>
+            <Field label="Sell Price" value={fmtMoney(item.sellPrice)}/>
+            <Field label="Markup" value={item.markup+"%"}/>
+            <Field label="Reorder Point" value={item.reorderPoint}/>
+            <Field label="Reorder Qty" value={item.reorderQty}/>
+            <div style={{marginTop:12}}>
+              <Btn label="✏️ Edit Item" onClick={onEdit} small outline/>
+            </div>
+          </Card>
+
+          {/* Price history */}
+          {item.priceHistory?.length>0&&(
+            <Card style={{marginBottom:12}}>
+              <SectionHead title="📈 Price History"/>
+              {[...item.priceHistory].reverse().map((h,i)=>(
+                <div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"8px 0",borderBottom:i<item.priceHistory.length-1?`1px solid ${C.border}`:"none"}}>
+                  <div>
+                    <div style={{fontWeight:700,fontSize:13,color:C.text}}>{fmtMoney(h.price)}</div>
+                    <div style={{fontSize:11,color:C.muted}}>{h.note||"—"}</div>
+                  </div>
+                  <div style={{fontSize:12,color:C.sub}}>{fmtDate(h.date)}</div>
+                </div>
+              ))}
+            </Card>
+          )}
+
+          {/* Client markups */}
+          <Card>
+            <SectionHead title="💼 Commission Markups"/>
+            <p style={{color:C.muted,fontSize:12,marginBottom:10}}>Extra % charged to clients who invoice you a commission</p>
+            {item.clientMarkups?.length===0&&<div style={{color:C.muted,fontSize:13}}>No client-specific markups set</div>}
+            {item.clientMarkups?.map((cm,i)=>(
+              <div key={i} style={{display:"flex",justifyContent:"space-between",padding:"6px 0",borderBottom:`1px solid ${C.border}`}}>
+                <span style={{fontSize:13,color:C.text}}>{cm.clientId||"All clients"}</span>
+                <Badge label={"+"+cm.markupPct+"%"} color="orange"/>
+              </div>
+            ))}
+          </Card>
+        </div>
+
+        <div style={{flex:1,minWidth:200}}>
+          {/* Stock levels */}
+          <Card style={{marginBottom:12}}>
+            <SectionHead title="📦 Stock Levels"/>
+            <div style={{textAlign:"center",margin:"8px 0 16px"}}>
+              <div style={{fontSize:48,fontWeight:900,color:totalQty===0?C.red:totalQty<=item.reorderPoint?C.orange:C.green}}>{totalQty}</div>
+              <div style={{fontSize:12,color:C.muted}}>Total on hand</div>
+            </div>
+            {locs.map(([loc,label])=>(
+              <div key={loc} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"7px 0",borderTop:`1px solid ${C.border}`}}>
+                <span style={{fontSize:13,color:C.sub}}>{label}</span>
+                <span style={{fontWeight:800,fontSize:16,color:C.text}}>{item.qtyOnHand?.[loc]||0}</span>
+              </div>
+            ))}
+          </Card>
+
+          {/* Barcode */}
+          {item.barcode&&(
+            <Card>
+              <SectionHead title="🔍 Barcode"/>
+              <div style={{padding:8,background:C.raised,borderRadius:8,display:"flex",justifyContent:"center"}}>
+                <BarcodeDisplay value={item.barcode} width={170} height={55}/>
+              </div>
+              <div style={{textAlign:"center",marginTop:6,fontSize:11,color:C.muted,fontFamily:"monospace"}}>{item.barcode}</div>
+            </Card>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── Main InventoryTab ── */
+function InventoryTab({settings, companies}) {
+  const {invItems, setInvItems, invSuppliers, setInvSuppliers, purchaseOrders, setPurchaseOrders, stockMovements, setStockMovements, fieldStaff} = settings;
+  const [invTab, setInvTab] = useState("items");
+  const [search, setSearch] = useState("");
+  const [catFilter, setCatFilter] = useState("All");
+  const [selItem, setSelItem] = useState(null);
+  const [modal, setModal] = useState(null); // "addItem"|"editItem"|"addPO"|"editPO"|"receive"|"transfer"|"collect"|"return"
+  const [modalData, setModalData] = useState(null);
+
+  const jobs = allJobs ? allJobs(companies) : [];
+  const openJobs = jobs.filter(j=>j.status==="Open");
+
+  /* ── Helpers ── */
+  const totalQty = item => Object.values(item.qtyOnHand||{}).reduce((s,v)=>s+(v||0),0);
+  const stockStatus = item => { const t=totalQty(item); return t===0?"red":t<=item.reorderPoint?"orange":"green"; };
+  const locName = l => l==="warehouse" ? "Warehouse" : "Van — "+fieldStaff?.find(f=>"van_"+f.id===l)?.name||l;
+
+  const cats = ["All",...new Set(invItems.map(i=>i.category))];
+  const filtered = invItems.filter(i=>{
+    const mc = catFilter==="All"||i.category===catFilter;
+    const ms = !search||i.name.toLowerCase().includes(search.toLowerCase())||i.code.toLowerCase().includes(search.toLowerCase())||i.barcode?.includes(search);
+    return mc&&ms&&i.status!=="discontinued";
+  });
+
+  const lowStock = invItems.filter(i=>totalQty(i)<=i.reorderPoint&&totalQty(i)>0);
+  const outOfStock = invItems.filter(i=>totalQty(i)===0);
+  const totalValue = invItems.reduce((s,i)=>s+totalQty(i)*i.purchasePrice,0);
+
+  /* ── PO status colours ── */
+  const poStatusCol = s => s==="received"?"green":s==="sent"?"blue":s==="partial"?"orange":"gray";
+
+  /* ── Save item ── */
+  const saveItem = item => {
+    setInvItems(prev=> prev.find(i=>i.id===item.id) ? prev.map(i=>i.id===item.id?item:i) : [...prev,item]);
+    setModal(null);
+    if(selItem?.id===item.id) setSelItem(item);
+  };
+
+  /* ── Save PO ── */
+  const savePO = po => {
+    setPurchaseOrders(prev=> prev.find(p=>p.id===po.id) ? prev.map(p=>p.id===po.id?po:p) : [...prev,po]);
+    setModal(null);
+  };
+
+  /* ── Receive stock ── */
+  const receiveStock = (po, receivedLines) => {
+    const now = new Date().toISOString().slice(0,10);
+    const newMovements = [];
+    const updatedItems = [...invItems];
+
+    receivedLines.forEach(l => {
+      if(!l.receiving||l.receiving<1) return;
+      const idx = updatedItems.findIndex(i=>i.id===l.itemId);
+      if(idx>=0) {
+        updatedItems[idx] = {...updatedItems[idx], qtyOnHand:{...updatedItems[idx].qtyOnHand, warehouse:(updatedItems[idx].qtyOnHand?.warehouse||0)+l.receiving}};
+      }
+      newMovements.push({id:nextMvId(),type:"receive",itemId:l.itemId,qty:l.receiving,fromLocation:null,toLocation:"warehouse",jobId:po.jobId||null,techId:null,poId:po.id,date:now,note:`${po.ref} received`});
+    });
+
+    const allReceived = receivedLines.every(l=>(l.qtyReceived+(l.receiving||0))>=l.qtyOrdered);
+    const updatedPO = {...po,
+      status: allReceived?"received":"partial",
+      receivedDate: now,
+      lines: po.lines.map(l=>{ const rl=receivedLines.find(r=>r.itemId===l.itemId); return rl?{...l,qtyReceived:l.qtyReceived+(rl.receiving||0)}:l; })
+    };
+
+    setInvItems(updatedItems);
+    setStockMovements(prev=>[...prev,...newMovements]);
+    setPurchaseOrders(prev=>prev.map(p=>p.id===po.id?updatedPO:p));
+
+    // Auto-move linked job to "Parts Received"
+    if(po.jobId && allReceived) {
+      const jRef = po.jobId;
+      // Update job stage in companies — find and update
+      // We surface a toast-style note since job update requires companies setter
+      alert(`✅ Stock received for PO ${po.ref}. Job ${jRef} should now be moved to "Parts Received".`);
+    }
+    setModal(null);
+  };
+
+  /* ── Transfer ── */
+  const doTransfer = ({itemId, qty, from, to}) => {
+    setInvItems(prev=>prev.map(i=>{
+      if(i.id!==itemId) return i;
+      const oh={...i.qtyOnHand};
+      oh[from]=Math.max(0,(oh[from]||0)-qty);
+      oh[to]=(oh[to]||0)+qty;
+      return {...i,qtyOnHand:oh};
+    }));
+    setStockMovements(prev=>[...prev,{id:nextMvId(),type:"transfer",itemId,qty,fromLocation:from,toLocation:to,jobId:null,techId:null,poId:null,date:new Date().toISOString().slice(0,10),note:"Transfer"}]);
+    setModal(null);
+  };
+
+  /* ── Collect ── */
+  const doCollect = ({collected, techId, jobRef}) => {
+    const loc = techId ? "van_"+techId : "warehouse";
+    setInvItems(prev=>prev.map(i=>{
+      const c=collected.find(x=>x.item.id===i.id); if(!c) return i;
+      const oh={...i.qtyOnHand};
+      oh[loc]=Math.max(0,(oh[loc]||0)-c.qty);
+      return {...i,qtyOnHand:oh};
+    }));
+    const now=new Date().toISOString().slice(0,10);
+    setStockMovements(prev=>[...prev,...collected.map(c=>({id:nextMvId(),type:"collect",itemId:c.item.id,qty:c.qty,fromLocation:loc,toLocation:null,jobId:jobRef||null,techId:techId||null,poId:null,date:now,note:"Collected"+" "+(jobRef?"for job "+jobRef:"")}))]);
+    setModal(null);
+  };
+
+  /* ── Return ── */
+  const doReturn = ({itemId,qty,from,jobRef,note}) => {
+    setInvItems(prev=>prev.map(i=>{
+      if(i.id!==itemId) return i;
+      const oh={...i.qtyOnHand};
+      oh[from]=Math.max(0,(oh[from]||0)-qty);
+      oh["warehouse"]=(oh["warehouse"]||0)+qty;
+      return {...i,qtyOnHand:oh};
+    }));
+    setStockMovements(prev=>[...prev,{id:nextMvId(),type:"return",itemId,qty,fromLocation:from,toLocation:"warehouse",jobId:jobRef||null,techId:null,poId:null,date:new Date().toISOString().slice(0,10),note:note||"Return to warehouse"}]);
+    setModal(null);
+  };
+
+  /* ── Tab sub-nav ── */
+  const tabs = [{id:"items",label:"📦 Items"},{id:"purchase-orders",label:"🛒 Purchase Orders"},{id:"movements",label:"📋 Movements"}];
+
+  if(selItem) return (
+    <ItemDetail item={selItem} suppliers={invSuppliers} fieldStaff={fieldStaff||[]}
+      onBack={()=>setSelItem(null)} onEdit={()=>setModal("editItem")}/>
+  );
+
+  return (
+    <div>
+      {/* Header */}
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:16,flexWrap:"wrap",gap:10}}>
+        <div>
+          <h2 style={{fontSize:18,fontWeight:800,color:C.text}}>Inventory</h2>
+          <p style={{color:C.sub,fontSize:12,marginTop:2}}>{invItems.length} items · {fmtMoney(totalValue)} stock value</p>
+        </div>
+        <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+          <Btn label="📦 Collect" onClick={()=>setModal("collect")} color={C.green} small/>
+          <Btn label="↔ Transfer" onClick={()=>setModal("transfer")} color={C.purple} small/>
+          <Btn label="↩ Return" onClick={()=>setModal("return")} color={C.orange} small/>
+          <Btn label="+ Add Item" onClick={()=>{setModalData(null);setModal("addItem");}} small/>
+        </div>
+      </div>
+
+      {/* Stats */}
+      <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10,marginBottom:14}}>
+        <StatCard label="Total Items" value={invItems.length} icon="📦" color={C.accent}/>
+        <StatCard label="Low Stock" value={lowStock.length} sub="near reorder point" icon="⚠️" color={C.orange}/>
+        <StatCard label="Out of Stock" value={outOfStock.length} icon="🚫" color={C.red}/>
+        <StatCard label="Stock Value" value={fmtMoney(totalValue)} icon="💰" color={C.green}/>
+      </div>
+
+      {/* Low stock alert */}
+      {(lowStock.length>0||outOfStock.length>0)&&(
+        <div style={{background:"#fef9c3",border:"1px solid #fde047",borderRadius:10,padding:"12px 14px",marginBottom:14}}>
+          <div style={{fontWeight:700,fontSize:13,color:"#854d0e",marginBottom:6}}>⚠️ Stock Alerts</div>
+          {outOfStock.map(i=><div key={i.id} style={{fontSize:12,color:C.red,marginTop:2,fontWeight:600}}>🚫 {i.name} — Out of stock</div>)}
+          {lowStock.map(i=><div key={i.id} style={{fontSize:12,color:"#92400e",marginTop:2}}>• {i.name} — {totalQty(i)} on hand (reorder at {i.reorderPoint})</div>)}
+        </div>
+      )}
+
+      {/* Sub-tabs */}
+      <div style={{display:"flex",gap:8,marginBottom:16,borderBottom:`2px solid ${C.border}`,paddingBottom:0}}>
+        {tabs.map(t=>(
+          <button key={t.id} onClick={()=>setInvTab(t.id)}
+            style={{background:"none",border:"none",borderBottom:`3px solid ${invTab===t.id?C.accent:"transparent"}`,padding:"8px 14px",fontWeight:700,fontSize:13,color:invTab===t.id?C.accent:C.sub,cursor:"pointer",fontFamily:"inherit",marginBottom:-2}}>
+            {t.label}
+            {t.id==="purchase-orders"&&<span style={{marginLeft:6,background:purchaseOrders.filter(p=>p.status!=="received").length?C.orange:"#e2e8f0",color:purchaseOrders.filter(p=>p.status!=="received").length?"#fff":C.muted,borderRadius:99,fontSize:10,fontWeight:800,padding:"1px 6px"}}>{purchaseOrders.filter(p=>p.status!=="received").length}</span>}
+          </button>
+        ))}
+      </div>
+
+      {/* ── ITEMS TAB ── */}
+      {invTab==="items"&&(
+        <div>
+          <div style={{display:"flex",gap:10,marginBottom:12,flexWrap:"wrap"}}>
+            <input placeholder="Search by name, code or barcode…" value={search} onChange={e=>setSearch(e.target.value)}
+              style={{flex:1,minWidth:200,background:"#fff",border:`1px solid ${C.border}`,borderRadius:9,padding:"10px 14px",color:C.text,fontSize:14,fontFamily:"inherit",boxSizing:"border-box"}}/>
+          </div>
+          <div style={{display:"flex",gap:8,marginBottom:14,overflowX:"auto",paddingBottom:4}}>
+            {cats.map(c=><Pill key={c} label={c} active={catFilter===c} onClick={()=>setCatFilter(c)}/>)}
+          </div>
+          {filtered.map(item=>(
+            <RowCard key={item.id} onClick={()=>setSelItem(item)}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
+                <div style={{flex:1,minWidth:0,marginRight:12}}>
+                  <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap",marginBottom:4}}>
+                    <span style={{color:C.accent,fontWeight:800,fontSize:11,fontFamily:"monospace"}}>{item.code}</span>
+                    <Badge label={item.category} color="blue"/>
+                    <Badge label={totalQty(item)===0?"Out of Stock":totalQty(item)<=item.reorderPoint?"Low Stock":"In Stock"} color={stockStatus(item)}/>
+                  </div>
+                  <div style={{color:C.text,fontWeight:700,fontSize:14}}>{item.name}</div>
+                  <div style={{color:C.muted,fontSize:12,marginTop:2}}>{item.description}</div>
+                  <div style={{display:"flex",gap:12,marginTop:6,fontSize:12,color:C.sub,flexWrap:"wrap"}}>
+                    <span>Cost: {fmtMoney(item.purchasePrice)}</span>
+                    <span>Sell: {fmtMoney(item.sellPrice)}</span>
+                    <span>Markup: {item.markup}%</span>
+                    <span>Reorder at: {item.reorderPoint}</span>
+                  </div>
+                </div>
+                <div style={{textAlign:"right",flexShrink:0}}>
+                  <div style={{color:totalQty(item)===0?C.red:totalQty(item)<=item.reorderPoint?C.orange:C.green,fontWeight:900,fontSize:28}}>{totalQty(item)}</div>
+                  <div style={{color:C.muted,fontSize:10,marginTop:2}}>total on hand</div>
+                  <div style={{display:"flex",gap:4,marginTop:6,justifyContent:"flex-end",flexWrap:"wrap"}}>
+                    {Object.entries(item.qtyOnHand||{}).filter(([,v])=>v>0).map(([loc,v])=>(
+                      <span key={loc} style={{background:C.raised,border:`1px solid ${C.border}`,borderRadius:6,padding:"2px 7px",fontSize:10,fontWeight:700,color:C.sub}}>{locName(loc)}: {v}</span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </RowCard>
+          ))}
+          {filtered.length===0&&<div style={{textAlign:"center",padding:"40px 0",color:C.muted}}><div style={{fontSize:36,marginBottom:8}}>📦</div>No items found</div>}
+        </div>
+      )}
+
+      {/* ── PURCHASE ORDERS TAB ── */}
+      {invTab==="purchase-orders"&&(
+        <div>
+          <div style={{display:"flex",justifyContent:"flex-end",marginBottom:14}}>
+            <Btn label="+ New Purchase Order" onClick={()=>{setModalData(null);setModal("addPO");}}/>
+          </div>
+          {purchaseOrders.length===0&&<div style={{textAlign:"center",padding:"40px 0",color:C.muted}}><div style={{fontSize:36,marginBottom:8}}>🛒</div>No purchase orders yet</div>}
+          {[...purchaseOrders].sort((a,b)=>b.date.localeCompare(a.date)).map(po=>(
+            <RowCard key={po.id}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap",marginBottom:4}}>
+                    <span style={{color:C.accent,fontWeight:800,fontSize:14}}>{po.ref}</span>
+                    <Badge label={po.status.charAt(0).toUpperCase()+po.status.slice(1)} color={poStatusCol(po.status)}/>
+                    {po.jobId&&<Badge label={"Job "+po.jobId} color="purple"/>}
+                  </div>
+                  <div style={{fontWeight:700,fontSize:14,color:C.text}}>{po.supplierName}</div>
+                  <div style={{fontSize:12,color:C.sub,marginTop:2}}>
+                    {po.lines.length} line{po.lines.length!==1?"s":""} · Ordered {fmtDate(po.date)}
+                    {po.receivedDate&&" · Received "+fmtDate(po.receivedDate)}
+                  </div>
+                  <div style={{fontSize:12,color:C.muted,marginTop:4}}>{po.notes}</div>
+                  <div style={{marginTop:8}}>
+                    {po.lines.map((l,i)=>(
+                      <div key={i} style={{fontSize:12,color:C.sub,marginTop:2}}>
+                        • {l.itemName} — {l.qtyReceived}/{l.qtyOrdered} received @ {fmtMoney(l.unitCost)}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div style={{display:"flex",flexDirection:"column",gap:8,flexShrink:0,marginLeft:12}}>
+                  <div style={{textAlign:"right",fontWeight:900,fontSize:15,color:C.text}}>
+                    {fmtMoney(po.lines.reduce((s,l)=>s+l.qtyOrdered*l.unitCost,0))}
+                  </div>
+                  {po.status!=="received"&&(
+                    <div style={{display:"flex",gap:6,flexWrap:"wrap",justifyContent:"flex-end"}}>
+                      <Btn label="✏️ Edit" onClick={()=>{setModalData(po);setModal("editPO");}} small outline/>
+                      <Btn label="📥 Receive" onClick={()=>{setModalData(po);setModal("receive");}} color={C.green} small/>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </RowCard>
+          ))}
+        </div>
+      )}
+
+      {/* ── MOVEMENTS TAB ── */}
+      {invTab==="movements"&&(
+        <div>
+          <div style={{fontWeight:700,fontSize:14,color:C.text,marginBottom:12}}>Stock Movement Log</div>
+          {[...stockMovements].sort((a,b)=>b.date.localeCompare(a.date)).map(mv=>{
+            const item=invItems.find(i=>i.id===mv.itemId);
+            const typeIcon={receive:"📥",transfer:"↔️",collect:"📤",return:"↩️",adjustment:"⚙️"}[mv.type]||"📋";
+            const typeCol={receive:C.green,transfer:C.accent,collect:C.orange,return:C.purple,adjustment:C.muted}[mv.type]||C.muted;
+            return(
+              <div key={mv.id} style={{display:"flex",gap:12,alignItems:"flex-start",padding:"10px 0",borderBottom:`1px solid ${C.border}`}}>
+                <div style={{fontSize:22,lineHeight:1,flexShrink:0,marginTop:2}}>{typeIcon}</div>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
+                    <span style={{fontWeight:700,fontSize:13,color:C.text}}>{item?.name||mv.itemId}</span>
+                    <span style={{background:typeCol+"22",color:typeCol,borderRadius:99,fontSize:10,fontWeight:800,padding:"2px 8px",textTransform:"uppercase"}}>{mv.type}</span>
+                    <span style={{fontWeight:800,fontSize:13,color:mv.type==="receive"||mv.type==="return"?C.green:C.orange}}>{mv.type==="receive"||mv.type==="return"?"+":"-"}{mv.qty}</span>
+                  </div>
+                  <div style={{fontSize:12,color:C.sub,marginTop:3}}>
+                    {mv.fromLocation&&locName(mv.fromLocation)}{mv.fromLocation&&mv.toLocation?" → ":""}{mv.toLocation&&locName(mv.toLocation)}
+                    {mv.jobId&&" · Job "+mv.jobId}
+                    {mv.poId&&" · "+mv.poId}
+                  </div>
+                  {mv.note&&<div style={{fontSize:12,color:C.muted,marginTop:2}}>{mv.note}</div>}
+                </div>
+                <div style={{fontSize:12,color:C.muted,flexShrink:0}}>{fmtDate(mv.date)}</div>
+              </div>
+            );
+          })}
+          {stockMovements.length===0&&<div style={{textAlign:"center",padding:"40px 0",color:C.muted}}>No movements recorded</div>}
+        </div>
+      )}
+
+      {/* ── MODALS ── */}
+      {(modal==="addItem"||modal==="editItem")&&(
+        <ItemModal item={modal==="editItem"?selItem:null} suppliers={invSuppliers} onSave={saveItem} onClose={()=>setModal(null)}/>
+      )}
+      {(modal==="addPO"||modal==="editPO")&&(
+        <POModal po={modal==="editPO"?modalData:null} items={invItems} suppliers={invSuppliers} jobs={openJobs} onSave={savePO} onClose={()=>setModal(null)}/>
+      )}
+      {modal==="receive"&&modalData&&(
+        <ReceiveModal po={modalData} onSave={lines=>receiveStock(modalData,lines)} onClose={()=>setModal(null)}/>
+      )}
+      {modal==="transfer"&&(
+        <TransferModal items={invItems} fieldStaff={fieldStaff||[]} onSave={doTransfer} onClose={()=>setModal(null)}/>
+      )}
+      {modal==="collect"&&(
+        <CollectModal items={invItems} fieldStaff={fieldStaff||[]} jobs={openJobs} onSave={doCollect} onClose={()=>setModal(null)}/>
+      )}
+      {modal==="return"&&(
+        <ReturnModal items={invItems} fieldStaff={fieldStaff||[]} jobs={openJobs} onSave={doReturn} onClose={()=>setModal(null)}/>
+      )}
+    </div>
+  );
 }
 
 /* ═══════════════════════════════════════════
@@ -4774,7 +5638,7 @@ function App() {
         {tab==="history"&&<HistoryTab settings={settings} companies={companies} setCompanies={setCompanies} vendors={vendors}/>}
         {tab==="quotes"&&<QuotesTab/>}
         {tab==="invoices"&&<InvoicesTab/>}
-        {tab==="inventory"&&<InventoryTab/>}
+        {tab==="inventory"&&<InventoryTab settings={settings} companies={companies} setCompanies={setCompanies}/>}
         {tab==="reports"&&<ReportsTab companies={companies}/>}
         {tab==="settings"&&<SettingsTab settings={settings}/>}
       </div>
