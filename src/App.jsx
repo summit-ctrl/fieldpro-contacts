@@ -2247,215 +2247,188 @@ function DispatchMap({jobs, allTechNames, onOpen}) {
   const [hoveredJob, setHoveredJob] = useState(null);
   const [hoveredTech, setHoveredTech] = useState(null);
 
-  const MAP_W = 860, MAP_H = 560;
-  const LNG_MIN=150.60, LNG_MAX=151.45;
-  const LAT_MIN=-34.15, LAT_MAX=-33.55;
+  // Sydney bounds
+  const MAP_W = 860, MAP_H = 530;
+  const LNG_MIN=150.58, LNG_MAX=151.45;
+  const LAT_MIN=-34.18, LAT_MAX=-33.55;
 
   const project = ({lat,lng}) => ({
     x: ((lng-LNG_MIN)/(LNG_MAX-LNG_MIN))*MAP_W,
     y: MAP_H - ((lat-LAT_MIN)/(LAT_MAX-LAT_MIN))*MAP_H,
   });
 
-  const jobsWithCoords = jobs.map(j=>({...j, coords:jobCoords(j)}));
+  const openJobs = jobs.filter(j=>j.status==="Open");
+  const jobsWithCoords = openJobs.map(j=>({...j, coords:jobCoords(j)}));
 
   const techRoutes = allTechNames.map((tech,ti)=>{
-    const techJobs = jobsWithCoords
-      .filter(j=>j.tech===tech && j.status==="Open")
+    const tJobs = jobsWithCoords
+      .filter(j=>j.tech===tech)
       .sort((a,b)=>(timeToMinutes(a.scheduledTime)||99999)-(timeToMinutes(b.scheduledTime)||99999));
-    return {tech, jobs:techJobs, color:TECH_COLORS[ti%TECH_COLORS.length]};
+    return {tech, jobs:tJobs, color:TECH_COLORS[ti%TECH_COLORS.length]};
   }).filter(r=>r.jobs.length>0);
 
   const LABELS = [
-    {name:"Sydney CBD",    lat:-33.8688, lng:151.2093},
-    {name:"Parramatta",    lat:-33.8150, lng:151.0011},
-    {name:"Blacktown",     lat:-33.7690, lng:150.9054},
-    {name:"Penrith",       lat:-33.7510, lng:150.6942},
-    {name:"Liverpool",     lat:-33.9200, lng:150.9231},
-    {name:"Chatswood",     lat:-33.7969, lng:151.1808},
-    {name:"Hornsby",       lat:-33.7028, lng:151.0988},
-    {name:"Campbelltown",  lat:-34.0651, lng:150.8141},
-    {name:"Castle Hill",   lat:-33.7300, lng:151.0000},
-    {name:"Seven Hills",   lat:-33.7745, lng:150.9360},
-    {name:"Auburn",        lat:-33.8490, lng:151.0340},
-    {name:"Merrylands",    lat:-33.8380, lng:150.9880},
+    {name:"Sydney CBD",   lat:-33.8688, lng:151.2093},
+    {name:"Parramatta",   lat:-33.8150, lng:151.0011},
+    {name:"Blacktown",    lat:-33.7690, lng:150.9054},
+    {name:"Penrith",      lat:-33.7510, lng:150.6942},
+    {name:"Liverpool",    lat:-33.9200, lng:150.9231},
+    {name:"Chatswood",    lat:-33.7969, lng:151.1808},
+    {name:"Hornsby",      lat:-33.7028, lng:151.0988},
+    {name:"Campbelltown", lat:-34.0651, lng:150.8141},
+    {name:"Castle Hill",  lat:-33.7300, lng:151.0000},
+    {name:"Merrylands",   lat:-33.8380, lng:150.9880},
+    {name:"Auburn",       lat:-33.8490, lng:151.0340},
   ];
 
-  // Road network paths
   const roads = [
-    // M4/Parramatta Rd: Parramatta → Sydney CBD
     {pts:[{lat:-33.815,lng:151.001},{lat:-33.842,lng:151.065},{lat:-33.869,lng:151.209}], w:3.5},
-    // M7: Blacktown → Liverpool (north-south)
     {pts:[{lat:-33.769,lng:150.905},{lat:-33.840,lng:150.872},{lat:-33.920,lng:150.923}], w:3},
-    // Great Western Hwy: Parramatta → Penrith
     {pts:[{lat:-33.815,lng:151.001},{lat:-33.769,lng:150.905},{lat:-33.763,lng:150.724},{lat:-33.751,lng:150.694}], w:3},
-    // Pacific Hwy: Sydney → Chatswood → Hornsby
     {pts:[{lat:-33.869,lng:151.209},{lat:-33.797,lng:151.181},{lat:-33.730,lng:151.099}], w:2.5},
-    // Hume Hwy: Sydney → Campbelltown
     {pts:[{lat:-33.869,lng:151.209},{lat:-33.920,lng:150.923},{lat:-34.065,lng:150.814}], w:2.5},
-    // Windsor Rd: Blacktown → Baulkham Hills → Castle Hill
     {pts:[{lat:-33.769,lng:150.905},{lat:-33.759,lng:150.980},{lat:-33.730,lng:151.000}], w:2},
-    // Parramatta → Merrylands → Auburn
     {pts:[{lat:-33.815,lng:151.001},{lat:-33.838,lng:150.988},{lat:-33.849,lng:151.034}], w:2},
-    // Coastline
-    {pts:[{lat:-33.62,lng:151.38},{lat:-33.72,lng:151.32},{lat:-33.82,lng:151.29},{lat:-33.87,lng:151.27},{lat:-33.95,lng:151.25},{lat:-34.05,lng:151.15}], w:5, coast:true},
+    {pts:[{lat:-33.62,lng:151.38},{lat:-33.72,lng:151.32},{lat:-33.82,lng:151.29},{lat:-33.95,lng:151.25},{lat:-34.05,lng:151.15}], w:6, coast:true},
   ];
 
   return(
-    <div style={{display:"flex",gap:14,alignItems:"flex-start"}}>
-      {/* Map */}
-      <div style={{flex:1,minWidth:0,borderRadius:14,overflow:"hidden",boxShadow:"0 6px 30px rgba(0,0,0,0.3)",background:"#0d1b2a"}}>
+    <div style={{display:"flex",flexDirection:"column",gap:12}}>
+      {/* Map SVG — full width */}
+      <div style={{borderRadius:14,overflow:"hidden",boxShadow:"0 6px 30px rgba(0,0,0,0.25)",background:"#0d1b2a",width:"100%"}}>
         <svg width="100%" viewBox={`0 0 ${MAP_W} ${MAP_H}`} style={{display:"block"}}>
-          {/* Sky gradient background */}
           <defs>
-            <linearGradient id="skyGrad" x1="0" y1="0" x2="0" y2="1">
+            <linearGradient id="mapBg" x1="0" y1="0" x2="0" y2="1">
               <stop offset="0%" stopColor="#0d1b2a"/>
-              <stop offset="100%" stopColor="#1a2f47"/>
+              <stop offset="100%" stopColor="#142035"/>
             </linearGradient>
-            {techRoutes.map(({tech,color},ti)=>(
-              <filter key={tech} id={`glow${ti}`} x="-50%" y="-50%" width="200%" height="200%">
-                <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
-                <feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge>
-              </filter>
-            ))}
           </defs>
-          <rect width={MAP_W} height={MAP_H} fill="url(#skyGrad)"/>
-
+          <rect width={MAP_W} height={MAP_H} fill="url(#mapBg)"/>
           {/* Grid */}
           {[0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9].map(f=>(
-            <g key={f} opacity={0.25}>
-              <line x1={f*MAP_W} y1={0} x2={f*MAP_W} y2={MAP_H} stroke="#2d4a6b" strokeWidth={0.8}/>
-              <line x1={0} y1={f*MAP_H} x2={MAP_W} y2={f*MAP_H} stroke="#2d4a6b" strokeWidth={0.8}/>
+            <g key={f} opacity={0.18}>
+              <line x1={f*MAP_W} y1={0} x2={f*MAP_W} y2={MAP_H} stroke="#4a7cb5" strokeWidth={0.6}/>
+              <line x1={0} y1={f*MAP_H} x2={MAP_W} y2={f*MAP_H} stroke="#4a7cb5" strokeWidth={0.6}/>
             </g>
           ))}
-
           {/* Roads */}
           {roads.map((road,ri)=>{
             const pts = road.pts.map(p=>project(p));
-            const d = pts.map((p,i)=>i===0?`M${p.x},${p.y}`:`L${p.x},${p.y}`).join(" ");
+            const d = pts.map((p,i)=>i===0?`M${p.x.toFixed(1)},${p.y.toFixed(1)}`:`L${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
             return road.coast
-              ? <path key={ri} d={d} fill="none" stroke="#1e4080" strokeWidth={road.w} opacity={0.7} strokeLinejoin="round"/>
-              : <path key={ri} d={d} fill="none" stroke="#2d4a6b" strokeWidth={road.w} opacity={0.8} strokeLinejoin="round"/>;
+              ? <path key={ri} d={d} fill="none" stroke="#1a3a6b" strokeWidth={road.w} opacity={0.8} strokeLinecap="round" strokeLinejoin="round"/>
+              : <path key={ri} d={d} fill="none" stroke="#253d5a" strokeWidth={road.w} opacity={0.9} strokeLinecap="round" strokeLinejoin="round"/>;
           })}
-
           {/* Suburb labels */}
           {LABELS.map(l=>{
             const p=project(l);
             return(
               <g key={l.name}>
-                <circle cx={p.x} cy={p.y} r={2.5} fill="#3d5a80" opacity={0.7}/>
-                <text x={p.x+5} y={p.y+4} fontSize={9.5} fill="#5a7fa8" fontFamily="'Inter','Segoe UI',sans-serif" letterSpacing={0.3}>{l.name}</text>
+                <circle cx={p.x} cy={p.y} r={2.5} fill="#3d5a80" opacity={0.8}/>
+                <text x={p.x+6} y={p.y+4} fontSize={10} fill="#4a7cb5" fontFamily="'Inter','Segoe UI',sans-serif" letterSpacing={0.2} opacity={0.9}>{l.name}</text>
               </g>
             );
           })}
 
-          {/* Route lines — draw UNDER pins */}
+          {/* Route lines (drawn before pins so pins sit on top) */}
           {techRoutes.map(({tech,jobs:tJobs,color},ti)=>{
-            if(tJobs.length<2) return null;
+            if(tJobs.length<1) return null;
             const isHov = hoveredTech===tech;
             const fade = hoveredTech && !isHov;
             const pts = tJobs.map(j=>project(j.coords));
             return(
-              <g key={tech} opacity={fade?0.12:1} style={{transition:"opacity 0.2s"}}>
-                {/* Glow pass */}
-                {isHov&&pts.slice(0,-1).map((p,i)=>{
+              <g key={tech} opacity={fade?0.08:1} style={{transition:"opacity 0.25s"}}>
+                {/* Glow under route when hovered */}
+                {isHov && pts.length>1 && pts.slice(0,-1).map((p,i)=>(
+                  <line key={"g"+i} x1={p.x} y1={p.y} x2={pts[i+1].x} y2={pts[i+1].y}
+                    stroke={color} strokeWidth={12} opacity={0.18} strokeLinecap="round"/>
+                ))}
+                {/* Route lines */}
+                {pts.length>1 && pts.slice(0,-1).map((p,i)=>{
                   const nx=pts[i+1];
-                  return <path key={"g"+i} d={`M${p.x},${p.y} L${nx.x},${nx.y}`}
-                    fill="none" stroke={color} strokeWidth={8} opacity={0.25} strokeLinecap="round"/>;
-                })}
-                {/* Main route line */}
-                {pts.slice(0,-1).map((p,i)=>{
-                  const nx=pts[i+1];
+                  // Direction arrow at midpoint
                   const mx=(p.x+nx.x)/2, my=(p.y+nx.y)/2;
+                  const angle = Math.atan2(nx.y-p.y, nx.x-p.x)*180/Math.PI;
                   return(
                     <g key={i}>
-                      <path d={`M${p.x},${p.y} L${nx.x},${nx.y}`}
-                        fill="none" stroke={color} strokeWidth={isHov?3.5:2.5}
-                        strokeLinecap="round" opacity={0.9}/>
-                      {/* Direction arrow at midpoint */}
-                      <polygon
-                        points={`${mx},${my-5} ${mx+4},${my+4} ${mx-4},${my+4}`}
-                        fill={color} opacity={0.85}
-                        transform={`rotate(${Math.atan2(nx.y-p.y,nx.x-p.x)*180/Math.PI+90},${mx},${my})`}/>
+                      <line x1={p.x} y1={p.y} x2={nx.x} y2={nx.y}
+                        stroke={color} strokeWidth={isHov?3.5:2.5} strokeLinecap="round" opacity={0.95}/>
+                      <g transform={`translate(${mx},${my}) rotate(${angle})`}>
+                        <polygon points="0,-4 8,0 0,4" fill={color} opacity={0.9}/>
+                      </g>
                     </g>
                   );
                 })}
+                {/* Stop-order labels on each pin */}
+                {pts.map((p,i)=>(
+                  <text key={"ord"+i} x={p.x} y={p.y-16} textAnchor="middle"
+                    fontSize={9} fill={color} fontWeight="800" fontFamily="'Inter',sans-serif" opacity={0.9}>
+                    {i+1}
+                  </text>
+                ))}
               </g>
             );
           })}
 
           {/* Job pins */}
-          {jobsWithCoords.filter(j=>j.status==="Open").map(job=>{
+          {jobsWithCoords.map(job=>{
             const ti = allTechNames.indexOf(job.tech);
             const col = TECH_COLORS[ti%TECH_COLORS.length]||"#64748b";
             const p = project(job.coords);
             const isHov = hoveredJob?.id===job.id;
             const techHov = hoveredTech===job.tech;
-            const fade = (hoveredTech&&!techHov);
-            const r = isHov ? 15 : 11;
+            const fade = hoveredTech && !techHov;
+            const r = isHov?14:10;
             return(
-              <g key={job.id} style={{cursor:"pointer",transition:"opacity 0.2s"}} opacity={fade?0.15:1}
+              <g key={job.id} style={{cursor:"pointer"}} opacity={fade?0.12:1}
                 onMouseEnter={()=>setHoveredJob(job)}
                 onMouseLeave={()=>setHoveredJob(null)}
                 onClick={()=>onOpen(job)}>
-                {/* Shadow */}
-                <circle cx={p.x+2} cy={p.y+2} r={r} fill="rgba(0,0,0,0.4)"/>
-                {/* White ring */}
-                <circle cx={p.x} cy={p.y} r={r+2} fill="#fff" opacity={isHov?1:0.9}/>
-                {/* Colour fill */}
+                <circle cx={p.x+2} cy={p.y+2} r={r} fill="rgba(0,0,0,0.35)"/>
+                <circle cx={p.x} cy={p.y} r={r+2.5} fill="#fff" opacity={0.95}/>
                 <circle cx={p.x} cy={p.y} r={r} fill={col}/>
-                {/* Job ref */}
-                <text x={p.x} y={p.y+4} textAnchor="middle" fontSize={isHov?9:8}
-                  fill="#fff" fontWeight="800" fontFamily="'Inter',sans-serif">{job.ref}</text>
+                <text x={p.x} y={p.y+3.5} textAnchor="middle" fontSize={isHov?8:7}
+                  fill="#fff" fontWeight="900" fontFamily="'Inter',sans-serif">{job.ref}</text>
               </g>
             );
           })}
 
-          {/* Tooltip on hover */}
+          {/* Hover tooltip */}
           {hoveredJob&&<MapPinTooltip job={hoveredJob} project={project} allTechNames={allTechNames}/>}
         </svg>
       </div>
 
-      {/* Side panel */}
-      <div style={{width:210,flexShrink:0,display:"flex",flexDirection:"column",gap:10}}>
-        <div style={{fontSize:11,fontWeight:700,color:C.sub,textTransform:"uppercase",letterSpacing:0.6}}>Today's Routes</div>
+      {/* Route cards — horizontal row below map */}
+      <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
         {techRoutes.map(({tech,jobs:tJobs,color})=>(
           <div key={tech}
-            style={{background:hoveredTech===tech?"#fff":C.card,border:`2px solid ${hoveredTech===tech?color:C.border}`,borderRadius:12,padding:"10px 12px",cursor:"pointer",transition:"border-color 0.15s, box-shadow 0.15s",boxShadow:hoveredTech===tech?`0 0 0 3px ${color}22`:"none"}}
+            style={{flex:"1 1 180px",background:hoveredTech===tech?"#fff":C.card,border:`2px solid ${hoveredTech===tech?color:C.border}`,borderRadius:12,padding:"12px 14px",cursor:"pointer",transition:"border-color 0.15s, box-shadow 0.15s",boxShadow:hoveredTech===tech?`0 0 0 3px ${color}22`:C.shadow}}
             onMouseEnter={()=>setHoveredTech(tech)}
             onMouseLeave={()=>setHoveredTech(null)}>
-            <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
-              <div style={{width:11,height:11,borderRadius:"50%",background:color,flexShrink:0,boxShadow:`0 0 6px ${color}`}}/>
-              <span style={{fontWeight:700,fontSize:13,color:C.text}}>{tech.split(" ")[0]}</span>
-              <span style={{marginLeft:"auto",background:color,color:"#fff",borderRadius:99,fontSize:10,fontWeight:700,padding:"1px 7px"}}>{tJobs.length}</span>
+            <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
+              <div style={{width:12,height:12,borderRadius:"50%",background:color,flexShrink:0,boxShadow:`0 0 8px ${color}`}}/>
+              <span style={{fontWeight:700,fontSize:13,color:C.text}}>{tech}</span>
+              <span style={{marginLeft:"auto",background:color,color:"#fff",borderRadius:99,fontSize:10,fontWeight:700,padding:"2px 8px"}}>{tJobs.length} jobs</span>
             </div>
-            {tJobs.map((j,i)=>(
-              <div key={j.id} onClick={e=>{e.stopPropagation();onOpen(j);}}
-                style={{display:"flex",gap:6,alignItems:"flex-start",padding:"5px 0",borderTop:i>0?`1px solid ${C.border}`:"none"}}>
-                <div style={{width:17,height:17,borderRadius:"50%",background:color,color:"#fff",fontSize:9,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginTop:1}}>{i+1}</div>
-                <div style={{minWidth:0}}>
-                  <div style={{fontSize:11,fontWeight:700,color:C.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{(j.address||"").split(",")[0]}</div>
-                  <div style={{fontSize:10,color:C.muted}}>{j.scheduledTime||"TBD"} · {j.durationHrs||1}hr · {j.ref}</div>
+            <div style={{display:"flex",flexDirection:"column",gap:4}}>
+              {tJobs.map((j,i)=>(
+                <div key={j.id} onClick={e=>{e.stopPropagation();onOpen(j);}}
+                  style={{display:"flex",gap:7,alignItems:"flex-start",padding:"5px 0",borderTop:i>0?`1px solid ${C.border}`:"none",cursor:"pointer"}}
+                  onMouseEnter={()=>setHoveredJob(j)}
+                  onMouseLeave={()=>setHoveredJob(null)}>
+                  <div style={{width:18,height:18,borderRadius:"50%",background:color,color:"#fff",fontSize:9,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginTop:1}}>{i+1}</div>
+                  <div style={{minWidth:0}}>
+                    <div style={{fontSize:11,fontWeight:700,color:C.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{(j.address||"").split(",")[0]}</div>
+                    <div style={{fontSize:10,color:C.muted}}>{j.scheduledTime||"TBD"} · {j.durationHrs||1}h · {j.ref}</div>
+                  </div>
                 </div>
-              </div>
-            ))}
-            {tJobs.length===1&&(
-              <div style={{marginTop:6,paddingTop:6,borderTop:`1px solid ${C.border}`,fontSize:10,color:C.muted}}>🗺️ 1 stop today</div>
-            )}
+              ))}
+            </div>
           </div>
         ))}
         {techRoutes.length===0&&(
-          <div style={{color:C.muted,fontSize:13,padding:"20px 0",textAlign:"center"}}>No open jobs on map</div>
+          <div style={{color:C.muted,fontSize:13,padding:"16px 0"}}>No open jobs on map</div>
         )}
-        {/* Colour legend */}
-        <div style={{marginTop:4,padding:"10px 12px",background:C.raised,borderRadius:10,border:`1px solid ${C.border}`}}>
-          <div style={{fontSize:10,fontWeight:700,color:C.sub,textTransform:"uppercase",letterSpacing:0.5,marginBottom:6}}>Technicians</div>
-          {allTechNames.map((t,i)=>(
-            <div key={t} style={{display:"flex",alignItems:"center",gap:7,marginBottom:4,fontSize:11,color:C.sub}}>
-              <span style={{width:10,height:10,borderRadius:"50%",background:TECH_COLORS[i%TECH_COLORS.length],display:"inline-block",flexShrink:0,boxShadow:`0 0 4px ${TECH_COLORS[i%TECH_COLORS.length]}`}}/>
-              {t}
-            </div>
-          ))}
-        </div>
       </div>
     </div>
   );
