@@ -2227,7 +2227,7 @@ function JobDrawer({job, onClose, onUpdate, settings, companies, setCompanies, v
 /* ═══════════════════════════════════════════
    JOB HISTORY
 ═══════════════════════════════════════════ */
-function HistoryTab({settings, companies, setCompanies}) {
+function HistoryTab({settings, companies, setCompanies, vendors}) {
   const {jobStages,jobSubStages,fieldStaff,jobTypes,setJobTypes} = settings;
   const allFlat = allJobs(companies);
   const closed = allFlat.filter(j=>j.status==="Closed");
@@ -2538,7 +2538,7 @@ export default function App() {
         {tab==="vendors"&&<VendorsTab vendors={vendors} setVendors={setVendors}/>}
         {tab==="products"&&<ProductsTab/>}
         {tab==="dispatch"&&<DispatchTab settings={settings} companies={companies}/>}
-        {tab==="history"&&<HistoryTab settings={settings} companies={companies} setCompanies={setCompanies}/>}
+        {tab==="history"&&<HistoryTab settings={settings} companies={companies} setCompanies={setCompanies} vendors={vendors}/>}
         {tab==="quotes"&&<QuotesTab/>}
         {tab==="invoices"&&<InvoicesTab/>}
         {tab==="inventory"&&<InventoryTab/>}
