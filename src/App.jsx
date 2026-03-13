@@ -4936,16 +4936,167 @@ function ReceiveModal({po, onSave, onClose}) {
 }
 
 /* ── Ad-Hoc Receive Modal — no PO required ── */
+/* ── Item Search Combobox with inline quick-add ── */
+function ItemSearchSelect({items, onSelect, onNewItem, placeholder="Search items…"}) {
+  const [query, setQuery] = useState("");
+  const [open, setOpen] = useState(false);
+  const [showNew, setShowNew] = useState(false);
+  const [newForm, setNewForm] = useState({code:"",name:"",category:"",purchasePrice:"",sellPrice:"",barcode:""});
+  const wrapRef = useRef(null);
+
+  const filtered = query.length < 1 ? items : items.filter(i=>
+    i.name.toLowerCase().includes(query.toLowerCase()) ||
+    i.code.toLowerCase().includes(query.toLowerCase()) ||
+    (i.barcode||"").includes(query)
+  );
+
+  // Close on outside click
+  useEffect(()=>{
+    const handler = e => { if(wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false); };
+    document.addEventListener("mousedown", handler);
+    return ()=>document.removeEventListener("mousedown", handler);
+  },[]);
+
+  const pick = (item) => {
+    setQuery("");
+    setOpen(false);
+    setShowNew(false);
+    onSelect(item);
+  };
+
+  const saveNew = () => {
+    if(!newForm.name){ return; }
+    const newItem = {
+      id: "in"+Date.now(),
+      code: newForm.code||"MISC-"+Date.now().toString().slice(-4),
+      barcode: newForm.barcode||"",
+      name: newForm.name,
+      description: "",
+      category: newForm.category||"Other",
+      supplierId: "", supplierCode: "",
+      purchasePrice: Number(newForm.purchasePrice)||0,
+      sellPrice: Number(newForm.sellPrice)||0,
+      markup: newForm.purchasePrice&&newForm.sellPrice ? (((newForm.sellPrice-newForm.purchasePrice)/newForm.purchasePrice)*100).toFixed(1) : 0,
+      clientMarkups: [],
+      qtyOnHand: {warehouse:0},
+      reorderPoint: 0, reorderQty: 0,
+      priceHistory: newForm.purchasePrice ? [{date:new Date().toISOString().slice(0,10),price:Number(newForm.purchasePrice),supplierId:"",note:"Created on receive"}] : [],
+      status: "active",
+    };
+    onNewItem(newItem);
+    pick(newItem);
+    setNewForm({code:"",name:"",category:"",purchasePrice:"",sellPrice:"",barcode:""});
+  };
+
+  return (
+    <div ref={wrapRef} style={{position:"relative"}}>
+      <input
+        value={query}
+        onChange={e=>{ setQuery(e.target.value); setOpen(true); setShowNew(false); }}
+        onFocus={()=>setOpen(true)}
+        placeholder={placeholder}
+        style={{width:"100%",background:"#fff",border:`1.5px solid ${open?C.accent:C.border}`,borderRadius:8,padding:"8px 10px",color:C.text,fontSize:13,fontFamily:"inherit",boxSizing:"border-box",outline:"none"}}
+      />
+      {open&&(
+        <div style={{position:"absolute",top:"100%",left:0,right:0,zIndex:200,background:"#fff",border:`1px solid ${C.border}`,borderRadius:10,boxShadow:"0 8px 30px rgba(0,0,0,0.14)",marginTop:3,maxHeight:240,overflowY:"auto"}}>
+          {filtered.length===0&&!showNew&&(
+            <div style={{padding:"10px 14px",color:C.muted,fontSize:13}}>No items match "{query}"</div>
+          )}
+          {filtered.map(item=>(
+            <div key={item.id} onMouseDown={()=>pick(item)}
+              style={{padding:"9px 14px",cursor:"pointer",borderBottom:`1px solid ${C.border}`,display:"flex",justifyContent:"space-between",alignItems:"center"}}
+              onMouseEnter={e=>e.currentTarget.style.background=C.raised}
+              onMouseLeave={e=>e.currentTarget.style.background="#fff"}>
+              <div>
+                <div style={{fontWeight:600,fontSize:13,color:C.text}}>{item.name}</div>
+                <div style={{fontSize:11,color:C.muted,fontFamily:"monospace"}}>{item.code}{item.barcode?" · "+item.barcode:""}</div>
+              </div>
+              <div style={{fontSize:12,color:C.sub,textAlign:"right",flexShrink:0}}>
+                <div>{item.category}</div>
+                <div style={{fontWeight:700}}>{fmtMoney(item.purchasePrice)}</div>
+              </div>
+            </div>
+          ))}
+          {/* Add new item option */}
+          {!showNew&&(
+            <div onMouseDown={()=>{ setShowNew(true); }}
+              style={{padding:"10px 14px",cursor:"pointer",color:C.accent,fontWeight:700,fontSize:13,display:"flex",alignItems:"center",gap:6,borderTop:filtered.length?`1px solid ${C.border}`:"none"}}
+              onMouseEnter={e=>e.currentTarget.style.background=C.raised}
+              onMouseLeave={e=>e.currentTarget.style.background="#fff"}>
+              + Add "{query||"new item"}" to catalogue
+            </div>
+          )}
+          {/* Inline quick-create form */}
+          {showNew&&(
+            <div style={{padding:14,borderTop:`1px solid ${C.border}`}} onMouseDown={e=>e.stopPropagation()}>
+              <div style={{fontWeight:700,fontSize:12,color:C.accent,marginBottom:10,textTransform:"uppercase",letterSpacing:0.5}}>Quick Add New Item</div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"0 10px"}}>
+                <div style={{marginBottom:8}}>
+                  <label style={{display:"block",fontSize:10,fontWeight:700,color:C.sub,textTransform:"uppercase",marginBottom:3}}>Name *</label>
+                  <input value={newForm.name} onChange={e=>setNewForm(p=>({...p,name:e.target.value}))}
+                    placeholder={query||"Item name"}
+                    style={{width:"100%",border:`1px solid ${C.border}`,borderRadius:6,padding:"6px 8px",fontSize:12,fontFamily:"inherit",color:C.text,boxSizing:"border-box"}}/>
+                </div>
+                <div style={{marginBottom:8}}>
+                  <label style={{display:"block",fontSize:10,fontWeight:700,color:C.sub,textTransform:"uppercase",marginBottom:3}}>Item Code</label>
+                  <input value={newForm.code} onChange={e=>setNewForm(p=>({...p,code:e.target.value}))}
+                    placeholder="e.g. RIN-HW25"
+                    style={{width:"100%",border:`1px solid ${C.border}`,borderRadius:6,padding:"6px 8px",fontSize:12,fontFamily:"inherit",color:C.text,boxSizing:"border-box"}}/>
+                </div>
+                <div style={{marginBottom:8}}>
+                  <label style={{display:"block",fontSize:10,fontWeight:700,color:C.sub,textTransform:"uppercase",marginBottom:3}}>Category</label>
+                  <input value={newForm.category} onChange={e=>setNewForm(p=>({...p,category:e.target.value}))}
+                    placeholder="e.g. Hot Water"
+                    style={{width:"100%",border:`1px solid ${C.border}`,borderRadius:6,padding:"6px 8px",fontSize:12,fontFamily:"inherit",color:C.text,boxSizing:"border-box"}}/>
+                </div>
+                <div style={{marginBottom:8}}>
+                  <label style={{display:"block",fontSize:10,fontWeight:700,color:C.sub,textTransform:"uppercase",marginBottom:3}}>Barcode</label>
+                  <input value={newForm.barcode} onChange={e=>setNewForm(p=>({...p,barcode:e.target.value}))}
+                    placeholder="optional"
+                    style={{width:"100%",border:`1px solid ${C.border}`,borderRadius:6,padding:"6px 8px",fontSize:12,fontFamily:"inherit",color:C.text,boxSizing:"border-box"}}/>
+                </div>
+                <div style={{marginBottom:8}}>
+                  <label style={{display:"block",fontSize:10,fontWeight:700,color:C.sub,textTransform:"uppercase",marginBottom:3}}>Purchase Price ($)</label>
+                  <input type="number" value={newForm.purchasePrice} onChange={e=>setNewForm(p=>({...p,purchasePrice:e.target.value}))}
+                    placeholder="0.00"
+                    style={{width:"100%",border:`1px solid ${C.border}`,borderRadius:6,padding:"6px 8px",fontSize:12,fontFamily:"inherit",color:C.text,boxSizing:"border-box"}}/>
+                </div>
+                <div style={{marginBottom:8}}>
+                  <label style={{display:"block",fontSize:10,fontWeight:700,color:C.sub,textTransform:"uppercase",marginBottom:3}}>Sell Price ($)</label>
+                  <input type="number" value={newForm.sellPrice} onChange={e=>setNewForm(p=>({...p,sellPrice:e.target.value}))}
+                    placeholder="0.00"
+                    style={{width:"100%",border:`1px solid ${C.border}`,borderRadius:6,padding:"6px 8px",fontSize:12,fontFamily:"inherit",color:C.text,boxSizing:"border-box"}}/>
+                </div>
+              </div>
+              <div style={{display:"flex",gap:8,marginTop:4}}>
+                <button onMouseDown={saveNew}
+                  style={{background:C.accent,color:"#fff",border:"none",borderRadius:7,padding:"7px 14px",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
+                  ✓ Add to Catalogue &amp; Select
+                </button>
+                <button onMouseDown={()=>setShowNew(false)}
+                  style={{background:"none",border:`1px solid ${C.border}`,color:C.sub,borderRadius:7,padding:"7px 12px",fontSize:12,cursor:"pointer",fontFamily:"inherit"}}>
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function AdHocReceiveModal({items, suppliers, onSave, onClose}) {
   const [supplierId, setSupplierId] = useState("");
   const [supplierFree, setSupplierFree] = useState("");
   const [date, setDate] = useState(new Date().toISOString().slice(0,10));
   const [refNote, setRefNote] = useState("");
   const [lines, setLines] = useState([]);
-  const [selItemId, setSelItemId] = useState("");
+  const [selItem, setSelItem] = useState(null);
   const [selQty, setSelQty] = useState(1);
   const [selPrice, setSelPrice] = useState("");
   const [err, setErr] = useState("");
+  const [localItems, setLocalItems] = useState(items); // includes any quick-added items
 
   // Invoice scan state
   const [scanState, setScanState] = useState("idle"); // idle | scanning | done | error
@@ -5043,20 +5194,16 @@ Rules:
 
   const applyExtracted = (parsed) => {
     if(!parsed) return;
-    // Auto-fill supplier name if free text
     if(parsed.supplierName && !supplierId) {
-      // Try to match to known supplier
       const matched = suppliers.find(s=>s.name.toLowerCase().includes(parsed.supplierName.toLowerCase())||parsed.supplierName.toLowerCase().includes(s.name.toLowerCase().split(" ")[0]));
       if(matched) setSupplierId(matched.id);
       else { setSupplierId("adhoc"); setSupplierFree(parsed.supplierName); }
     }
     if(parsed.invoiceRef) setRefNote(parsed.invoiceRef);
     if(parsed.invoiceDate) setDate(parsed.invoiceDate);
-
-    // Build lines — match to our items where possible
     if(parsed.lines?.length) {
       const newLines = parsed.lines.map(l => {
-        const matchedItem = l.matchedItemCode ? items.find(i=>i.code===l.matchedItemCode) : null;
+        const matchedItem = l.matchedItemCode ? localItems.find(i=>i.code===l.matchedItemCode) : null;
         return {
           itemId: matchedItem?.id || null,
           itemCode: matchedItem?.code || "",
@@ -5071,21 +5218,26 @@ Rules:
     }
   };
 
+  // Called when user quick-adds a new item via ItemSearchSelect
+  const handleNewItem = (newItem) => {
+    setLocalItems(prev=>[...prev, newItem]);
+    // Also bubble up to parent inventory state via onSave chain — we'll include new items in save
+  };
+
   const addLine = () => {
-    const item = items.find(i=>i.id===selItemId);
-    if(!item){ setErr("Select an item first."); return; }
+    if(!selItem){ setErr("Select an item first."); return; }
     if(!selQty||selQty<1){ setErr("Quantity must be at least 1."); return; }
     setErr("");
     setLines(prev=>{
-      const ex = prev.findIndex(l=>l.itemId===item.id);
+      const ex = prev.findIndex(l=>l.itemId===selItem.id);
       if(ex>=0) return prev.map((l,i)=>i===ex?{...l,qty:l.qty+Number(selQty),unitCost:Number(selPrice)||l.unitCost}:l);
-      return [...prev,{itemId:item.id,itemCode:item.code,itemName:item.name,qty:Number(selQty),unitCost:Number(selPrice)||item.purchasePrice,unmatched:false}];
+      return [...prev,{itemId:selItem.id,itemCode:selItem.code,itemName:selItem.name,qty:Number(selQty),unitCost:Number(selPrice)||selItem.purchasePrice,unmatched:false}];
     });
-    setSelItemId(""); setSelQty(1); setSelPrice("");
+    setSelItem(null); setSelQty(1); setSelPrice("");
   };
 
   const matchLine = (idx, itemId) => {
-    const item = items.find(i=>i.id===itemId);
+    const item = localItems.find(i=>i.id===itemId);
     if(!item) return;
     setLines(prev=>prev.map((l,i)=>i===idx?{...l,itemId:item.id,itemCode:item.code,itemName:item.name,unmatched:false}:l));
   };
@@ -5099,7 +5251,9 @@ Rules:
     const validLines = lines.filter(l=>l.itemId&&l.qty>0);
     if(validLines.length===0){ setErr("Add at least one matched item."); return; }
     const supplierName = isAdHoc ? (supplierFree||"Online / Ad Hoc") : selSupplier?.name||"";
-    onSave({supplierId: isAdHoc?"sup4":supplierId, supplierName, date, refNote, lines:validLines});
+    // Pass new items back so inventory state gets updated
+    const newItems = localItems.filter(li=>!items.find(i=>i.id===li.id));
+    onSave({supplierId: isAdHoc?"sup4":supplierId, supplierName, date, refNote, lines:validLines, newItems});
   };
 
   return (
@@ -5202,11 +5356,11 @@ Rules:
                 {l.unmatched&&(
                   <div style={{padding:"0 12px 10px",display:"flex",gap:8,alignItems:"center"}}>
                     <span style={{fontSize:11,color:C.orange,fontWeight:700,flexShrink:0}}>Link to stock item:</span>
-                    <select onChange={e=>matchLine(i,e.target.value)} defaultValue=""
-                      style={{flex:1,background:"#fff",border:`1px solid ${C.orange}`,borderRadius:6,padding:"5px 8px",fontSize:12,fontFamily:"inherit",color:C.text}}>
-                      <option value="">— Select item —</option>
-                      {items.map(it=><option key={it.id} value={it.id}>{it.name} ({it.code})</option>)}
-                    </select>
+                    <div style={{flex:1}}>
+                      <ItemSearchSelect items={localItems} placeholder="Type to search or add new…"
+                        onSelect={item=>matchLine(i,item.id)}
+                        onNewItem={newItem=>{ handleNewItem(newItem); matchLine(i,newItem.id); }}/>
+                    </div>
                   </div>
                 )}
               </div>
@@ -5222,13 +5376,21 @@ Rules:
       <div style={{background:C.raised,border:`1px solid ${C.border}`,borderRadius:10,padding:14,marginBottom:8}}>
         <div style={{fontWeight:700,fontSize:12,color:C.sub,textTransform:"uppercase",letterSpacing:0.5,marginBottom:10}}>Add Item Manually</div>
         <div style={{display:"flex",gap:8,alignItems:"flex-end",flexWrap:"wrap"}}>
-          <div style={{flex:2,minWidth:160}}>
+          <div style={{flex:2,minWidth:180}}>
             <label style={{display:"block",color:C.sub,fontSize:11,fontWeight:700,marginBottom:4}}>ITEM</label>
-            <select value={selItemId} onChange={e=>{setSelItemId(e.target.value);const it=items.find(i=>i.id===e.target.value);if(it)setSelPrice(it.purchasePrice);}}
-              style={{width:"100%",background:"#fff",border:`1px solid ${C.border}`,borderRadius:8,padding:"8px 10px",color:C.text,fontSize:13,fontFamily:"inherit"}}>
-              <option value="">— Select item —</option>
-              {items.map(i=><option key={i.id} value={i.id}>{i.name} ({i.code})</option>)}
-            </select>
+            {selItem
+              ? <div style={{display:"flex",gap:8,alignItems:"center",background:"#fff",border:`1.5px solid ${C.accent}`,borderRadius:8,padding:"7px 10px"}}>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{fontWeight:600,fontSize:13,color:C.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{selItem.name}</div>
+                    <div style={{fontSize:10,color:C.muted,fontFamily:"monospace"}}>{selItem.code}</div>
+                  </div>
+                  <button onClick={()=>{ setSelItem(null); setSelPrice(""); }}
+                    style={{background:"none",border:"none",color:C.muted,cursor:"pointer",fontSize:16,lineHeight:1,flexShrink:0}}>×</button>
+                </div>
+              : <ItemSearchSelect items={localItems} placeholder="Type to search or add new item…"
+                  onSelect={item=>{ setSelItem(item); setSelPrice(item.purchasePrice); }}
+                  onNewItem={handleNewItem}/>
+            }
           </div>
           <div style={{width:80}}>
             <label style={{display:"block",color:C.sub,fontSize:11,fontWeight:700,marginBottom:4}}>QTY</label>
@@ -5636,7 +5798,9 @@ function InventoryTab({settings, companies}) {
     setModal(null);
   };
 
-  const doAdHocReceive = ({supplierId, supplierName, date, refNote, lines}) => {
+  const doAdHocReceive = ({supplierId, supplierName, date, refNote, lines, newItems=[]}) => {
+    // Add any new items created in the modal to the catalogue first
+    if(newItems.length>0) setInvItems(prev=>[...prev,...newItems]);
     // Update stock quantities
     setInvItems(prev=>prev.map(i=>{
       const l=lines.find(l=>l.itemId===i.id); if(!l) return i;
