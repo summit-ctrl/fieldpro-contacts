@@ -480,7 +480,7 @@ function JobDiary({job, onUpdate, onOpenAttachment, emailTemplates}){
                 {entry.files.filter(f=>f.mime?.startsWith("image/")).length > 0 && (
                   <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:8}}>
                     {entry.files.filter(f=>f.mime?.startsWith("image/")).map(f=>(
-                      <div key={f.id} onClick={()=>{ const imgs=entry.files.filter(x=>x.mime?.startsWith("image/")); onOpenAttachment?onOpenAttachment(f,entry,imgs):setLightbox(f); }}
+                      <div key={f.id} onClick={()=>{ const allImgs=(job.diary||[]).flatMap(d=>(d.files||[]).filter(x=>x.mime?.startsWith("image/"))); onOpenAttachment?onOpenAttachment(f,entry,allImgs):setLightbox(f); }}
                         style={{cursor:"zoom-in",borderRadius:8,overflow:"hidden",border:`2px solid ${C.border}`,width:80,height:80,flexShrink:0,transition:"border-color 0.15s"}}
                         onMouseEnter={e=>e.currentTarget.style.borderColor=C.accent}
                         onMouseLeave={e=>e.currentTarget.style.borderColor=C.border}>
@@ -1901,7 +1901,7 @@ const CAL_START = 7*60; // 7am
 const CAL_END   = 19*60; // 7pm
 const CAL_SPAN  = CAL_END - CAL_START;
 
-function DispatchTab({settings, companies, setCompanies, fieldMode, setFieldMode}) {
+function DispatchTab({settings, companies, setCompanies, vendors, fieldMode, setFieldMode}) {
   const jobs = allJobs(companies);
   const open = jobs.filter(j=>j.status==="Open");
   const allTechNames = [...new Set(open.map(j=>j.tech).filter(Boolean))].sort();
@@ -2010,6 +2010,7 @@ function DispatchTab({settings, companies, setCompanies, fieldMode, setFieldMode
           settings={settings}
           companies={companies}
           setCompanies={setCompanies}
+          vendors={vendors}
         />
       )}
     </div>
@@ -3362,7 +3363,7 @@ function ReportsPane({job, onUpdate, onOpenAttachment, reportTemplates, fieldSta
               {f.type==="photo"&&Array.isArray(val)&&(
                 <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
                   {val.map(ph=>(
-                    <img key={ph.id} src={ph.data} alt={ph.name} onClick={()=>onOpenAttachment(ph,{},val)}
+                    <img key={ph.id} src={ph.data} alt={ph.name} onClick={()=>{ const allImgs=(job.diary||[]).flatMap(d=>(d.files||[]).filter(x=>x.mime?.startsWith("image/"))); const combined=[...new Map([...allImgs,...(val||[])].map(x=>[x.id,x])).values()]; onOpenAttachment(ph,{},combined); }}
                       style={{width:80,height:80,objectFit:"cover",borderRadius:8,border:`1px solid ${C.border}`,cursor:"pointer"}}/>
                   ))}
                 </div>
@@ -3486,7 +3487,15 @@ function JobDrawer({job, onClose, onUpdate, settings, companies, setCompanies, v
   const [attachment, setAttachment] = useState(null);
 
   const openAttachment = (file, entry, siblings) => {
-    setAttachment({file, entry, siblings: siblings||[file]});
+    // For images: always browse ALL photos from every diary entry in this job
+    const allJobPhotos = (job.diary||[])
+      .flatMap(d=>(d.files||[]).filter(f=>f.mime?.startsWith("image/")));
+    const sibs = file.mime?.startsWith("image/")
+      ? (allJobPhotos.length > 0 ? allJobPhotos : siblings||[file])
+      : (siblings||[file]);
+    // Ensure the clicked file is in the siblings list
+    const sibsWithFile = sibs.find(f=>f.id===file.id) ? sibs : [file,...sibs];
+    setAttachment({file, entry, siblings: sibsWithFile});
     setExpanded(true);
   };
   const closeAttachment = () => setAttachment(null);
@@ -4096,7 +4105,7 @@ function App() {
         {tab==="customers"&&<CustomersTab settings={settings} companies={companies} setCompanies={setCompanies}/>}
         {tab==="vendors"&&<VendorsTab vendors={vendors} setVendors={setVendors}/>}
         {tab==="products"&&<ProductsTab/>}
-        {tab==="dispatch"&&<DispatchTab settings={settings} companies={companies} setCompanies={setCompanies} fieldMode={fieldMode} setFieldMode={setFieldMode}/>}
+        {tab==="dispatch"&&<DispatchTab settings={settings} companies={companies} setCompanies={setCompanies} vendors={vendors} fieldMode={fieldMode} setFieldMode={setFieldMode}/>}
         {tab==="history"&&<HistoryTab settings={settings} companies={companies} setCompanies={setCompanies} vendors={vendors}/>}
         {tab==="quotes"&&<QuotesTab/>}
         {tab==="invoices"&&<InvoicesTab/>}
