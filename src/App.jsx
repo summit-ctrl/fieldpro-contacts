@@ -1922,14 +1922,25 @@ const techColor = (techName, allTechs) => {
 
 // Approx Sydney suburb coords for jobs without lat/lng
 const SUBURB_COORDS = {
-  "parramatta":{lat:-33.8150,lng:151.0011},
-  "blacktown":{lat:-33.7690,lng:150.9054},
-  "penrith":{lat:-33.7510,lng:150.6942},
-  "sydney":{lat:-33.8688,lng:151.2093},
-  "chatswood":{lat:-33.7969,lng:151.1808},
-  "hornsby":{lat:-33.7028,lng:151.0988},
-  "liverpool":{lat:-33.9200,lng:150.9231},
-  "campbelltown":{lat:-34.0651,lng:150.8141},
+  "parramatta":    {lat:-33.8150, lng:151.0011},
+  "blacktown":     {lat:-33.7690, lng:150.9054},
+  "penrith":       {lat:-33.7510, lng:150.6942},
+  "sydney":        {lat:-33.8688, lng:151.2093},
+  "chatswood":     {lat:-33.7969, lng:151.1808},
+  "hornsby":       {lat:-33.7028, lng:151.0988},
+  "liverpool":     {lat:-33.9200, lng:150.9231},
+  "campbelltown":  {lat:-34.0651, lng:150.8141},
+  "carlingford":   {lat:-33.7810, lng:151.0460},
+  "rydalmere":     {lat:-33.8100, lng:151.0200},
+  "merrylands":    {lat:-33.8380, lng:150.9880},
+  "guildford":     {lat:-33.8510, lng:150.9800},
+  "auburn":        {lat:-33.8490, lng:151.0340},
+  "seven hills":   {lat:-33.7745, lng:150.9360},
+  "baulkham hills":{lat:-33.7590, lng:150.9800},
+  "castle hill":   {lat:-33.7300, lng:151.0000},
+  "kingswood":     {lat:-33.7630, lng:150.7240},
+  "jamisontown":   {lat:-33.7670, lng:150.6750},
+  "narellan":      {lat:-34.0200, lng:150.7380},
 };
 
 const jobCoords = (job) => {
@@ -1938,8 +1949,9 @@ const jobCoords = (job) => {
   for(const [suburb, coords] of Object.entries(SUBURB_COORDS)){
     if(addr.includes(suburb)) return coords;
   }
-  // Jitter around Sydney CBD as fallback
-  return {lat:-33.8688 + (Math.random()-0.5)*0.15, lng:151.2093 + (Math.random()-0.5)*0.15};
+  // Deterministic fallback based on job id hash
+  const h = (job.id||"x").split("").reduce((a,c)=>a+c.charCodeAt(0),0);
+  return {lat:-33.8688 + ((h%20)-10)*0.008, lng:151.2093 + ((h%15)-7)*0.008};
 };
 
 // Calendar helpers
@@ -2043,7 +2055,7 @@ function DispatchTab({settings, companies, setCompanies, vendors, fieldMode, set
 
       {/* MAP VIEW */}
       {dispView==="map"&&(
-        <DispatchMap jobs={filtered} allTechNames={allTechNames} onOpen={setDrawerJob}/>
+        <DispatchMap jobs={open} allTechNames={allTechNames} onOpen={setDrawerJob}/>
       )}
 
       {/* Job Drawer */}
@@ -2297,13 +2309,7 @@ function DispatchMap({jobs, allTechNames, onOpen}) {
       {/* Map SVG */}
       <div style={{flex:1,minWidth:0,borderRadius:14,overflow:"hidden",boxShadow:"0 6px 30px rgba(0,0,0,0.25)",background:"#0d1b2a"}}>
         <svg width="100%" viewBox={`0 0 ${MAP_W} ${MAP_H}`} style={{display:"block"}}>
-          <defs>
-            <linearGradient id="mapBg" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#0d1b2a"/>
-              <stop offset="100%" stopColor="#142035"/>
-            </linearGradient>
-          </defs>
-          <rect width={MAP_W} height={MAP_H} fill="url(#mapBg)"/>
+          <rect width={MAP_W} height={MAP_H} fill="#0f1e2e"/>
           {[0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9].map(f=>(
             <g key={f} opacity={0.18}>
               <line x1={f*MAP_W} y1={0} x2={f*MAP_W} y2={MAP_H} stroke="#4a7cb5" strokeWidth={0.6}/>
@@ -2332,11 +2338,13 @@ function DispatchMap({jobs, allTechNames, onOpen}) {
             const fade = hoveredTech && !isHov;
             const pts = tJobs.map(j=>project(j.coords));
             return(
-              <g key={tech} opacity={fade?0.08:1} style={{transition:"opacity 0.25s"}}>
-                {isHov && pts.length>1 && pts.slice(0,-1).map((p,i)=>(
-                  <line key={"g"+i} x1={p.x} y1={p.y} x2={pts[i+1].x} y2={pts[i+1].y}
-                    stroke={color} strokeWidth={12} opacity={0.18} strokeLinecap="round"/>
+              <g key={tech} opacity={fade?0.1:1} style={{transition:"opacity 0.25s"}}>
+                {/* Always-on glow pass for visibility */}
+                {pts.length>1 && pts.slice(0,-1).map((p,i)=>(
+                  <line key={"gl"+i} x1={p.x} y1={p.y} x2={pts[i+1].x} y2={pts[i+1].y}
+                    stroke={color} strokeWidth={isHov?16:8} opacity={isHov?0.25:0.15} strokeLinecap="round"/>
                 ))}
+                {/* Main route lines */}
                 {pts.length>1 && pts.slice(0,-1).map((p,i)=>{
                   const nx=pts[i+1];
                   const mx=(p.x+nx.x)/2, my=(p.y+nx.y)/2;
@@ -2344,16 +2352,18 @@ function DispatchMap({jobs, allTechNames, onOpen}) {
                   return(
                     <g key={i}>
                       <line x1={p.x} y1={p.y} x2={nx.x} y2={nx.y}
-                        stroke={color} strokeWidth={isHov?3.5:2.5} strokeLinecap="round" opacity={0.95}/>
+                        stroke={color} strokeWidth={isHov?4:3} strokeLinecap="round" opacity={1}/>
                       <g transform={`translate(${mx},${my}) rotate(${angle})`}>
-                        <polygon points="0,-4 8,0 0,4" fill={color} opacity={0.9}/>
+                        <polygon points="0,-5 9,0 0,5" fill={color} opacity={1}/>
                       </g>
                     </g>
                   );
                 })}
+                {/* Stop-order numbers above pins */}
                 {pts.map((p,i)=>(
-                  <text key={"ord"+i} x={p.x} y={p.y-16} textAnchor="middle"
-                    fontSize={9} fill={color} fontWeight="800" fontFamily="'Inter',sans-serif" opacity={0.9}>{i+1}</text>
+                  <text key={"ord"+i} x={p.x} y={p.y-17} textAnchor="middle"
+                    fontSize={10} fill={color} fontWeight="900" fontFamily="'Inter',sans-serif" opacity={1}
+                    style={{textShadow:"0 1px 3px rgba(0,0,0,0.8)"}}>{i+1}</text>
                 ))}
               </g>
             );
@@ -2382,7 +2392,7 @@ function DispatchMap({jobs, allTechNames, onOpen}) {
       </div>
 
       {/* Scrollable route panel */}
-      <div style={{width:200,flexShrink:0,display:"flex",flexDirection:"column",gap:8,maxHeight:580,overflowY:"auto",paddingRight:2}}>
+      <div style={{width:200,flexShrink:0,display:"flex",flexDirection:"column",gap:8,maxHeight:"calc(100vh - 180px)",overflowY:"auto",paddingRight:2}}>
         <div style={{fontSize:11,fontWeight:700,color:C.sub,textTransform:"uppercase",letterSpacing:0.6,paddingBottom:2}}>Today's Routes</div>
         {techRoutes.map(({tech,jobs:tJobs,color})=>(
           <div key={tech}
