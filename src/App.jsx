@@ -1,4 +1,19 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, Component } from "react";
+
+class ErrorBoundary extends Component {
+  constructor(props) { super(props); this.state = {error:null}; }
+  static getDerivedStateFromError(e) { return {error:e}; }
+  render() {
+    if(this.state.error) return (
+      <div style={{padding:40,fontFamily:"monospace",background:"#fef2f2",minHeight:"100vh"}}>
+        <div style={{fontSize:18,fontWeight:800,color:"#dc2626",marginBottom:12}}>⚠️ App Error</div>
+        <pre style={{fontSize:12,color:"#7f1d1d",whiteSpace:"pre-wrap"}}>{this.state.error.toString()}\n\n{this.state.error.stack}</pre>
+        <button onClick={()=>this.setState({error:null})} style={{marginTop:16,padding:"8px 16px",background:"#dc2626",color:"#fff",border:"none",borderRadius:8,cursor:"pointer",fontFamily:"inherit"}}>Try Again</button>
+      </div>
+    );
+    return this.props.children;
+  }
+}
 
 const C = {
   bg:"#f4f6f9", card:"#ffffff", raised:"#f8fafc",
@@ -1926,7 +1941,7 @@ function PdfViewer({file}) {
 ═══════════════════════════════════════════ */
 function JobDrawer({job, onClose, onUpdate, settings, companies, setCompanies, vendors}) {
   const [expanded, setExpanded] = useState(false);
-  const {jobStages, jobSubStages, fieldStaff, jobTypes, reportTemplates} = settings;
+  const {jobStages, jobSubStages, fieldStaff, jobTypes, reportTemplates=DEFAULT_REPORT_TEMPLATES} = settings;
   const [applianceTypes, setApplianceTypes] = useState(DEFAULT_APPLIANCE_TYPES);
   const [workPresets, setWorkPresets] = useState(DEFAULT_WORK_PRESETS);
   const [showAddTenant, setShowAddTenant] = useState(false);
@@ -2475,7 +2490,7 @@ const MOBILE_NAV = [
   {id:"settings",icon:"⚙️",label:"Settings"},
 ];
 
-export default function App() {
+function App() {
   const [tab,setTab]=useState("customers");
   const [isMobile,setIsMobile]=useState(window.innerWidth<768);
   const settings = useSettings();
@@ -2561,3 +2576,5 @@ export default function App() {
     </div>
   );
 }
+
+export default function AppRoot() { return <ErrorBoundary><App/></ErrorBoundary>; }
