@@ -4935,6 +4935,323 @@ function ReceiveModal({po, onSave, onClose}) {
   );
 }
 
+/* ── Ad-Hoc Receive Modal — no PO required ── */
+function AdHocReceiveModal({items, suppliers, onSave, onClose}) {
+  const [supplierId, setSupplierId] = useState("");
+  const [supplierFree, setSupplierFree] = useState("");
+  const [date, setDate] = useState(new Date().toISOString().slice(0,10));
+  const [refNote, setRefNote] = useState("");
+  const [lines, setLines] = useState([]);
+  const [selItemId, setSelItemId] = useState("");
+  const [selQty, setSelQty] = useState(1);
+  const [selPrice, setSelPrice] = useState("");
+  const [err, setErr] = useState("");
+
+  // Invoice scan state
+  const [scanState, setScanState] = useState("idle"); // idle | scanning | done | error
+  const [invoiceImg, setInvoiceImg] = useState(null); // base64 data URL
+  const [rawExtracted, setRawExtracted] = useState(null); // parsed JSON from Claude
+  const [scanErr, setScanErr] = useState("");
+  const fileInputRef = useRef(null);
+  const cameraInputRef = useRef(null);
+
+  const selSupplier = suppliers.find(s=>s.id===supplierId);
+  const isAdHoc = supplierId === "adhoc";
+
+  /* ── Invoice OCR via Claude vision ── */
+  const scanInvoice = async (file) => {
+    if(!file) return;
+    setScanState("scanning");
+    setScanErr("");
+    setInvoiceImg(null);
+
+    // Read file as base64
+    const base64 = await new Promise((res, rej) => {
+      const r = new FileReader();
+      r.onload = () => res(r.result.split(",")[1]);
+      r.onerror = () => rej(new Error("Read failed"));
+      r.readAsDataURL(file);
+    });
+
+    // Show preview
+    setInvoiceImg("data:image/jpeg;base64," + base64);
+
+    const mediaType = file.type || "image/jpeg";
+
+    // Build item catalogue string for context
+    const catalogue = items.map(i=>`${i.code} | ${i.name} | usual cost $${i.purchasePrice}`).join("\n");
+
+    const prompt = `You are an invoice data extractor for a field service management system.
+
+Extract data from this supplier invoice/delivery docket image and return ONLY valid JSON, no markdown, no explanation.
+
+Our stock catalogue (for matching):
+${catalogue}
+
+Return this exact JSON structure:
+{
+  "supplierName": "string or null",
+  "invoiceRef": "string or null",
+  "invoiceDate": "YYYY-MM-DD or null",
+  "lines": [
+    {
+      "rawDescription": "exact text from invoice",
+      "matchedItemCode": "our item code if confident match, else null",
+      "matchedItemName": "our item name if matched, else use raw description",
+      "qty": number,
+      "unitPrice": number or null,
+      "lineTotal": number or null
+    }
+  ]
+}
+
+Rules:
+- Match invoice line items to our catalogue by description/code similarity. Only set matchedItemCode if confident (>80%).
+- qty must always be a positive number. If unclear, use 1.
+- unitPrice: extract from invoice. If only line total shown, divide by qty.
+- If invoice date found, format as YYYY-MM-DD.
+- Return empty lines array if no line items found.`;
+
+    try {
+      const res = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "claude-sonnet-4-20250514",
+          max_tokens: 1000,
+          messages: [{
+            role: "user",
+            content: [
+              { type: "image", source: { type: "base64", media_type: mediaType, data: base64 } },
+              { type: "text", text: prompt }
+            ]
+          }]
+        })
+      });
+      const data = await res.json();
+      const text = data.content?.find(b=>b.type==="text")?.text || "";
+      const clean = text.replace(/```json|```/g,"").trim();
+      const parsed = JSON.parse(clean);
+      setRawExtracted(parsed);
+      applyExtracted(parsed);
+      setScanState("done");
+    } catch(e) {
+      setScanErr("Could not extract invoice data. Please fill in manually.");
+      setScanState("error");
+    }
+  };
+
+  const applyExtracted = (parsed) => {
+    if(!parsed) return;
+    // Auto-fill supplier name if free text
+    if(parsed.supplierName && !supplierId) {
+      // Try to match to known supplier
+      const matched = suppliers.find(s=>s.name.toLowerCase().includes(parsed.supplierName.toLowerCase())||parsed.supplierName.toLowerCase().includes(s.name.toLowerCase().split(" ")[0]));
+      if(matched) setSupplierId(matched.id);
+      else { setSupplierId("adhoc"); setSupplierFree(parsed.supplierName); }
+    }
+    if(parsed.invoiceRef) setRefNote(parsed.invoiceRef);
+    if(parsed.invoiceDate) setDate(parsed.invoiceDate);
+
+    // Build lines — match to our items where possible
+    if(parsed.lines?.length) {
+      const newLines = parsed.lines.map(l => {
+        const matchedItem = l.matchedItemCode ? items.find(i=>i.code===l.matchedItemCode) : null;
+        return {
+          itemId: matchedItem?.id || null,
+          itemCode: matchedItem?.code || "",
+          itemName: matchedItem?.name || l.matchedItemName || l.rawDescription,
+          rawDescription: l.rawDescription,
+          qty: Number(l.qty)||1,
+          unitCost: Number(l.unitPrice)||Number(l.lineTotal/l.qty)||0,
+          unmatched: !matchedItem,
+        };
+      });
+      setLines(newLines);
+    }
+  };
+
+  const addLine = () => {
+    const item = items.find(i=>i.id===selItemId);
+    if(!item){ setErr("Select an item first."); return; }
+    if(!selQty||selQty<1){ setErr("Quantity must be at least 1."); return; }
+    setErr("");
+    setLines(prev=>{
+      const ex = prev.findIndex(l=>l.itemId===item.id);
+      if(ex>=0) return prev.map((l,i)=>i===ex?{...l,qty:l.qty+Number(selQty),unitCost:Number(selPrice)||l.unitCost}:l);
+      return [...prev,{itemId:item.id,itemCode:item.code,itemName:item.name,qty:Number(selQty),unitCost:Number(selPrice)||item.purchasePrice,unmatched:false}];
+    });
+    setSelItemId(""); setSelQty(1); setSelPrice("");
+  };
+
+  const matchLine = (idx, itemId) => {
+    const item = items.find(i=>i.id===itemId);
+    if(!item) return;
+    setLines(prev=>prev.map((l,i)=>i===idx?{...l,itemId:item.id,itemCode:item.code,itemName:item.name,unmatched:false}:l));
+  };
+
+  const removeLine = idx => setLines(prev=>prev.filter((_,i)=>i!==idx));
+  const updateLine = (idx,key,val) => setLines(prev=>prev.map((l,i)=>i===idx?{...l,[key]:key==="qty"||key==="unitCost"?Number(val):val}:l));
+  const total = lines.reduce((s,l)=>s+l.qty*l.unitCost,0);
+
+  const handleSave = () => {
+    if(!supplierId){ setErr("Please select a supplier."); return; }
+    const validLines = lines.filter(l=>l.itemId&&l.qty>0);
+    if(validLines.length===0){ setErr("Add at least one matched item."); return; }
+    const supplierName = isAdHoc ? (supplierFree||"Online / Ad Hoc") : selSupplier?.name||"";
+    onSave({supplierId: isAdHoc?"sup4":supplierId, supplierName, date, refNote, lines:validLines});
+  };
+
+  return (
+    <Modal title="📥 Receive Stock" onClose={onClose} wide onSave={handleSave}>
+
+      {/* ── Invoice Scan Banner ── */}
+      <div style={{background:"linear-gradient(135deg,#0f172a,#1e3a5f)",borderRadius:12,padding:16,marginBottom:18}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",flexWrap:"wrap",gap:10}}>
+          <div>
+            <div style={{fontWeight:800,fontSize:14,color:"#e2e8f0",marginBottom:4}}>📸 Scan Invoice</div>
+            <div style={{fontSize:12,color:"#94a3b8"}}>Take a photo of the delivery invoice — AI will extract items, quantities and prices automatically</div>
+          </div>
+          <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+            {/* Camera capture — mobile */}
+            <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" style={{display:"none"}}
+              onChange={e=>e.target.files[0]&&scanInvoice(e.target.files[0])}/>
+            <button onClick={()=>cameraInputRef.current?.click()}
+              style={{background:"#0ea5e9",color:"#fff",border:"none",borderRadius:8,padding:"9px 16px",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",gap:6}}>
+              📷 Camera
+            </button>
+            {/* File upload — desktop */}
+            <input ref={fileInputRef} type="file" accept="image/*,application/pdf" style={{display:"none"}}
+              onChange={e=>e.target.files[0]&&scanInvoice(e.target.files[0])}/>
+            <button onClick={()=>fileInputRef.current?.click()}
+              style={{background:"rgba(255,255,255,0.12)",color:"#e2e8f0",border:"1px solid rgba(255,255,255,0.2)",borderRadius:8,padding:"9px 16px",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",gap:6}}>
+              📁 Upload Photo
+            </button>
+          </div>
+        </div>
+
+        {/* Scan states */}
+        {scanState==="scanning"&&(
+          <div style={{marginTop:14,display:"flex",alignItems:"center",gap:10,color:"#94a3b8",fontSize:13}}>
+            <div style={{width:18,height:18,border:"2px solid #334155",borderTopColor:"#0ea5e9",borderRadius:"50%",animation:"spin 0.8s linear infinite",flexShrink:0}}/>
+            Analysing invoice with AI — extracting items and prices…
+          </div>
+        )}
+        {scanState==="done"&&(
+          <div style={{marginTop:12,display:"flex",gap:10,alignItems:"flex-start"}}>
+            {invoiceImg&&<img src={invoiceImg} alt="invoice" style={{width:64,height:64,objectFit:"cover",borderRadius:8,border:"2px solid #22c55e",flexShrink:0}}/>}
+            <div>
+              <div style={{color:"#22c55e",fontWeight:700,fontSize:13}}>✓ Invoice scanned — {lines.length} line{lines.length!==1?"s":""} extracted</div>
+              <div style={{color:"#94a3b8",fontSize:12,marginTop:2}}>Review the items below. Unmatched lines are highlighted — link them to a stock item or remove.</div>
+              <button onClick={()=>{ setScanState("idle"); setInvoiceImg(null); setRawExtracted(null); }}
+                style={{marginTop:6,background:"none",border:"none",color:"#64748b",fontSize:11,cursor:"pointer",fontFamily:"inherit",textDecoration:"underline",padding:0}}>Rescan</button>
+            </div>
+          </div>
+        )}
+        {scanState==="error"&&(
+          <div style={{marginTop:12,color:"#f87171",fontSize:13,fontWeight:600}}>⚠️ {scanErr}</div>
+        )}
+      </div>
+
+      {/* Supplier + date */}
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"0 16px"}}>
+        <div style={{marginBottom:14}}>
+          <label style={{display:"block",color:C.sub,fontSize:12,fontWeight:600,textTransform:"uppercase",letterSpacing:0.5,marginBottom:5}}>Supplier *</label>
+          <select value={supplierId} onChange={e=>setSupplierId(e.target.value)}
+            style={{width:"100%",background:C.raised,border:`1px solid ${C.border}`,borderRadius:8,padding:"9px 12px",color:C.text,fontSize:13,fontFamily:"inherit"}}>
+            <option value="">— Select supplier —</option>
+            {suppliers.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}
+            <option value="adhoc">Online / Ad Hoc (other)</option>
+          </select>
+        </div>
+        <FF label="Date Received" value={date} onChange={setDate} type="date"/>
+      </div>
+      {isAdHoc&&<FF label="Supplier / Source Name" value={supplierFree} onChange={setSupplierFree} placeholder="e.g. Amazon, eBay seller, local hardware…"/>}
+      <FF label="Reference / Invoice #" value={refNote} onChange={setRefNote} placeholder="e.g. INV-8821, delivery docket #…"/>
+
+      {/* ── Lines table (from scan or manual) ── */}
+      {lines.length>0&&(
+        <div style={{marginBottom:16}}>
+          <div style={{fontWeight:700,fontSize:13,color:C.text,marginBottom:8}}>
+            Items to Receive
+            {lines.some(l=>l.unmatched)&&<span style={{marginLeft:8,background:"#fef3c7",color:"#92400e",borderRadius:99,fontSize:11,fontWeight:700,padding:"2px 8px"}}>⚠️ {lines.filter(l=>l.unmatched).length} unmatched</span>}
+          </div>
+          <div style={{border:`1px solid ${C.border}`,borderRadius:10,overflow:"hidden"}}>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 70px 100px 80px 32px",gap:0,background:C.raised,padding:"8px 12px",borderBottom:`1px solid ${C.border}`}}>
+              {["Item","Qty","Unit Price","Total",""].map(h=><span key={h} style={{fontSize:11,fontWeight:700,color:C.sub,textTransform:"uppercase"}}>{h}</span>)}
+            </div>
+            {lines.map((l,i)=>(
+              <div key={i} style={{borderBottom:i<lines.length-1?`1px solid ${C.border}`:"none",background:l.unmatched?"#fffbeb":"#fff"}}>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 70px 100px 80px 32px",gap:0,padding:"10px 12px",alignItems:"center"}}>
+                  <div style={{minWidth:0}}>
+                    <div style={{fontWeight:600,fontSize:13,color:l.unmatched?C.orange:C.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+                      {l.unmatched?"⚠️ ":""}{l.itemName}
+                    </div>
+                    {l.rawDescription&&l.unmatched&&<div style={{fontSize:10,color:C.muted,marginTop:1}}>Invoice: "{l.rawDescription}"</div>}
+                    {l.itemCode&&!l.unmatched&&<div style={{fontSize:10,color:C.muted,fontFamily:"monospace"}}>{l.itemCode}</div>}
+                  </div>
+                  <input type="number" min={1} value={l.qty} onChange={e=>updateLine(i,"qty",e.target.value)}
+                    style={{width:56,background:C.raised,border:`1px solid ${C.border}`,borderRadius:6,padding:"5px 7px",fontSize:13,fontFamily:"inherit",color:C.text}}/>
+                  <input type="number" min={0} step={0.01} value={l.unitCost} onChange={e=>updateLine(i,"unitCost",e.target.value)}
+                    style={{width:82,background:C.raised,border:`1px solid ${C.border}`,borderRadius:6,padding:"5px 7px",fontSize:13,fontFamily:"inherit",color:C.text}}/>
+                  <span style={{fontWeight:700,fontSize:13,color:C.text}}>{fmtMoney(l.qty*l.unitCost)}</span>
+                  <button onClick={()=>removeLine(i)}
+                    style={{background:"none",border:"none",color:C.red,cursor:"pointer",fontSize:18,fontFamily:"inherit",lineHeight:1}}>×</button>
+                </div>
+                {/* Unmatched — show item picker to link */}
+                {l.unmatched&&(
+                  <div style={{padding:"0 12px 10px",display:"flex",gap:8,alignItems:"center"}}>
+                    <span style={{fontSize:11,color:C.orange,fontWeight:700,flexShrink:0}}>Link to stock item:</span>
+                    <select onChange={e=>matchLine(i,e.target.value)} defaultValue=""
+                      style={{flex:1,background:"#fff",border:`1px solid ${C.orange}`,borderRadius:6,padding:"5px 8px",fontSize:12,fontFamily:"inherit",color:C.text}}>
+                      <option value="">— Select item —</option>
+                      {items.map(it=><option key={it.id} value={it.id}>{it.name} ({it.code})</option>)}
+                    </select>
+                  </div>
+                )}
+              </div>
+            ))}
+            <div style={{display:"flex",justifyContent:"flex-end",padding:"10px 12px",background:C.raised,borderTop:`2px solid ${C.border}`}}>
+              <span style={{fontWeight:800,fontSize:14,color:C.text}}>Total: {fmtMoney(total)}</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Manual add item row ── */}
+      <div style={{background:C.raised,border:`1px solid ${C.border}`,borderRadius:10,padding:14,marginBottom:8}}>
+        <div style={{fontWeight:700,fontSize:12,color:C.sub,textTransform:"uppercase",letterSpacing:0.5,marginBottom:10}}>Add Item Manually</div>
+        <div style={{display:"flex",gap:8,alignItems:"flex-end",flexWrap:"wrap"}}>
+          <div style={{flex:2,minWidth:160}}>
+            <label style={{display:"block",color:C.sub,fontSize:11,fontWeight:700,marginBottom:4}}>ITEM</label>
+            <select value={selItemId} onChange={e=>{setSelItemId(e.target.value);const it=items.find(i=>i.id===e.target.value);if(it)setSelPrice(it.purchasePrice);}}
+              style={{width:"100%",background:"#fff",border:`1px solid ${C.border}`,borderRadius:8,padding:"8px 10px",color:C.text,fontSize:13,fontFamily:"inherit"}}>
+              <option value="">— Select item —</option>
+              {items.map(i=><option key={i.id} value={i.id}>{i.name} ({i.code})</option>)}
+            </select>
+          </div>
+          <div style={{width:80}}>
+            <label style={{display:"block",color:C.sub,fontSize:11,fontWeight:700,marginBottom:4}}>QTY</label>
+            <input type="number" min={1} value={selQty} onChange={e=>setSelQty(e.target.value)}
+              style={{width:"100%",background:"#fff",border:`1px solid ${C.border}`,borderRadius:8,padding:"8px 10px",fontSize:13,fontFamily:"inherit",color:C.text}}/>
+          </div>
+          <div style={{width:110}}>
+            <label style={{display:"block",color:C.sub,fontSize:11,fontWeight:700,marginBottom:4}}>UNIT PRICE ($)</label>
+            <input type="number" min={0} step={0.01} value={selPrice} onChange={e=>setSelPrice(e.target.value)} placeholder="0.00"
+              style={{width:"100%",background:"#fff",border:`1px solid ${C.border}`,borderRadius:8,padding:"8px 10px",fontSize:13,fontFamily:"inherit",color:C.text}}/>
+          </div>
+          <Btn label="+ Add" onClick={addLine} small/>
+        </div>
+        {err&&<div style={{color:C.red,fontSize:12,marginTop:8,fontWeight:600}}>⚠️ {err}</div>}
+      </div>
+
+      {lines.length===0&&scanState==="idle"&&(
+        <div style={{textAlign:"center",padding:"16px 0",color:C.muted,fontSize:13}}>Scan an invoice above or add items manually</div>
+      )}
+    </Modal>
+  );
+}
+
 /* ── Transfer Modal ── */
 function TransferModal({items, fieldStaff, onSave, onClose}) {
   const [itemId, setItemId] = useState("");
@@ -5319,6 +5636,28 @@ function InventoryTab({settings, companies}) {
     setModal(null);
   };
 
+  const doAdHocReceive = ({supplierId, supplierName, date, refNote, lines}) => {
+    // Update stock quantities
+    setInvItems(prev=>prev.map(i=>{
+      const l=lines.find(l=>l.itemId===i.id); if(!l) return i;
+      const oh={...i.qtyOnHand};
+      oh["warehouse"]=(oh["warehouse"]||0)+l.qty;
+      // Update purchase price and log price history if price changed
+      const priceH=[...(i.priceHistory||[])];
+      if(l.unitCost&&l.unitCost!==i.purchasePrice) priceH.push({date,price:l.unitCost,supplierId,note:refNote||"Ad-hoc receive"});
+      return {...i,qtyOnHand:oh,priceHistory:priceH};
+    }));
+    // Log a movement per line
+    const now=date||new Date().toISOString().slice(0,10);
+    setStockMovements(prev=>[...prev,...lines.map(l=>({
+      id:nextMvId(),type:"receive",itemId:l.itemId,qty:l.qty,
+      fromLocation:null,toLocation:"warehouse",
+      jobId:null,techId:null,poId:null,
+      date:now,note:[supplierName,refNote].filter(Boolean).join(" · ")||"Ad-hoc receive"
+    }))]);
+    setModal(null);
+  };
+
   /* ── Tab sub-nav ── */
   const tabs = [{id:"items",label:"📦 Items"},{id:"purchase-orders",label:"🛒 Purchase Orders"},{id:"movements",label:"📋 Movements"}];
 
@@ -5336,6 +5675,7 @@ function InventoryTab({settings, companies}) {
           <p style={{color:C.sub,fontSize:12,marginTop:2}}>{invItems.length} items · {fmtMoney(totalValue)} stock value</p>
         </div>
         <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+          <Btn label="📥 Receive Stock" onClick={()=>setModal("adhocReceive")} color={C.accent} small/>
           <Btn label="📦 Collect" onClick={()=>setModal("collect")} color={C.green} small/>
           <Btn label="↔ Transfer" onClick={()=>setModal("transfer")} color={C.purple} small/>
           <Btn label="↩ Return" onClick={()=>setModal("return")} color={C.orange} small/>
@@ -5495,6 +5835,9 @@ function InventoryTab({settings, companies}) {
       )}
 
       {/* ── MODALS ── */}
+      {modal==="adhocReceive"&&(
+        <AdHocReceiveModal items={invItems} suppliers={invSuppliers} onSave={doAdHocReceive} onClose={()=>setModal(null)}/>
+      )}
       {(modal==="addItem"||modal==="editItem")&&(
         <ItemModal item={modal==="editItem"?selItem:null} suppliers={invSuppliers} onSave={saveItem} onClose={()=>setModal(null)}/>
       )}
