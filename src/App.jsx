@@ -1924,12 +1924,6 @@ function DispatchTab({settings, companies, setCompanies, vendors, fieldMode, set
     return matchTech && matchSearch;
   });
 
-  const ViewBtn = ({id,label,icon}) => (
-    <button onClick={()=>setDispView(id)} style={{display:"flex",alignItems:"center",gap:5,padding:"7px 14px",borderRadius:8,border:`1.5px solid ${dispView===id?C.accent:C.border}`,background:dispView===id?"#eff6ff":"#fff",color:dispView===id?C.accent:C.sub,fontWeight:dispView===id?700:500,fontSize:13,cursor:"pointer",fontFamily:"inherit"}}>
-      <span>{icon}</span>{label}
-    </button>
-  );
-
   return(
     <div>
       {/* Header */}
@@ -1939,9 +1933,12 @@ function DispatchTab({settings, companies, setCompanies, vendors, fieldMode, set
           <p style={{color:C.sub,fontSize:12,marginTop:2}}>{open.length} open jobs · {allTechNames.length} techs scheduled today</p>
         </div>
         <div style={{display:"flex",gap:6}}>
-          <ViewBtn id="board" label="Board" icon="📋"/>
-          <ViewBtn id="calendar" label="Calendar" icon="📅"/>
-          <ViewBtn id="map" label="Map" icon="🗺️"/>
+          {[["board","📋","Board"],["calendar","📅","Calendar"],["map","🗺️","Map"]].map(([id,icon,label])=>(
+            <button key={id} onClick={()=>setDispView(id)}
+              style={{display:"flex",alignItems:"center",gap:5,padding:"7px 14px",borderRadius:8,border:`1.5px solid ${dispView===id?C.accent:C.border}`,background:dispView===id?"#eff6ff":"#fff",color:dispView===id?C.accent:C.sub,fontWeight:dispView===id?700:500,fontSize:13,cursor:"pointer",fontFamily:"inherit"}}>
+              <span>{icon}</span>{label}
+            </button>
+          ))}
         </div>
       </div>
 
