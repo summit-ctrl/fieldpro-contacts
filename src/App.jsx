@@ -2533,7 +2533,6 @@ function VisitsSection({job, onUpdate, fieldStaff}) {
   const [editIdx, setEditIdx] = useState(null);
 
   const today = new Date().toISOString().split("T")[0];
-  const nowTime = new Date().toTimeString().slice(0,5);
 
   const emptyForm = () => ({
     date: today,
