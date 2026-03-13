@@ -97,19 +97,19 @@ const SEED_COMPANIES = [
         agents:[
           {id:"a1",name:"James Okafor",email:"jokafor@raywhite.com",phone:"0412 111 222",properties:12,
             jobs:[
-              {id:"j1",ref:"1001",type:"Plumbing",address:"22 Oak St, Parramatta NSW",scheduledTime:"08:00",durationHrs:1.5,lat:-33.8150,lng:151.0011,description:"Leaking tap – kitchen & bathroom",tech:"Jake Rivera",keyMethod:"other",keyNotes:"Lockbox code 4421",createdDate:"2026-03-01",status:"Open",stage:"In Progress",subStage:"Waiting on tenant",closedDate:null,tenants:[{id:"t1",name:"Wei & Fang Liu",email:"wliu@gmail.com",phone:"0400 111 333"}],appliances:[{id:"ap1",appType:"Dishwasher",brand:"Bosch",model:"SMS46KI01A",serial:"BSH2024-001",condition:"Leaking from door seal"}],additionalWorks:[{id:"aw1",description:"Add power point",custom:false,notes:"Behind dishwasher cavity"}]},
+              {id:"j1",ref:"1001",type:"Plumbing",address:"22 Oak St, Parramatta NSW",scheduledTime:"08:00",durationHrs:1.5,lat:-33.8138,lng:150.9985,description:"Leaking tap – kitchen & bathroom",tech:"Jake Rivera",keyMethod:"other",keyNotes:"Lockbox code 4421",createdDate:"2026-03-01",status:"Open",stage:"In Progress",subStage:"Waiting on tenant",closedDate:null,tenants:[{id:"t1",name:"Wei & Fang Liu",email:"wliu@gmail.com",phone:"0400 111 333"}],appliances:[{id:"ap1",appType:"Dishwasher",brand:"Bosch",model:"SMS46KI01A",serial:"BSH2024-001",condition:"Leaking from door seal"}],additionalWorks:[{id:"aw1",description:"Add power point",custom:false,notes:"Behind dishwasher cavity"}]},
               {id:"j2",ref:"1002",type:"Electrical",address:"7/15 Church St, Parramatta NSW",description:"Power point replacement x3",tech:"Tom Yuen",keyMethod:"office",keyNotes:"Ask for Maria at reception",createdDate:"2026-02-10",status:"Closed",stage:"Invoiced",subStage:"",closedDate:"2026-02-20",tenants:[{id:"t2",name:"Priya Menon",email:"pmenon@hotmail.com",phone:"0400 222 444"}],appliances:[],additionalWorks:[{id:"aw2",description:"Replace cables",custom:false,notes:"3x double GPO"},{id:"aw3",description:"Update circuit breaker",custom:false,notes:""}]},
               {id:"j3",ref:"1003",type:"HVAC",address:"22 Oak St, Parramatta NSW",description:"AC unit not cooling – full service",tech:"Maria Flores",keyMethod:"tenant",keyNotes:"Call 30 mins prior",createdDate:"2025-11-15",status:"Closed",stage:"Completed",subStage:"Follow-up required",closedDate:"2025-11-20",tenants:[{id:"t1",name:"Wei & Fang Liu",email:"wliu@gmail.com",phone:"0400 111 333"}],appliances:[{id:"ap2",appType:"Cooktop – Gas",brand:"Smeg",model:"SR264GH",serial:"SMG2022-887",condition:"One burner igniter faulty"}],additionalWorks:[]},
               {id:"j11",ref:"1011",type:"Plumbing",address:"4 Pennant Hills Rd, Carlingford NSW",scheduledTime:"10:00",durationHrs:1.5,lat:-33.7810,lng:151.0460,description:"Blocked drain – bathroom",tech:"Jake Rivera",keyMethod:"tenant",keyNotes:"Text before arrival",createdDate:"2026-03-10",status:"Open",stage:"Scheduled",subStage:"",closedDate:null,tenants:[{id:"t11",name:"Lily Tran",email:"ltran@gmail.com",phone:"0400 010 011"}],appliances:[],additionalWorks:[]},
-              {id:"j12",ref:"1012",type:"Plumbing",address:"18 Victoria Rd, Rydalmere NSW",scheduledTime:"12:00",durationHrs:2,lat:-33.8100,lng:151.0200,description:"Hot water system flush & service",tech:"Jake Rivera",keyMethod:"office",keyNotes:"",createdDate:"2026-03-10",status:"Open",stage:"Scheduled",subStage:"",closedDate:null,tenants:[{id:"t12",name:"Omar Sheikh",email:"osheikh@gmail.com",phone:"0400 010 012"}],appliances:[],additionalWorks:[]},
-              {id:"j13",ref:"1013",type:"Plumbing",address:"55 Marsden St, Parramatta NSW",scheduledTime:"14:30",durationHrs:1,lat:-33.8170,lng:151.0050,description:"Leaking toilet cistern",tech:"Jake Rivera",keyMethod:"tenant",keyNotes:"",createdDate:"2026-03-10",status:"Open",stage:"New",subStage:"",closedDate:null,tenants:[{id:"t13",name:"Sophie Grant",email:"sgrant@gmail.com",phone:"0400 010 013"}],appliances:[],additionalWorks:[]},
+              {id:"j12",ref:"1012",type:"Plumbing",address:"18 Victoria Rd, Rydalmere NSW",scheduledTime:"12:00",durationHrs:2,lat:-33.8085,lng:151.0155,description:"Hot water system flush & service",tech:"Jake Rivera",keyMethod:"office",keyNotes:"",createdDate:"2026-03-10",status:"Open",stage:"Scheduled",subStage:"",closedDate:null,tenants:[{id:"t12",name:"Omar Sheikh",email:"osheikh@gmail.com",phone:"0400 010 012"}],appliances:[],additionalWorks:[]},
+              {id:"j13",ref:"1013",type:"Plumbing",address:"55 Marsden St, Parramatta NSW",scheduledTime:"14:30",durationHrs:1,lat:-33.8195,lng:151.0065,description:"Leaking toilet cistern",tech:"Jake Rivera",keyMethod:"tenant",keyNotes:"",createdDate:"2026-03-10",status:"Open",stage:"New",subStage:"",closedDate:null,tenants:[{id:"t13",name:"Sophie Grant",email:"sgrant@gmail.com",phone:"0400 010 013"}],appliances:[],additionalWorks:[]},
             ]},
           {id:"a2",name:"Sofia Reyes",email:"sreyes@raywhite.com",phone:"0413 333 444",properties:8,
             jobs:[
-              {id:"j4",ref:"1004",type:"Plumbing",address:"3 Rose Ave, Parramatta NSW",scheduledTime:"11:00",durationHrs:2,lat:-33.8140,lng:151.0030,description:"Hot water system replacement",tech:"Anita Shaw",keyMethod:"office",keyNotes:"",createdDate:"2026-03-05",status:"Open",stage:"Scheduled",subStage:"",closedDate:null,tenants:[{id:"t3",name:"Ahmed & Sara Hassan",email:"ahassan@gmail.com",phone:"0400 333 555"}],appliances:[],additionalWorks:[{id:"aw4",description:"Close off gas (gas shutdown)",custom:false,notes:"Old HWS – gas line to be capped"}]},
+              {id:"j4",ref:"1004",type:"Plumbing",address:"3 Rose Ave, Parramatta NSW",scheduledTime:"11:00",durationHrs:2,lat:-33.8158,lng:151.0048,description:"Hot water system replacement",tech:"Anita Shaw",keyMethod:"office",keyNotes:"",createdDate:"2026-03-05",status:"Open",stage:"Scheduled",subStage:"",closedDate:null,tenants:[{id:"t3",name:"Ahmed & Sara Hassan",email:"ahassan@gmail.com",phone:"0400 333 555"}],appliances:[],additionalWorks:[{id:"aw4",description:"Close off gas (gas shutdown)",custom:false,notes:"Old HWS – gas line to be capped"}]},
               {id:"j21",ref:"1021",type:"Electrical",address:"88 Merrylands Rd, Merrylands NSW",scheduledTime:"08:30",durationHrs:1.5,lat:-33.8380,lng:150.9880,description:"Switchboard upgrade",tech:"Anita Shaw",keyMethod:"tenant",keyNotes:"Ring doorbell",createdDate:"2026-03-10",status:"Open",stage:"Scheduled",subStage:"",closedDate:null,tenants:[{id:"t21",name:"Ben Nguyen",email:"bnguyen@gmail.com",phone:"0400 020 021"}],appliances:[],additionalWorks:[]},
               {id:"j22",ref:"1022",type:"HVAC",address:"14 Woodville Rd, Guildford NSW",scheduledTime:"13:00",durationHrs:2,lat:-33.8510,lng:150.9800,description:"Ducted AC – not heating",tech:"Anita Shaw",keyMethod:"tenant",keyNotes:"",createdDate:"2026-03-10",status:"Open",stage:"In Progress",subStage:"",closedDate:null,tenants:[{id:"t22",name:"Michelle Park",email:"mpark@gmail.com",phone:"0400 020 022"}],appliances:[{id:"ap22",appType:"Oven",brand:"Westinghouse",model:"WVE636S",serial:"WV23-444",condition:"Fan not working"}],additionalWorks:[]},
-              {id:"j23",ref:"1023",type:"Plumbing",address:"6 Railway Pde, Auburn NSW",scheduledTime:"15:30",durationHrs:1,lat:-33.8490,lng:151.0340,description:"Burst pipe under sink",tech:"Anita Shaw",keyMethod:"other",keyNotes:"Key with neighbour",createdDate:"2026-03-10",status:"Open",stage:"New",subStage:"",closedDate:null,tenants:[{id:"t23",name:"David Chow",email:"dchow@gmail.com",phone:"0400 020 023"}],appliances:[],additionalWorks:[]},
+              {id:"j23",ref:"1023",type:"Plumbing",address:"6 Railway Pde, Auburn NSW",scheduledTime:"15:30",durationHrs:1,lat:-33.8510,lng:151.0355,description:"Burst pipe under sink",tech:"Anita Shaw",keyMethod:"other",keyNotes:"Key with neighbour",createdDate:"2026-03-10",status:"Open",stage:"New",subStage:"",closedDate:null,tenants:[{id:"t23",name:"David Chow",email:"dchow@gmail.com",phone:"0400 020 023"}],appliances:[],additionalWorks:[]},
             ]},
         ]},
       {id:"b2",name:"Ray White Blacktown",address:"1 Flushcombe Rd, Blacktown NSW 2148",phone:"(02) 9622 4400",email:"blacktown@raywhite.com",billing:{name:"Tom Nguyen",email:"tnguyen@raywhite.com",phone:"(02) 9622 4401"},
@@ -126,14 +126,14 @@ const SEED_COMPANIES = [
       {id:"b3",name:"LJ Hooker Penrith",address:"345 High St, Penrith NSW 2750",phone:"(02) 4732 1100",email:"penrith@ljhooker.com.au",billing:{name:"Rachel Park",email:"rpark@ljhooker.com.au",phone:"(02) 4732 1101"},
         agents:[{id:"a4",name:"David Tran",email:"dtran@ljhooker.com.au",phone:"0415 777 888",properties:10,
           jobs:[
-            {id:"j6",ref:"1006",type:"HVAC",address:"88 Woodriff St, Penrith NSW",scheduledTime:"09:00",durationHrs:2,lat:-33.7510,lng:150.6942,description:"Split system install – bedroom",tech:"Maria Flores",keyMethod:"tenant",keyNotes:"Call Maya on 0400 555 777",createdDate:"2026-03-08",status:"Open",stage:"On Hold",subStage:"Parts ordered",closedDate:null,tenants:[{id:"t5",name:"Maya & Luke Patel",email:"mpatel@gmail.com",phone:"0400 555 777"}],appliances:[{id:"ap4",appType:"Washing Machine",brand:"Samsung",model:"WW80T504DAW",serial:"SAM2023-441",condition:"Not spinning"}],additionalWorks:[]},
-            {id:"j41",ref:"1041",type:"HVAC",address:"15 Great Western Hwy, Kingswood NSW",scheduledTime:"11:30",durationHrs:1.5,lat:-33.7630,lng:150.7240,description:"Split system filter clean & service",tech:"Maria Flores",keyMethod:"tenant",keyNotes:"",createdDate:"2026-03-10",status:"Open",stage:"Scheduled",subStage:"",closedDate:null,tenants:[{id:"t41",name:"Jess Murphy",email:"jmurphy@gmail.com",phone:"0400 040 041"}],appliances:[],additionalWorks:[]},
-            {id:"j42",ref:"1042",type:"Plumbing",address:"44 Mulgoa Rd, Jamisontown NSW",scheduledTime:"13:30",durationHrs:2,lat:-33.7670,lng:150.6750,description:"Bathroom renovation – rough-in",tech:"Maria Flores",keyMethod:"other",keyNotes:"Site contact: Bob 0412 500 600",createdDate:"2026-03-10",status:"Open",stage:"In Progress",subStage:"",closedDate:null,tenants:[{id:"t42",name:"Bob Walsh",email:"bwalsh@gmail.com",phone:"0412 500 600"}],appliances:[],additionalWorks:[]},
+            {id:"j6",ref:"1006",type:"HVAC",address:"88 Woodriff St, Penrith NSW",scheduledTime:"08:00",durationHrs:2,lat:-33.7510,lng:150.6942,description:"Split system install – bedroom",tech:"Maria Flores",keyMethod:"tenant",keyNotes:"Call Maya on 0400 555 777",createdDate:"2026-03-08",status:"Open",stage:"On Hold",subStage:"Parts ordered",closedDate:null,tenants:[{id:"t5",name:"Maya & Luke Patel",email:"mpatel@gmail.com",phone:"0400 555 777"}],appliances:[{id:"ap4",appType:"Washing Machine",brand:"Samsung",model:"WW80T504DAW",serial:"SAM2023-441",condition:"Not spinning"}],additionalWorks:[]},
+            {id:"j41",ref:"1041",type:"HVAC",address:"15 Great Western Hwy, Kingswood NSW",scheduledTime:"10:30",durationHrs:1.5,lat:-33.7630,lng:150.7240,description:"Split system filter clean & service",tech:"Maria Flores",keyMethod:"tenant",keyNotes:"",createdDate:"2026-03-10",status:"Open",stage:"Scheduled",subStage:"",closedDate:null,tenants:[{id:"t41",name:"Jess Murphy",email:"jmurphy@gmail.com",phone:"0400 040 041"}],appliances:[],additionalWorks:[]},
+            {id:"j42",ref:"1042",type:"Plumbing",address:"44 Mulgoa Rd, Jamisontown NSW",scheduledTime:"12:30",durationHrs:2,lat:-33.7670,lng:150.6750,description:"Bathroom renovation – rough-in",tech:"Maria Flores",keyMethod:"other",keyNotes:"Site contact: Bob 0412 500 600",createdDate:"2026-03-10",status:"Open",stage:"In Progress",subStage:"",closedDate:null,tenants:[{id:"t42",name:"Bob Walsh",email:"bwalsh@gmail.com",phone:"0412 500 600"}],appliances:[],additionalWorks:[]},
           ]}]},
       {id:"b4",name:"LJ Hooker Campbelltown",address:"200 Queen St, Campbelltown NSW 2560",phone:"(02) 4625 1100",email:"campbelltown@ljhooker.com.au",billing:{name:"Alex Greer",email:"agreer@ljhooker.com.au",phone:"(02) 4625 1101"},
         agents:[{id:"a5",name:"Rachel Moore",email:"rmoore@ljhooker.com.au",phone:"0416 100 200",properties:8,
           jobs:[
-            {id:"j43",ref:"1043",type:"HVAC",address:"5 Narellan Rd, Campbelltown NSW",scheduledTime:"08:00",durationHrs:2,lat:-34.0651,lng:150.8141,description:"Ducted heating – annual service",tech:"Maria Flores",keyMethod:"tenant",keyNotes:"Early start OK",createdDate:"2026-03-10",status:"Open",stage:"Scheduled",subStage:"",closedDate:null,tenants:[{id:"t43",name:"Sam Lowe",email:"slowe@gmail.com",phone:"0400 040 043"}],appliances:[],additionalWorks:[]},
+            {id:"j43",ref:"1043",type:"HVAC",address:"5 Narellan Rd, Campbelltown NSW",scheduledTime:"15:30",durationHrs:1.5,lat:-34.0651,lng:150.8141,description:"Ducted heating – annual service",tech:"Maria Flores",keyMethod:"tenant",keyNotes:"Early start OK",createdDate:"2026-03-10",status:"Open",stage:"Scheduled",subStage:"",closedDate:null,tenants:[{id:"t43",name:"Sam Lowe",email:"slowe@gmail.com",phone:"0400 040 043"}],appliances:[],additionalWorks:[]},
           ]}]},
     ]},
 ];
@@ -2247,10 +2247,10 @@ function DispatchMap({jobs, allTechNames, onOpen}) {
   const [hoveredJob, setHoveredJob] = useState(null);
   const [hoveredTech, setHoveredTech] = useState(null);
 
-  // Sydney bounds
-  const MAP_W = 860, MAP_H = 530;
-  const LNG_MIN=150.58, LNG_MAX=151.45;
-  const LAT_MIN=-34.18, LAT_MAX=-33.55;
+  // Sydney bounds — wide enough to include Campbelltown (-34.07) with margin
+  const MAP_W = 900, MAP_H = 580;
+  const LNG_MIN=150.56, LNG_MAX=151.45;
+  const LAT_MIN=-34.22, LAT_MAX=-33.52;
 
   const project = ({lat,lng}) => ({
     x: ((lng-LNG_MIN)/(LNG_MAX-LNG_MIN))*MAP_W,
@@ -2286,16 +2286,16 @@ function DispatchMap({jobs, allTechNames, onOpen}) {
     {pts:[{lat:-33.769,lng:150.905},{lat:-33.840,lng:150.872},{lat:-33.920,lng:150.923}], w:3},
     {pts:[{lat:-33.815,lng:151.001},{lat:-33.769,lng:150.905},{lat:-33.763,lng:150.724},{lat:-33.751,lng:150.694}], w:3},
     {pts:[{lat:-33.869,lng:151.209},{lat:-33.797,lng:151.181},{lat:-33.730,lng:151.099}], w:2.5},
-    {pts:[{lat:-33.869,lng:151.209},{lat:-33.920,lng:150.923},{lat:-34.065,lng:150.814}], w:2.5},
+    {pts:[{lat:-33.869,lng:151.209},{lat:-33.920,lng:150.923},{lat:-34.065,lng:150.814},{lat:-34.10,lng:150.810}], w:2.5},
     {pts:[{lat:-33.769,lng:150.905},{lat:-33.759,lng:150.980},{lat:-33.730,lng:151.000}], w:2},
     {pts:[{lat:-33.815,lng:151.001},{lat:-33.838,lng:150.988},{lat:-33.849,lng:151.034}], w:2},
     {pts:[{lat:-33.62,lng:151.38},{lat:-33.72,lng:151.32},{lat:-33.82,lng:151.29},{lat:-33.95,lng:151.25},{lat:-34.05,lng:151.15}], w:6, coast:true},
   ];
 
   return(
-    <div style={{display:"flex",flexDirection:"column",gap:12}}>
-      {/* Map SVG — full width */}
-      <div style={{borderRadius:14,overflow:"hidden",boxShadow:"0 6px 30px rgba(0,0,0,0.25)",background:"#0d1b2a",width:"100%"}}>
+    <div style={{display:"flex",gap:12,alignItems:"flex-start"}}>
+      {/* Map SVG */}
+      <div style={{flex:1,minWidth:0,borderRadius:14,overflow:"hidden",boxShadow:"0 6px 30px rgba(0,0,0,0.25)",background:"#0d1b2a"}}>
         <svg width="100%" viewBox={`0 0 ${MAP_W} ${MAP_H}`} style={{display:"block"}}>
           <defs>
             <linearGradient id="mapBg" x1="0" y1="0" x2="0" y2="1">
@@ -2304,14 +2304,12 @@ function DispatchMap({jobs, allTechNames, onOpen}) {
             </linearGradient>
           </defs>
           <rect width={MAP_W} height={MAP_H} fill="url(#mapBg)"/>
-          {/* Grid */}
           {[0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9].map(f=>(
             <g key={f} opacity={0.18}>
               <line x1={f*MAP_W} y1={0} x2={f*MAP_W} y2={MAP_H} stroke="#4a7cb5" strokeWidth={0.6}/>
               <line x1={0} y1={f*MAP_H} x2={MAP_W} y2={f*MAP_H} stroke="#4a7cb5" strokeWidth={0.6}/>
             </g>
           ))}
-          {/* Roads */}
           {roads.map((road,ri)=>{
             const pts = road.pts.map(p=>project(p));
             const d = pts.map((p,i)=>i===0?`M${p.x.toFixed(1)},${p.y.toFixed(1)}`:`L${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
@@ -2319,7 +2317,6 @@ function DispatchMap({jobs, allTechNames, onOpen}) {
               ? <path key={ri} d={d} fill="none" stroke="#1a3a6b" strokeWidth={road.w} opacity={0.8} strokeLinecap="round" strokeLinejoin="round"/>
               : <path key={ri} d={d} fill="none" stroke="#253d5a" strokeWidth={road.w} opacity={0.9} strokeLinecap="round" strokeLinejoin="round"/>;
           })}
-          {/* Suburb labels */}
           {LABELS.map(l=>{
             const p=project(l);
             return(
@@ -2329,26 +2326,21 @@ function DispatchMap({jobs, allTechNames, onOpen}) {
               </g>
             );
           })}
-
-          {/* Route lines (drawn before pins so pins sit on top) */}
-          {techRoutes.map(({tech,jobs:tJobs,color},ti)=>{
+          {techRoutes.map(({tech,jobs:tJobs,color})=>{
             if(tJobs.length<1) return null;
             const isHov = hoveredTech===tech;
             const fade = hoveredTech && !isHov;
             const pts = tJobs.map(j=>project(j.coords));
             return(
               <g key={tech} opacity={fade?0.08:1} style={{transition:"opacity 0.25s"}}>
-                {/* Glow under route when hovered */}
                 {isHov && pts.length>1 && pts.slice(0,-1).map((p,i)=>(
                   <line key={"g"+i} x1={p.x} y1={p.y} x2={pts[i+1].x} y2={pts[i+1].y}
                     stroke={color} strokeWidth={12} opacity={0.18} strokeLinecap="round"/>
                 ))}
-                {/* Route lines */}
                 {pts.length>1 && pts.slice(0,-1).map((p,i)=>{
                   const nx=pts[i+1];
-                  // Direction arrow at midpoint
                   const mx=(p.x+nx.x)/2, my=(p.y+nx.y)/2;
-                  const angle = Math.atan2(nx.y-p.y, nx.x-p.x)*180/Math.PI;
+                  const angle=Math.atan2(nx.y-p.y,nx.x-p.x)*180/Math.PI;
                   return(
                     <g key={i}>
                       <line x1={p.x} y1={p.y} x2={nx.x} y2={nx.y}
@@ -2359,30 +2351,23 @@ function DispatchMap({jobs, allTechNames, onOpen}) {
                     </g>
                   );
                 })}
-                {/* Stop-order labels on each pin */}
                 {pts.map((p,i)=>(
                   <text key={"ord"+i} x={p.x} y={p.y-16} textAnchor="middle"
-                    fontSize={9} fill={color} fontWeight="800" fontFamily="'Inter',sans-serif" opacity={0.9}>
-                    {i+1}
-                  </text>
+                    fontSize={9} fill={color} fontWeight="800" fontFamily="'Inter',sans-serif" opacity={0.9}>{i+1}</text>
                 ))}
               </g>
             );
           })}
-
-          {/* Job pins */}
           {jobsWithCoords.map(job=>{
-            const ti = allTechNames.indexOf(job.tech);
-            const col = TECH_COLORS[ti%TECH_COLORS.length]||"#64748b";
-            const p = project(job.coords);
-            const isHov = hoveredJob?.id===job.id;
-            const techHov = hoveredTech===job.tech;
-            const fade = hoveredTech && !techHov;
-            const r = isHov?14:10;
+            const ti=allTechNames.indexOf(job.tech);
+            const col=TECH_COLORS[ti%TECH_COLORS.length]||"#64748b";
+            const p=project(job.coords);
+            const isHov=hoveredJob?.id===job.id;
+            const fade=hoveredTech&&hoveredTech!==job.tech;
+            const r=isHov?14:10;
             return(
               <g key={job.id} style={{cursor:"pointer"}} opacity={fade?0.12:1}
-                onMouseEnter={()=>setHoveredJob(job)}
-                onMouseLeave={()=>setHoveredJob(null)}
+                onMouseEnter={()=>setHoveredJob(job)} onMouseLeave={()=>setHoveredJob(null)}
                 onClick={()=>onOpen(job)}>
                 <circle cx={p.x+2} cy={p.y+2} r={r} fill="rgba(0,0,0,0.35)"/>
                 <circle cx={p.x} cy={p.y} r={r+2.5} fill="#fff" opacity={0.95}/>
@@ -2392,43 +2377,48 @@ function DispatchMap({jobs, allTechNames, onOpen}) {
               </g>
             );
           })}
-
-          {/* Hover tooltip */}
           {hoveredJob&&<MapPinTooltip job={hoveredJob} project={project} allTechNames={allTechNames}/>}
         </svg>
       </div>
 
-      {/* Route cards — horizontal row below map */}
-      <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
+      {/* Scrollable route panel */}
+      <div style={{width:200,flexShrink:0,display:"flex",flexDirection:"column",gap:8,maxHeight:580,overflowY:"auto",paddingRight:2}}>
+        <div style={{fontSize:11,fontWeight:700,color:C.sub,textTransform:"uppercase",letterSpacing:0.6,paddingBottom:2}}>Today's Routes</div>
         {techRoutes.map(({tech,jobs:tJobs,color})=>(
           <div key={tech}
-            style={{flex:"1 1 180px",background:hoveredTech===tech?"#fff":C.card,border:`2px solid ${hoveredTech===tech?color:C.border}`,borderRadius:12,padding:"12px 14px",cursor:"pointer",transition:"border-color 0.15s, box-shadow 0.15s",boxShadow:hoveredTech===tech?`0 0 0 3px ${color}22`:C.shadow}}
-            onMouseEnter={()=>setHoveredTech(tech)}
-            onMouseLeave={()=>setHoveredTech(null)}>
-            <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
-              <div style={{width:12,height:12,borderRadius:"50%",background:color,flexShrink:0,boxShadow:`0 0 8px ${color}`}}/>
-              <span style={{fontWeight:700,fontSize:13,color:C.text}}>{tech}</span>
-              <span style={{marginLeft:"auto",background:color,color:"#fff",borderRadius:99,fontSize:10,fontWeight:700,padding:"2px 8px"}}>{tJobs.length} jobs</span>
+            style={{background:hoveredTech===tech?"#fff":C.card,border:`2px solid ${hoveredTech===tech?color:C.border}`,borderRadius:10,padding:"10px 12px",cursor:"pointer",transition:"border-color 0.15s",boxShadow:hoveredTech===tech?`0 2px 12px ${color}33`:"none",flexShrink:0}}
+            onMouseEnter={()=>setHoveredTech(tech)} onMouseLeave={()=>setHoveredTech(null)}>
+            <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:7}}>
+              <div style={{width:10,height:10,borderRadius:"50%",background:color,flexShrink:0,boxShadow:`0 0 6px ${color}`}}/>
+              <span style={{fontWeight:700,fontSize:12,color:C.text,flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{tech.split(" ")[0]}</span>
+              <span style={{background:color,color:"#fff",borderRadius:99,fontSize:10,fontWeight:700,padding:"1px 6px",flexShrink:0}}>{tJobs.length}</span>
             </div>
-            <div style={{display:"flex",flexDirection:"column",gap:4}}>
-              {tJobs.map((j,i)=>(
-                <div key={j.id} onClick={e=>{e.stopPropagation();onOpen(j);}}
-                  style={{display:"flex",gap:7,alignItems:"flex-start",padding:"5px 0",borderTop:i>0?`1px solid ${C.border}`:"none",cursor:"pointer"}}
-                  onMouseEnter={()=>setHoveredJob(j)}
-                  onMouseLeave={()=>setHoveredJob(null)}>
-                  <div style={{width:18,height:18,borderRadius:"50%",background:color,color:"#fff",fontSize:9,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginTop:1}}>{i+1}</div>
-                  <div style={{minWidth:0}}>
-                    <div style={{fontSize:11,fontWeight:700,color:C.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{(j.address||"").split(",")[0]}</div>
-                    <div style={{fontSize:10,color:C.muted}}>{j.scheduledTime||"TBD"} · {j.durationHrs||1}h · {j.ref}</div>
-                  </div>
+            {tJobs.map((j,i)=>(
+              <div key={j.id} onClick={e=>{e.stopPropagation();onOpen(j);}}
+                style={{display:"flex",gap:6,alignItems:"flex-start",padding:"4px 0",borderTop:i>0?`1px solid ${C.border}`:"none",cursor:"pointer"}}
+                onMouseEnter={()=>setHoveredJob(j)} onMouseLeave={()=>setHoveredJob(null)}>
+                <div style={{width:16,height:16,borderRadius:"50%",background:color,color:"#fff",fontSize:9,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginTop:1}}>{i+1}</div>
+                <div style={{minWidth:0}}>
+                  <div style={{fontSize:11,fontWeight:600,color:C.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{(j.address||"").split(",")[0]}</div>
+                  <div style={{fontSize:9,color:C.muted}}>{j.scheduledTime||"TBD"} · {j.durationHrs||1}h · {j.ref}</div>
                 </div>
-              ))}
-            </div>
+              </div>
+            ))}
           </div>
         ))}
         {techRoutes.length===0&&(
-          <div style={{color:C.muted,fontSize:13,padding:"16px 0"}}>No open jobs on map</div>
+          <div style={{color:C.muted,fontSize:12,padding:"12px 0",textAlign:"center"}}>No open jobs</div>
         )}
+        {/* Legend */}
+        <div style={{marginTop:4,padding:"10px 12px",background:C.raised,borderRadius:10,border:`1px solid ${C.border}`,flexShrink:0}}>
+          <div style={{fontSize:10,fontWeight:700,color:C.sub,textTransform:"uppercase",letterSpacing:0.5,marginBottom:6}}>Technicians</div>
+          {allTechNames.map((t,i)=>(
+            <div key={t} style={{display:"flex",alignItems:"center",gap:6,marginBottom:4,fontSize:11,color:C.sub}}>
+              <span style={{width:9,height:9,borderRadius:"50%",background:TECH_COLORS[i%TECH_COLORS.length],display:"inline-block",flexShrink:0,boxShadow:`0 0 4px ${TECH_COLORS[i%TECH_COLORS.length]}`}}/>
+              {t}
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );
