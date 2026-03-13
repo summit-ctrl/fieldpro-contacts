@@ -26,7 +26,6 @@ const C = {
 const DEFAULT_APPLIANCE_TYPES = ["Oven","Dishwasher","Cooktop – Gas","Cooktop – Electric","Upright Cooker","Washing Machine","Dryer","Fridge","Microwave","Other"];
 const DEFAULT_WORK_PRESETS = ["Add power point","Close off gas (gas shutdown)","Replace cables","Update circuit breaker","Modify cabinets","Cut benchtop","Install rangehood","Replace hot water system","Install exhaust fan","Smoke alarm replacement"];
 const DEFAULT_JOB_TYPES = ["HVAC","Plumbing","Electrical"];
-const DEFAULT_TECHNICIANS = ["Jake Rivera","Tom Yuen","Maria Flores","Anita Shaw"];
 const DEFAULT_JOB_STAGES = ["New","Scheduled","In Progress","On Hold","Completed","Invoiced"];
 
 /* ─── DEFAULT REPORT TEMPLATES ─── */
@@ -154,13 +153,70 @@ const FF = ({label,value,onChange,type="text",placeholder="",required=false}) =>
 const StatCard = ({label,value,sub,color=C.accent,icon}) => (<div style={{background:"#fff",border:`1px solid ${C.border}`,borderRadius:12,padding:"16px 18px"}}><div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}><div><div style={{color:C.sub,fontSize:12,fontWeight:600,textTransform:"uppercase",letterSpacing:0.5}}>{label}</div><div style={{color,fontSize:26,fontWeight:900,marginTop:4}}>{value}</div>{sub&&<div style={{color:C.muted,fontSize:12,marginTop:2}}>{sub}</div>}</div><span style={{fontSize:28}}>{icon}</span></div></div>);
 
 /* ─── SETTINGS CONTEXT ─── */
+const DEFAULT_FIELD_FORMS = [
+  { id:"ff1", name:"New Installation Form", badge:"Install", badgeRequired:"optional",
+    questions:[
+      {id:"fq1",text:"Did you take pictures of existing damages around the work area?",type:"multi",mandatory:true,options:["Yes, confirmed — pictures are in the diary","No, I forgot and will rely on the trust"],skipIf:""},
+      {id:"fq2",text:"Job completed?",type:"yesno",mandatory:true,options:[],skipIf:""},
+      {id:"fq3",text:"Explain why it took longer than expected",type:"text",mandatory:false,options:[],skipIf:""},
+      {id:"fq4",text:"Appliance(s) Type / Make & Model",type:"text",mandatory:true,options:[],skipIf:""},
+      {id:"fq5",text:"Appliance(s) tested?",type:"yesno",mandatory:true,options:[],skipIf:""},
+      {id:"fq6",text:"Removed old appliance / rubbish out?",type:"yesno",mandatory:false,options:[],skipIf:""},
+      {id:"fq7",text:"Why wasn't the job completed?",type:"text",mandatory:false,options:[],skipIf:""},
+      {id:"fq8",text:"Photo of the new appliance installed",type:"photo",mandatory:true,options:[],skipIf:""},
+      {id:"fq9",text:"Sticker plate / Compliance plate",type:"photo",mandatory:false,options:[],skipIf:""},
+      {id:"fq10",text:"Extra pictures",type:"photo",mandatory:false,options:[],skipIf:""},
+      {id:"fq11",text:"How long did you spend on this job?",type:"text",mandatory:true,options:[],skipIf:""},
+      {id:"fq12",text:"Any extra relevant information about the completed installation",type:"text",mandatory:false,options:[],skipIf:""},
+      {id:"fq13",text:"Did you use any stock parts?",type:"yesno",mandatory:false,options:[],skipIf:""},
+    ]},
+  { id:"ff2", name:"Gas Safety Inspection", badge:"Gas Check", badgeRequired:"required",
+    questions:[
+      {id:"gq1",text:"All gas appliances inspected?",type:"yesno",mandatory:true,options:[],skipIf:""},
+      {id:"gq2",text:"Any gas leaks detected?",type:"yesno",mandatory:true,options:[],skipIf:""},
+      {id:"gq3",text:"Describe the leak location and action taken",type:"text",mandatory:false,options:[],skipIf:""},
+      {id:"gq4",text:"Compliance certificate issued?",type:"yesno",mandatory:true,options:[],skipIf:""},
+      {id:"gq5",text:"Photo of compliance plate",type:"photo",mandatory:true,options:[],skipIf:""},
+    ]},
+];
+
+const DEFAULT_EMAIL_TEMPLATES = [
+  { id:"em1", name:"Booking Confirmation", icon:"📅",
+    subject:"Booking confirmed — Job {{job_ref}}",
+    body:"Hi {{agent_name}},\n\nThis confirms your service booking has been scheduled.\n\nJob Reference: {{job_ref}}\nJob Type: {{job_type}}\nAppliance: {{appliance_type}}\nAddress: {{address}}\nBranch: {{branch}}\nTechnician: {{tech_name}}\nDate: {{date}}\n\nPlease don't hesitate to contact us with any questions.\n\nKind regards,\n[Your Company]" },
+  { id:"em2", name:"Job Completed", icon:"✅",
+    subject:"Job completed — {{job_ref}}",
+    body:"Hi {{agent_name}},\n\nWe're pleased to confirm the following job has been completed.\n\nJob Reference: {{job_ref}}\nAppliance: {{appliance_type}}\nAddress: {{address}}\nCompleted By: {{tech_name}}\nDate: {{date}}\n\nPlease find any attached reports in this email. Contact us if you need anything further.\n\nKind regards,\n[Your Company]" },
+  { id:"em3", name:"Parts Ordered — Awaiting Delivery", icon:"📦",
+    subject:"Parts ordered for {{job_ref}} — awaiting delivery",
+    body:"Hi {{agent_name}},\n\nWe have ordered the required parts for your job and are awaiting delivery.\n\nJob Reference: {{job_ref}}\nAppliance: {{appliance_type}}\nAddress: {{address}}\nTechnician: {{tech_name}}\n\nWe'll be in touch to reschedule once parts have arrived.\n\nKind regards,\n[Your Company]" },
+  { id:"em4", name:"No Access — Reschedule Required", icon:"🚫",
+    subject:"Unable to access property — {{job_ref}}",
+    body:"Hi {{agent_name}},\n\nUnfortunately our technician was unable to gain access to the property today.\n\nJob Reference: {{job_ref}}\nAddress: {{address}}\nDate: {{date}}\n\nPlease arrange access and contact us to reschedule at your earliest convenience.\n\nKind regards,\n[Your Company]" },
+  { id:"em5", name:"Quote Required", icon:"📝",
+    subject:"Quote required — {{job_ref}}",
+    body:"Hi {{agent_name}},\n\nFollowing our technician's visit, a quote is required before works can proceed.\n\nJob Reference: {{job_ref}}\nAppliance: {{appliance_type}}\nAddress: {{address}}\nCustomer: {{customer_name}}\n\nWe will prepare the quote and send it through shortly.\n\nKind regards,\n[Your Company]" },
+];
+
+const EMAIL_MERGE_FIELDS = ["{{customer_name}}","{{agent_name}}","{{job_ref}}","{{job_type}}","{{appliance_type}}","{{address}}","{{branch}}","{{tech_name}}","{{date}}"];
+
 const useSettings = () => {
   const [jobStages, setJobStages] = useState(DEFAULT_JOB_STAGES);
   const [jobSubStages, setJobSubStages] = useState(DEFAULT_JOB_SUBSTAGES);
   const [fieldStaff, setFieldStaff] = useState(DEFAULT_FIELD_STAFF);
   const [jobTypes, setJobTypes] = useState(DEFAULT_JOB_TYPES);
   const [reportTemplates, setReportTemplates] = useState(DEFAULT_REPORT_TEMPLATES);
-  return { jobStages, setJobStages, jobSubStages, setJobSubStages, fieldStaff, setFieldStaff, jobTypes, setJobTypes, reportTemplates, setReportTemplates };
+  const [fieldForms, setFieldForms] = useState(DEFAULT_FIELD_FORMS);
+  const [emailTemplates, setEmailTemplates] = useState(DEFAULT_EMAIL_TEMPLATES);
+  const [fieldApp, setFieldApp] = useState({
+    defaultTech:"", requireOutcome:true, requireNotes:false, requirePhoto:false,
+    closeAction:"close", smsOnDeparture:false,
+    smsTemplate:"Hi {tenant}, your technician is on the way. Job ref: {ref}.",
+    customOutcomes:[],
+  });
+  return { jobStages,setJobStages, jobSubStages,setJobSubStages, fieldStaff,setFieldStaff,
+    jobTypes,setJobTypes, reportTemplates,setReportTemplates,
+    fieldForms,setFieldForms, emailTemplates,setEmailTemplates, fieldApp,setFieldApp };
 };
 
 /* ─── LIST MANAGER ─── */
@@ -264,7 +320,7 @@ const DIARY_TYPES = [
   {id:"visit",    label:"Site Visit", icon:"🔧", color:"#0891b2"},
 ];
 
-function JobDiary({job, onUpdate, onOpenAttachment}){
+function JobDiary({job, onUpdate, onOpenAttachment, emailTemplates}){
   const diary = job.diary || [];
   const [filter, setFilter] = useState("All");
   const [showAdd, setShowAdd] = useState(false);
@@ -277,6 +333,26 @@ function JobDiary({job, onUpdate, onOpenAttachment}){
   const [files, setFiles] = useState([]); // [{name,type,data,mime}]
   const [lightbox, setLightbox] = useState(null);
   const fileRef = useState(null);
+  const [selTemplate, setSelTemplate] = useState("");
+
+  const applyTemplate = (tmpl, job) => {
+    if(!tmpl) return;
+    const today = new Date().toLocaleDateString("en-AU",{day:"2-digit",month:"short",year:"numeric"});
+    const appType = (job.appliances||[]).map(a=>a.appType).join(", ") || "";
+    const fill = s => (s||"")
+      .replace(/\{\{customer_name\}\}/g, job.companyName||"")
+      .replace(/\{\{agent_name\}\}/g, job.agentName||"")
+      .replace(/\{\{job_ref\}\}/g, job.ref||"")
+      .replace(/\{\{job_type\}\}/g, job.type||"")
+      .replace(/\{\{appliance_type\}\}/g, appType)
+      .replace(/\{\{address\}\}/g, job.address||"")
+      .replace(/\{\{branch\}\}/g, job.branchName||"")
+      .replace(/\{\{tech_name\}\}/g, job.tech||"")
+      .replace(/\{\{date\}\}/g, today);
+    setSubject(fill(tmpl.subject));
+    setNotes(fill(tmpl.body));
+    setSelTemplate(tmpl.id);
+  };
 
   const isMedia = id => ["photo","pdf","video"].includes(id);
   const isComms = id => ["email","phone","sms","whatsapp"].includes(id);
@@ -489,6 +565,22 @@ function JobDiary({job, onUpdate, onOpenAttachment}){
                   style={{width:"100%",background:C.raised,border:`1px solid ${C.border}`,borderRadius:8,padding:"9px 12px",color:C.text,fontSize:13,fontFamily:"inherit",boxSizing:"border-box"}}/>
               </div>
 
+              {/* Email template picker */}
+              {entryType==="email" && (emailTemplates||[]).length>0 && (
+                <div style={{marginBottom:14}}>
+                  <label style={{display:"block",color:C.sub,fontSize:12,fontWeight:600,textTransform:"uppercase",letterSpacing:0.5,marginBottom:6}}>Use Template</label>
+                  <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+                    {(emailTemplates||[]).map(t=>(
+                      <button key={t.id} onClick={()=>applyTemplate(t,job)}
+                        style={{display:"flex",alignItems:"center",gap:5,padding:"6px 12px",borderRadius:8,border:`1.5px solid ${selTemplate===t.id?C.accent:C.border}`,background:selTemplate===t.id?"#eff6ff":"#fff",color:selTemplate===t.id?C.accent:C.sub,fontWeight:selTemplate===t.id?700:500,fontSize:12,cursor:"pointer",fontFamily:"inherit"}}>
+                        <span>{t.icon}</span>{t.name}
+                      </button>
+                    ))}
+                  </div>
+                  {selTemplate&&<div style={{marginTop:6,fontSize:11,color:C.muted}}>Template applied — edit freely below</div>}
+                </div>
+              )}
+
               {/* Subject (email only) */}
               {entryType==="email" && (
                 <div style={{marginBottom:14}}>
@@ -688,10 +780,12 @@ function JobsSection({agent,onUpdate,settings}) {
    SETTINGS TAB
 ═══════════════════════════════════════════ */
 function SettingsTab({settings}) {
-  const {jobStages,setJobStages,jobSubStages,setJobSubStages,fieldStaff,setFieldStaff,jobTypes,setJobTypes,reportTemplates,setReportTemplates} = settings;
+  const {jobStages,setJobStages,jobSubStages,setJobSubStages,fieldStaff,setFieldStaff,jobTypes,setJobTypes,reportTemplates,setReportTemplates,fieldForms,setFieldForms,emailTemplates,setEmailTemplates,fieldApp,setFieldApp} = settings;
   const [section,setSection]=useState("stages");
   const [modal,setModal]=useState(null);
   const [form,setForm]=useState({});
+  const fa = fieldApp||{};
+  const setFa = patch => setFieldApp({...fa,...patch});
 
   const saveStaff=()=>{
     if(!form.name)return;
@@ -701,7 +795,7 @@ function SettingsTab({settings}) {
   const toggleStaffStatus=id=>setFieldStaff(fieldStaff.map(f=>f.id===id?{...f,status:f.status==="Active"?"Inactive":"Active"}:f));
   const removeStaff=id=>setFieldStaff(fieldStaff.filter(f=>f.id!==id));
 
-  const sections=[{id:"stages",icon:"🎯",label:"Job Stages"},{id:"substages",icon:"🏷️",label:"Sub-stages"},{id:"staff",icon:"👷",label:"Field Staff"},{id:"jobtypes",icon:"🔧",label:"Job Types"},{id:"reports",icon:"📋",label:"Report Templates"}];
+  const sections=[{id:"stages",icon:"🎯",label:"Job Stages"},{id:"substages",icon:"🏷️",label:"Sub-stages"},{id:"staff",icon:"👷",label:"Field Staff"},{id:"jobtypes",icon:"🔧",label:"Job Types"},{id:"reports",icon:"📋",label:"Report Templates"},{id:"forms",icon:"📱",label:"Field Forms"},{id:"email",icon:"📧",label:"Email Templates"},{id:"fieldapp",icon:"📱",label:"Field App"}];
 
   return(<div>
     <div style={{marginBottom:20}}><h2 style={{fontSize:18,fontWeight:800,color:C.text}}>Settings</h2><p style={{color:C.sub,fontSize:12,marginTop:2}}>Manage lists, field staff, and job configuration</p></div>
@@ -820,6 +914,20 @@ function SettingsTab({settings}) {
         <ReportTemplateEditor reportTemplates={reportTemplates} setReportTemplates={setReportTemplates} jobTypes={jobTypes}/>
       </Card>
     )}
+    {section==="forms"&&(
+      <Card>
+        <SectionHead title="📱 Field Forms"/>
+        <p style={{color:C.sub,fontSize:13,marginBottom:16}}>Create forms that technicians fill in during a job. Add questions, set types, and mark which are mandatory.</p>
+        <FieldFormBuilder fieldForms={fieldForms} setFieldForms={setFieldForms}/>
+      </Card>
+    )}
+    {section==="email"&&(
+      <Card>
+        <SectionHead title="📧 Email Templates"/>
+        <p style={{color:C.sub,fontSize:13,marginBottom:16}}>Build reusable email templates for sending from the job diary. Use merge fields to auto-fill job details.</p>
+        <EmailTemplateEditor emailTemplates={emailTemplates} setEmailTemplates={setEmailTemplates}/>
+      </Card>
+    )}
   </div>);
 }
 
@@ -877,10 +985,867 @@ function ProductsTab() {
 }
 
 /* ═══════════════════════════════════════════
+   FIELD FORM BUILDER (Settings)
+═══════════════════════════════════════════ */
+const FORM_Q_TYPES = [{id:"yesno",label:"Yes / No",icon:"✅"},{id:"multi",label:"Multiple Choice",icon:"☑️"},{id:"text",label:"Text Entry",icon:"📝"},{id:"number",label:"Number",icon:"🔢"},{id:"photo",label:"Photo",icon:"📷"}];
+
+function FieldFormBuilder({fieldForms, setFieldForms}) {
+  const [selForm, setSelForm] = useState(null);
+  const [selQ, setSelQ] = useState(null);
+  const [editingForm, setEditingForm] = useState(null); // form being edited
+  const [addingForm, setAddingForm] = useState(false);
+  const [newFormName, setNewFormName] = useState("");
+  const [newFormBadge, setNewFormBadge] = useState("");
+
+  const liveForm = selForm ? (editingForm || fieldForms.find(f=>f.id===selForm)) : null;
+  const liveQ = selQ ? liveForm?.questions?.find(q=>q.id===selQ) : null;
+
+  const saveForm = f => {
+    setFieldForms(fieldForms.map(x=>x.id===f.id?f:x));
+    setEditingForm(f);
+  };
+
+  const updateQ = patch => {
+    if(!liveForm||!liveQ) return;
+    const updated = {...liveForm, questions: liveForm.questions.map(q=>q.id===liveQ.id?{...q,...patch}:q)};
+    saveForm(updated);
+  };
+
+  const addQ = () => {
+    if(!liveForm) return;
+    const nq = {id:uid(),text:"New question",type:"text",mandatory:false,options:[],skipIf:""};
+    const updated = {...liveForm, questions:[...liveForm.questions, nq]};
+    saveForm(updated);
+    setSelQ(nq.id);
+  };
+
+  const removeQ = id => {
+    if(!liveForm) return;
+    const updated = {...liveForm, questions: liveForm.questions.filter(q=>q.id!==id)};
+    saveForm(updated);
+    if(selQ===id) setSelQ(null);
+  };
+
+  const moveQ = (id, dir) => {
+    if(!liveForm) return;
+    const qs = [...liveForm.questions];
+    const i = qs.findIndex(q=>q.id===id);
+    if(dir===-1&&i===0) return;
+    if(dir===1&&i===qs.length-1) return;
+    [qs[i],qs[i+dir]] = [qs[i+dir],qs[i]];
+    saveForm({...liveForm, questions:qs});
+  };
+
+  const dupQ = id => {
+    if(!liveForm) return;
+    const src = liveForm.questions.find(q=>q.id===id);
+    if(!src) return;
+    const nq = {...src, id:uid(), text:src.text+" (copy)"};
+    const idx = liveForm.questions.findIndex(q=>q.id===id);
+    const qs = [...liveForm.questions];
+    qs.splice(idx+1,0,nq);
+    saveForm({...liveForm, questions:qs});
+  };
+
+  const createForm = () => {
+    if(!newFormName.trim()) return;
+    const nf = {id:uid(), name:newFormName.trim(), badge:newFormBadge.trim()||newFormName.trim(), badgeRequired:"optional", questions:[]};
+    setFieldForms([...fieldForms, nf]);
+    setSelForm(nf.id);
+    setEditingForm(nf);
+    setAddingForm(false);
+    setNewFormName(""); setNewFormBadge("");
+  };
+
+  const deleteForm = id => {
+    setFieldForms(fieldForms.filter(f=>f.id!==id));
+    if(selForm===id){setSelForm(null);setEditingForm(null);setSelQ(null);}
+  };
+
+  const iSt = {width:"100%",background:"#fff",border:`1px solid ${C.border}`,borderRadius:7,padding:"8px 10px",color:C.text,fontSize:13,fontFamily:"inherit",boxSizing:"border-box"};
+
+  // Form list view
+  if(!selForm) return (
+    <div>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
+        <div style={{fontSize:13,color:C.sub}}>Build forms for technicians to fill on-site during a job.</div>
+        <button onClick={()=>setAddingForm(true)} style={{background:C.accent,color:"#fff",border:"none",borderRadius:8,padding:"8px 16px",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>+ New Form</button>
+      </div>
+      {addingForm&&(
+        <div style={{background:C.raised,border:`1px solid ${C.border}`,borderRadius:10,padding:"14px 16px",marginBottom:16}}>
+          <div style={{fontSize:13,fontWeight:700,color:C.text,marginBottom:10}}>New Form</div>
+          <FF label="Form Name" value={newFormName} onChange={setNewFormName} placeholder="e.g. New Installation Form" required/>
+          <FF label="Badge Name" value={newFormBadge} onChange={setNewFormBadge} placeholder="e.g. Install (short label)"/>
+          <div style={{display:"flex",gap:8,marginTop:4}}>
+            <button onClick={createForm} style={{background:C.accent,color:"#fff",border:"none",borderRadius:7,padding:"8px 16px",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>Create</button>
+            <button onClick={()=>setAddingForm(false)} style={{background:"none",border:`1px solid ${C.border}`,borderRadius:7,padding:"8px 16px",fontSize:13,color:C.sub,cursor:"pointer",fontFamily:"inherit"}}>Cancel</button>
+          </div>
+        </div>
+      )}
+      {fieldForms.map(f=>(
+        <div key={f.id} style={{background:"#fff",border:`1px solid ${C.border}`,borderRadius:12,padding:"14px 16px",marginBottom:10,display:"flex",alignItems:"center",gap:12,cursor:"pointer"}} onClick={()=>{setSelForm(f.id);setEditingForm(null);setSelQ(null);}}>
+          <div style={{flex:1,minWidth:0}}>
+            <div style={{fontWeight:700,fontSize:14,color:C.text}}>{f.name}</div>
+            <div style={{display:"flex",gap:8,marginTop:6,flexWrap:"wrap"}}>
+              <Badge label={`${f.questions.length} questions`} color="blue"/>
+              <Badge label={f.badge} color="purple"/>
+              <Badge label={f.badgeRequired} color={f.badgeRequired==="required"?"red":"gray"}/>
+            </div>
+          </div>
+          <button onClick={e=>{e.stopPropagation();deleteForm(f.id);}} style={{background:"none",border:"none",color:C.muted,fontSize:16,cursor:"pointer",padding:4}}>🗑</button>
+          <span style={{color:C.muted,fontSize:18}}>›</span>
+        </div>
+      ))}
+      {fieldForms.length===0&&<p style={{color:C.muted,fontSize:13}}>No forms yet. Create your first form above.</p>}
+    </div>
+  );
+
+  // Form editor (2-panel: question list + question detail)
+  return (
+    <div>
+      <button onClick={()=>{setSelForm(null);setEditingForm(null);setSelQ(null);}} style={{background:"none",border:"none",color:C.accent,fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit",marginBottom:12,padding:0}}>← All Forms</button>
+
+      {/* Form meta */}
+      <div style={{background:C.raised,border:`1px solid ${C.border}`,borderRadius:10,padding:"12px 14px",marginBottom:14}}>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:10}}>
+          <div>
+            <label style={{display:"block",fontSize:11,fontWeight:700,color:C.sub,textTransform:"uppercase",letterSpacing:0.5,marginBottom:4}}>Form Name</label>
+            <input style={iSt} value={liveForm?.name||""} onChange={e=>saveForm({...liveForm,name:e.target.value})}/>
+          </div>
+          <div>
+            <label style={{display:"block",fontSize:11,fontWeight:700,color:C.sub,textTransform:"uppercase",letterSpacing:0.5,marginBottom:4}}>Badge Name</label>
+            <input style={iSt} value={liveForm?.badge||""} onChange={e=>saveForm({...liveForm,badge:e.target.value})}/>
+          </div>
+        </div>
+        <div>
+          <label style={{display:"block",fontSize:11,fontWeight:700,color:C.sub,textTransform:"uppercase",letterSpacing:0.5,marginBottom:4}}>Badge Requirement</label>
+          <select style={iSt} value={liveForm?.badgeRequired||"optional"} onChange={e=>saveForm({...liveForm,badgeRequired:e.target.value})}>
+            <option value="optional">Form is Optional</option>
+            <option value="required">Form is Required</option>
+          </select>
+        </div>
+      </div>
+
+      <div style={{display:"grid",gridTemplateColumns:"240px 1fr",gap:12,alignItems:"start"}}>
+        {/* Question list */}
+        <div style={{border:`1px solid ${C.border}`,borderRadius:10,overflow:"hidden",background:"#fff"}}>
+          <div style={{background:C.raised,borderBottom:`1px solid ${C.border}`,padding:"8px 12px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+            <span style={{fontSize:11,fontWeight:700,color:C.sub,textTransform:"uppercase",letterSpacing:0.5}}>Questions</span>
+            <button onClick={addQ} style={{background:C.accent,color:"#fff",border:"none",borderRadius:5,padding:"3px 9px",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>+ New</button>
+          </div>
+          {(liveForm?.questions||[]).map((q,i)=>(
+            <div key={q.id} onClick={()=>setSelQ(q.id)}
+              style={{padding:"9px 12px",borderBottom:`1px solid ${C.border}`,background:selQ===q.id?"#eff6ff":"#fff",cursor:"pointer",display:"flex",gap:8,alignItems:"flex-start"}}>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{fontSize:12,fontWeight:selQ===q.id?700:500,color:selQ===q.id?C.accent:C.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{q.text||"(no text)"}</div>
+                <div style={{display:"flex",gap:4,marginTop:3,flexWrap:"wrap"}}>
+                  <span style={{fontSize:10,color:C.sub}}>{FORM_Q_TYPES.find(t=>t.id===q.type)?.icon} {q.type}</span>
+                  {q.mandatory&&<span style={{fontSize:10,color:C.red,fontWeight:700}}>*req</span>}
+                </div>
+              </div>
+              <div style={{display:"flex",flexDirection:"column",gap:2,flexShrink:0}}>
+                <button onClick={e=>{e.stopPropagation();moveQ(q.id,-1);}} style={{background:"none",border:"none",color:C.muted,fontSize:10,cursor:"pointer",padding:"1px 3px",lineHeight:1}}>▲</button>
+                <button onClick={e=>{e.stopPropagation();moveQ(q.id,1);}} style={{background:"none",border:"none",color:C.muted,fontSize:10,cursor:"pointer",padding:"1px 3px",lineHeight:1}}>▼</button>
+              </div>
+            </div>
+          ))}
+          {(liveForm?.questions||[]).length===0&&<div style={{padding:"16px 12px",color:C.muted,fontSize:12,textAlign:"center"}}>No questions yet</div>}
+        </div>
+
+        {/* Question detail */}
+        {liveQ ? (
+          <div style={{border:`1px solid ${C.border}`,borderRadius:10,padding:"14px 16px",background:"#fff"}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
+              <span style={{fontSize:13,fontWeight:700,color:C.text}}>Question Details</span>
+              <div style={{display:"flex",gap:8}}>
+                <button onClick={()=>dupQ(liveQ.id)} style={{background:C.raised,border:`1px solid ${C.border}`,borderRadius:6,padding:"5px 10px",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit",color:C.sub}}>Duplicate</button>
+                <button onClick={()=>removeQ(liveQ.id)} style={{background:"#fef2f2",border:"1px solid #fecaca",borderRadius:6,padding:"5px 10px",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit",color:C.red}}>Remove</button>
+              </div>
+            </div>
+
+            <div style={{marginBottom:12}}>
+              <label style={{display:"block",fontSize:11,fontWeight:700,color:C.sub,textTransform:"uppercase",letterSpacing:0.5,marginBottom:4}}>Question</label>
+              <textarea rows={2} style={{...iSt,resize:"vertical"}} value={liveQ.text} onChange={e=>updateQ({text:e.target.value})}/>
+            </div>
+
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:12}}>
+              <div>
+                <label style={{display:"block",fontSize:11,fontWeight:700,color:C.sub,textTransform:"uppercase",letterSpacing:0.5,marginBottom:4}}>Question Type</label>
+                <select style={iSt} value={liveQ.type} onChange={e=>updateQ({type:e.target.value,options:[]})}>
+                  {FORM_Q_TYPES.map(t=><option key={t.id} value={t.id}>{t.icon} {t.label}</option>)}
+                </select>
+              </div>
+              <div style={{display:"flex",flexDirection:"column",justifyContent:"flex-end"}}>
+                <label style={{display:"flex",alignItems:"center",gap:8,cursor:"pointer",fontSize:13,fontWeight:600,color:C.text,userSelect:"none"}}>
+                  <input type="checkbox" checked={!!liveQ.mandatory} onChange={e=>updateQ({mandatory:e.target.checked})} style={{accentColor:C.accent,width:15,height:15}}/>
+                  Mandatory
+                </label>
+              </div>
+            </div>
+
+            {liveQ.type==="multi"&&(
+              <div style={{marginBottom:12}}>
+                <label style={{display:"block",fontSize:11,fontWeight:700,color:C.sub,textTransform:"uppercase",letterSpacing:0.5,marginBottom:6}}>Multiple Choice Options</label>
+                {(liveQ.options||[]).map((opt,i)=>(
+                  <div key={i} style={{display:"flex",gap:6,marginBottom:6,alignItems:"center"}}>
+                    <span style={{fontSize:11,color:C.muted,width:18,textAlign:"right",flexShrink:0}}>{i+1}.</span>
+                    <input style={{...iSt,flex:1}} value={opt} onChange={e=>{const o=[...liveQ.options];o[i]=e.target.value;updateQ({options:o});}} placeholder={`Option ${i+1}`}/>
+                    <button onClick={()=>{const o=liveQ.options.filter((_,j)=>j!==i);updateQ({options:o});}} style={{background:"none",border:"none",color:C.muted,fontSize:15,cursor:"pointer",flexShrink:0}}>✕</button>
+                  </div>
+                ))}
+                {(liveQ.options||[]).length<10&&(
+                  <button onClick={()=>updateQ({options:[...(liveQ.options||[]),""]})
+                  } style={{background:C.raised,border:`1px dashed ${C.border}`,borderRadius:7,padding:"6px 14px",fontSize:12,color:C.sub,cursor:"pointer",fontFamily:"inherit",fontWeight:600}}>+ Add Option</button>
+                )}
+              </div>
+            )}
+
+            <div>
+              <label style={{display:"block",fontSize:11,fontWeight:700,color:C.sub,textTransform:"uppercase",letterSpacing:0.5,marginBottom:4}}>Skip Question If (optional)</label>
+              <input style={iSt} value={liveQ.skipIf||""} onChange={e=>updateQ({skipIf:e.target.value})} placeholder='e.g. "Job completed?" is Yes'/>
+              <div style={{fontSize:11,color:C.muted,marginTop:3}}>Describe condition in plain English — skip logic reference</div>
+            </div>
+          </div>
+        ) : (
+          <div style={{border:`1px dashed ${C.border}`,borderRadius:10,padding:"32px 16px",textAlign:"center",color:C.muted}}>
+            <div style={{fontSize:28,marginBottom:8}}>☝️</div>
+            <div style={{fontSize:13}}>Select a question to edit, or create a new one</div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════
+   EMAIL TEMPLATE EDITOR (Settings)
+═══════════════════════════════════════════ */
+function EmailTemplateEditor({emailTemplates, setEmailTemplates}) {
+  const [selId, setSelId] = useState(null);
+  const [adding, setAdding] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [newIcon, setNewIcon] = useState("📧");
+
+  const sel = emailTemplates.find(t=>t.id===selId);
+
+  const update = patch => setEmailTemplates(emailTemplates.map(t=>t.id===selId?{...t,...patch}:t));
+
+  const create = () => {
+    if(!newName.trim()) return;
+    const nt = {id:uid(), name:newName.trim(), icon:newIcon, subject:"", body:""};
+    setEmailTemplates([...emailTemplates, nt]);
+    setSelId(nt.id);
+    setAdding(false); setNewName(""); setNewIcon("📧");
+  };
+
+  const remove = id => {
+    setEmailTemplates(emailTemplates.filter(t=>t.id!==id));
+    if(selId===id) setSelId(null);
+  };
+
+  const insertField = field => {
+    if(!sel) return;
+    update({body:(sel.body||"")+" "+field});
+  };
+
+  const iSt = {width:"100%",background:"#fff",border:`1px solid ${C.border}`,borderRadius:7,padding:"8px 10px",color:C.text,fontSize:13,fontFamily:"inherit",boxSizing:"border-box"};
+
+  return (
+    <div>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
+        <div style={{fontSize:13,color:C.sub}}>Build reusable email templates for sending from the job diary.</div>
+        <button onClick={()=>setAdding(true)} style={{background:C.accent,color:"#fff",border:"none",borderRadius:8,padding:"8px 16px",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>+ New Template</button>
+      </div>
+
+      {adding&&(
+        <div style={{background:C.raised,border:`1px solid ${C.border}`,borderRadius:10,padding:"14px 16px",marginBottom:16}}>
+          <div style={{display:"flex",gap:10,marginBottom:10}}>
+            <div style={{width:60}}>
+              <label style={{display:"block",fontSize:11,fontWeight:700,color:C.sub,textTransform:"uppercase",letterSpacing:0.5,marginBottom:4}}>Icon</label>
+              <input style={{...iSt,textAlign:"center",fontSize:20}} value={newIcon} onChange={e=>setNewIcon(e.target.value)} maxLength={2}/>
+            </div>
+            <div style={{flex:1}}>
+              <label style={{display:"block",fontSize:11,fontWeight:700,color:C.sub,textTransform:"uppercase",letterSpacing:0.5,marginBottom:4}}>Template Name</label>
+              <input style={iSt} value={newName} onChange={e=>setNewName(e.target.value)} placeholder="e.g. Booking Confirmation"/>
+            </div>
+          </div>
+          <div style={{display:"flex",gap:8}}>
+            <button onClick={create} style={{background:C.accent,color:"#fff",border:"none",borderRadius:7,padding:"8px 16px",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>Create</button>
+            <button onClick={()=>setAdding(false)} style={{background:"none",border:`1px solid ${C.border}`,borderRadius:7,padding:"8px 16px",fontSize:13,color:C.sub,cursor:"pointer",fontFamily:"inherit"}}>Cancel</button>
+          </div>
+        </div>
+      )}
+
+      <div style={{display:"grid",gridTemplateColumns:"220px 1fr",gap:12,alignItems:"start"}}>
+        {/* Template list */}
+        <div style={{border:`1px solid ${C.border}`,borderRadius:10,overflow:"hidden",background:"#fff"}}>
+          {emailTemplates.map(t=>(
+            <div key={t.id} onClick={()=>setSelId(t.id)}
+              style={{padding:"10px 12px",borderBottom:`1px solid ${C.border}`,background:selId===t.id?"#eff6ff":"#fff",cursor:"pointer",display:"flex",gap:8,alignItems:"center"}}>
+              <span style={{fontSize:18,flexShrink:0}}>{t.icon}</span>
+              <span style={{flex:1,fontSize:13,fontWeight:selId===t.id?700:500,color:selId===t.id?C.accent:C.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{t.name}</span>
+              <button onClick={e=>{e.stopPropagation();remove(t.id);}} style={{background:"none",border:"none",color:C.muted,fontSize:14,cursor:"pointer",padding:2,flexShrink:0}}>🗑</button>
+            </div>
+          ))}
+          {emailTemplates.length===0&&<div style={{padding:"16px 12px",color:C.muted,fontSize:12,textAlign:"center"}}>No templates yet</div>}
+        </div>
+
+        {/* Template editor */}
+        {sel ? (
+          <div style={{border:`1px solid ${C.border}`,borderRadius:10,padding:"14px 16px",background:"#fff"}}>
+            <div style={{display:"flex",gap:10,marginBottom:12,alignItems:"flex-start"}}>
+              <div style={{width:52}}>
+                <label style={{display:"block",fontSize:11,fontWeight:700,color:C.sub,textTransform:"uppercase",letterSpacing:0.5,marginBottom:4}}>Icon</label>
+                <input style={{...iSt,textAlign:"center",fontSize:20,padding:"6px"}} value={sel.icon} onChange={e=>update({icon:e.target.value})} maxLength={2}/>
+              </div>
+              <div style={{flex:1}}>
+                <label style={{display:"block",fontSize:11,fontWeight:700,color:C.sub,textTransform:"uppercase",letterSpacing:0.5,marginBottom:4}}>Template Name</label>
+                <input style={iSt} value={sel.name} onChange={e=>update({name:e.target.value})}/>
+              </div>
+            </div>
+
+            <div style={{marginBottom:12}}>
+              <label style={{display:"block",fontSize:11,fontWeight:700,color:C.sub,textTransform:"uppercase",letterSpacing:0.5,marginBottom:4}}>Email Subject</label>
+              <input style={iSt} value={sel.subject} onChange={e=>update({subject:e.target.value})} placeholder="e.g. Booking confirmed — Job {{job_ref}}"/>
+            </div>
+
+            <div style={{marginBottom:10}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
+                <label style={{display:"block",fontSize:11,fontWeight:700,color:C.sub,textTransform:"uppercase",letterSpacing:0.5}}>Email Body</label>
+              </div>
+              <textarea rows={10} style={{...iSt,resize:"vertical",lineHeight:1.6}} value={sel.body} onChange={e=>update({body:e.target.value})}/>
+            </div>
+
+            <div>
+              <div style={{fontSize:11,fontWeight:700,color:C.sub,textTransform:"uppercase",letterSpacing:0.5,marginBottom:6}}>Insert Merge Field</div>
+              <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+                {EMAIL_MERGE_FIELDS.map(f=>(
+                  <button key={f} onClick={()=>insertField(f)}
+                    style={{background:C.raised,border:`1px solid ${C.border}`,borderRadius:6,padding:"4px 10px",fontSize:11,fontWeight:600,color:C.accent,cursor:"pointer",fontFamily:"inherit"}}>
+                    {f}
+                  </button>
+                ))}
+              </div>
+              <div style={{fontSize:11,color:C.muted,marginTop:6}}>Click a field to append it to the body. These auto-fill when composing from the job diary.</div>
+            </div>
+          </div>
+        ) : (
+          <div style={{border:`1px dashed ${C.border}`,borderRadius:10,padding:"32px 16px",textAlign:"center",color:C.muted}}>
+            <div style={{fontSize:28,marginBottom:8}}>📧</div>
+            <div style={{fontSize:13}}>Select a template to edit</div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════
+   FIELD MODE — fullscreen mobile tech workflow
+   States: driving → arrived → in_progress → closed
+═══════════════════════════════════════════ */
+function FieldMode({job, fieldStaff, fieldForms, onClose, onJobUpdate}) {
+  // phase: driving | arrived | in_progress | closed
+  const [phase, setPhase] = useState("driving");
+  const [driveStartTs, setDriveStartTs] = useState(null);
+  const [arrivalTs, setArrivalTs] = useState(null);
+  const [jobStartTs, setJobStartTs] = useState(null);
+  const [jobEndTs, setJobEndTs] = useState(null);
+
+  // Arrival check-in state
+  const [leadTech, setLeadTech] = useState(job.tech||"");
+  const [fellowTechs, setFellowTechs] = useState([]);
+  const [addressOk, setAddressOk] = useState(null); // true|false|null
+  const [gps, setGps] = useState(null);
+
+  // In-progress
+  const [notes, setNotes] = useState("");
+  const [outcome, setOutcome] = useState("");
+  const [activeFormId, setActiveFormId] = useState(null);
+  const [formAnswers, setFormAnswers] = useState({}); // {formId: {qId: answer}}
+  const [completedForms, setCompletedForms] = useState([]); // [formId]
+
+  const activeTechs = fieldStaff.filter(f=>f.status==="Active");
+
+  // Grab GPS on mount
+  useEffect(()=>{
+    setDriveStartTs(new Date().toISOString());
+    if(navigator.geolocation){
+      navigator.geolocation.getCurrentPosition(
+        p=>setGps({lat:p.coords.latitude,lng:p.coords.longitude,acc:Math.round(p.coords.accuracy)}),
+        ()=>setGps({error:true}),
+        {timeout:10000}
+      );
+    }
+  },[]);
+
+  const openMaps = () => {
+    const addr = encodeURIComponent(job.address);
+    window.open(`https://www.google.com/maps/dir/?api=1&destination=${addr}`, "_blank");
+  };
+
+  const handleArrived = () => {
+    const ts = new Date().toISOString();
+    setArrivalTs(ts);
+    setPhase("arrived");
+  };
+
+  const handleStartJob = () => {
+    if(!leadTech) return;
+    const ts = new Date().toISOString();
+    setJobStartTs(ts);
+    setPhase("in_progress");
+  };
+
+  const handleCloseJob = () => {
+    const ts = new Date().toISOString();
+    setJobEndTs(ts);
+    setPhase("closed");
+
+    // Calculate times
+    const driveStart = new Date(driveStartTs);
+    const arrival = new Date(arrivalTs);
+    const jobStart = new Date(jobStartTs||arrivalTs);
+    const jobEnd = new Date(ts);
+
+    const driveMins = Math.round((arrival - driveStart) / 60000);
+    const jobMins = Math.round((jobEnd - jobStart) / 60000);
+
+    const toTime = d => `${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`;
+    const toDate = d => d.toISOString().split("T")[0];
+
+    // Build tech list: lead + fellows, all with same times
+    const allTechs = [leadTech, ...fellowTechs].filter(Boolean).map(name=>({
+      techName: name,
+      arrivalTime: toTime(jobStart),
+      departureTime: toTime(jobEnd),
+    }));
+
+    // Build visit record
+    const visitId = uid();
+    const visit = {
+      id: visitId,
+      date: toDate(arrival),
+      outcome: outcome||"Completed",
+      notes: notes,
+      techs: allTechs,
+      driveMinutes: driveMins,
+      jobMinutes: jobMins,
+      source: "field_app",
+    };
+
+    // Build diary entry
+    const techNames = allTechs.map(t=>t.techName).join(", ");
+    const diaryEntry = {
+      id: uid(),
+      type: "visit",
+      ts: jobStart.toISOString(),
+      contact: techNames,
+      subject: `Field Visit — ${outcome||"Completed"}`,
+      notes: [`Techs: ${techNames}`, `Drive: ${fmtDuration(driveMins)}`, `On-site: ${fmtDuration(jobMins)}`, notes].filter(Boolean).join("\n"),
+      direction: "outbound",
+      files: [],
+      visitId,
+      source: "field_app",
+    };
+
+    const existingVisits = job.visits||[];
+    const existingDiary = job.diary||[];
+    const updatedJob = {
+      ...job,
+      status: "Closed",
+      closedDate: toDate(jobEnd),
+      stage: "Completed",
+      visits: [...existingVisits, visit],
+      diary: [diaryEntry, ...existingDiary],
+    };
+    onJobUpdate(updatedJob);
+  };
+
+  const toggleFellow = name => {
+    setFellowTechs(prev => prev.includes(name) ? prev.filter(n=>n!==name) : [...prev,name]);
+  };
+
+  // Shared styles
+  const S = {
+    screen: {position:"fixed",inset:0,background:"#0f172a",zIndex:1000,display:"flex",flexDirection:"column",fontFamily:"'Inter','Segoe UI',sans-serif",color:"#f1f5f9",overflowY:"auto"},
+    header: {padding:"16px 20px",borderBottom:"1px solid rgba(255,255,255,0.08)",display:"flex",alignItems:"center",gap:12,flexShrink:0},
+    body: {flex:1,padding:"24px 20px",display:"flex",flexDirection:"column",gap:16,maxWidth:520,margin:"0 auto",width:"100%"},
+    card: {background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:14,padding:"16px 18px"},
+    label: {fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:0.8,color:"#64748b",marginBottom:6,display:"block"},
+    bigBtn: (color="#0ea5e9") => ({width:"100%",background:color,color:"#fff",border:"none",borderRadius:14,padding:"18px",fontSize:16,fontWeight:800,cursor:"pointer",fontFamily:"inherit",marginTop:8}),
+    outlineBtn: {width:"100%",background:"transparent",color:"#94a3b8",border:"1px solid rgba(255,255,255,0.15)",borderRadius:14,padding:"14px",fontSize:14,fontWeight:600,cursor:"pointer",fontFamily:"inherit"},
+    chip: (sel) => ({padding:"8px 16px",borderRadius:99,fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit",border:`1.5px solid ${sel?"#0ea5e9":"rgba(255,255,255,0.15)"}`,background:sel?"#0ea5e9":"transparent",color:sel?"#fff":"#94a3b8",transition:"all 0.15s"}),
+  };
+
+  const elapsed = (start) => {
+    if(!start) return "";
+    const mins = Math.round((Date.now() - new Date(start)) / 60000);
+    return fmtDuration(mins);
+  };
+
+  // ── DRIVING PHASE ──────────────────────────────
+  if(phase==="driving") return (
+    <div style={S.screen}>
+      <div style={S.header}>
+        <button onClick={onClose} style={{background:"none",border:"none",color:"#94a3b8",fontSize:20,cursor:"pointer",fontFamily:"inherit",padding:0}}>←</button>
+        <div>
+          <div style={{fontWeight:800,fontSize:15}}>🚗 Driving to Job</div>
+          <div style={{fontSize:12,color:"#64748b"}}>{job.ref} · {job.type}</div>
+        </div>
+      </div>
+      <div style={S.body}>
+        <div style={S.card}>
+          <span style={S.label}>Job Address</span>
+          <div style={{fontSize:18,fontWeight:800,lineHeight:1.3,marginBottom:12}}>{job.address}</div>
+          <div style={{fontSize:13,color:"#94a3b8",marginBottom:4}}>{job.description}</div>
+          {job.keyMethod&&<div style={{marginTop:10,padding:"8px 12px",background:"rgba(255,255,255,0.05)",borderRadius:8,fontSize:13,color:"#94a3b8"}}>
+            🔑 Access: <span style={{color:"#f1f5f9",fontWeight:600}}>{job.keyMethod==="tenant"?"Tenant has key":job.keyMethod==="office"?"Office hold key":"Other"}</span>
+            {job.keyNotes&&<div style={{marginTop:4,fontSize:12,color:"#64748b"}}>{job.keyNotes}</div>}
+          </div>}
+        </div>
+
+        <button onClick={openMaps} style={{...S.outlineBtn,display:"flex",alignItems:"center",justifyContent:"center",gap:10}}>
+          <span style={{fontSize:20}}>🗺️</span> Open Google Maps
+        </button>
+
+        {/* Tenant info */}
+        {(job.tenants||[]).length>0&&(
+          <div style={S.card}>
+            <span style={S.label}>Tenants to notify</span>
+            {job.tenants.map(t=>(
+              <div key={t.id} style={{display:"flex",gap:12,alignItems:"center",padding:"8px 0",borderBottom:"1px solid rgba(255,255,255,0.06)"}}>
+                <Avatar name={t.name} size={32} bg="#1e3a5f" fg="#93c5fd"/>
+                <div style={{flex:1}}>
+                  <div style={{fontWeight:700,fontSize:13}}>{t.name}</div>
+                  {t.phone&&<div style={{fontSize:12,color:"#64748b"}}>{t.phone}</div>}
+                </div>
+                {t.phone&&<a href={`tel:${t.phone}`} style={{color:"#0ea5e9",fontSize:12,fontWeight:700,textDecoration:"none"}}>Call</a>}
+              </div>
+            ))}
+            <div style={{marginTop:10,padding:"8px 12px",background:"rgba(14,165,233,0.1)",border:"1px solid rgba(14,165,233,0.2)",borderRadius:8,fontSize:12,color:"#7dd3fc"}}>
+              📱 SMS notification — coming soon
+            </div>
+          </div>
+        )}
+
+        <div style={{textAlign:"center",color:"#475569",fontSize:12,marginTop:4}}>Driving timer started · {elapsed(driveStartTs)} ago</div>
+
+        <button onClick={handleArrived} style={S.bigBtn("#16a34a")}>
+          ✅ I've Arrived
+        </button>
+        <button onClick={onClose} style={S.outlineBtn}>← Back to Jobs</button>
+      </div>
+    </div>
+  );
+
+  // ── ARRIVAL CHECK-IN PHASE ─────────────────────
+  if(phase==="arrived") return (
+    <div style={S.screen}>
+      <div style={S.header}>
+        <div style={{width:10,height:10,borderRadius:"50%",background:"#22c55e",flexShrink:0}}/>
+        <div>
+          <div style={{fontWeight:800,fontSize:15}}>📍 On Site</div>
+          <div style={{fontSize:12,color:"#64748b"}}>{job.ref} · {job.address}</div>
+        </div>
+      </div>
+      <div style={S.body}>
+        {/* Drive time summary */}
+        <div style={{...S.card,background:"rgba(34,197,94,0.08)",border:"1px solid rgba(34,197,94,0.2)"}}>
+          <div style={{display:"flex",gap:16}}>
+            <div style={{textAlign:"center",flex:1}}>
+              <div style={{fontSize:22,fontWeight:900,color:"#4ade80"}}>{fmtDuration(Math.round((new Date(arrivalTs)-new Date(driveStartTs))/60000))}</div>
+              <div style={{fontSize:11,color:"#64748b",marginTop:2}}>Drive time</div>
+            </div>
+            <div style={{width:1,background:"rgba(255,255,255,0.08)"}}/>
+            <div style={{textAlign:"center",flex:1}}>
+              <div style={{fontSize:22,fontWeight:900,color:"#f1f5f9"}}>{new Date(arrivalTs).toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})}</div>
+              <div style={{fontSize:11,color:"#64748b",marginTop:2}}>Arrived at</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Address confirm */}
+        <div style={S.card}>
+          <span style={S.label}>Confirm address is correct</span>
+          <div style={{fontSize:15,fontWeight:700,marginBottom:12}}>{job.address}</div>
+          <div style={{display:"flex",gap:8}}>
+            <button onClick={()=>setAddressOk(true)} style={{...S.chip(addressOk===true),flex:1}}>✓ Correct</button>
+            <button onClick={()=>setAddressOk(false)} style={{...S.chip(addressOk===false),flex:1,borderColor:addressOk===false?"#ef4444":"rgba(255,255,255,0.15)",background:addressOk===false?"#ef4444":"transparent"}}>✗ Wrong</button>
+          </div>
+          {addressOk===false&&<div style={{marginTop:10,fontSize:12,color:"#fca5a5"}}>⚠️ Note the correct address in job notes when closing.</div>}
+        </div>
+
+        {/* Lead tech */}
+        <div style={S.card}>
+          <span style={S.label}>Who are you?</span>
+          <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
+            {activeTechs.map(f=>(
+              <button key={f.id} onClick={()=>setLeadTech(f.name)} style={S.chip(leadTech===f.name)}>
+                {leadTech===f.name?"👤 ":""}{f.name}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Fellow techs */}
+        <div style={S.card}>
+          <span style={S.label}>Fellow techs on site (optional)</span>
+          <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
+            {activeTechs.filter(f=>f.name!==leadTech).map(f=>(
+              <button key={f.id} onClick={()=>toggleFellow(f.name)} style={S.chip(fellowTechs.includes(f.name))}>
+                {fellowTechs.includes(f.name)?"✓ ":""}{f.name}
+              </button>
+            ))}
+            {activeTechs.filter(f=>f.name!==leadTech).length===0&&<span style={{fontSize:13,color:"#475569"}}>No other techs assigned</span>}
+          </div>
+        </div>
+
+        <button onClick={handleStartJob} disabled={!leadTech||addressOk===null}
+          style={{...S.bigBtn(leadTech&&addressOk!==null?"#0ea5e9":"#334155"),cursor:leadTech&&addressOk!==null?"pointer":"not-allowed"}}>
+          {!leadTech?"Select your name first":addressOk===null?"Confirm address first":"▶ Start Job"}
+        </button>
+      </div>
+    </div>
+  );
+
+  // ── IN PROGRESS PHASE ──────────────────────────
+  if(phase==="in_progress") return (
+    <div style={S.screen}>
+      <div style={S.header}>
+        <div style={{width:10,height:10,borderRadius:"50%",background:"#f59e0b",animation:"pulse 1.5s infinite",flexShrink:0}}/>
+        <div style={{flex:1}}>
+          <div style={{fontWeight:800,fontSize:15}}>🔧 Job in Progress</div>
+          <div style={{fontSize:12,color:"#64748b"}}>{job.ref} · {[leadTech,...fellowTechs].join(", ")}</div>
+        </div>
+        <div style={{textAlign:"right"}}>
+          <div style={{fontSize:18,fontWeight:900,color:"#fbbf24"}}>{elapsed(jobStartTs)}</div>
+          <div style={{fontSize:10,color:"#64748b"}}>on site</div>
+        </div>
+      </div>
+      <div style={S.body}>
+        {/* Job info */}
+        <div style={S.card}>
+          <div style={{fontSize:16,fontWeight:800,marginBottom:6}}>{job.address}</div>
+          <div style={{fontSize:13,color:"#94a3b8"}}>{job.description}</div>
+          {(job.tenants||[]).length>0&&(
+            <div style={{marginTop:10,paddingTop:10,borderTop:"1px solid rgba(255,255,255,0.08)"}}>
+              {job.tenants.map(t=>(
+                <div key={t.id} style={{display:"flex",gap:8,alignItems:"center",marginBottom:4}}>
+                  <span style={{fontSize:13,color:"#94a3b8"}}>👤 {t.name}</span>
+                  {t.phone&&<a href={`tel:${t.phone}`} style={{color:"#0ea5e9",fontSize:12,fontWeight:700,textDecoration:"none",marginLeft:"auto"}}>Call</a>}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Appliances */}
+        {(job.appliances||[]).length>0&&(
+          <div style={S.card}>
+            <span style={S.label}>Appliances</span>
+            {job.appliances.map((a,i)=>(
+              <div key={i} style={{fontSize:13,color:"#cbd5e1",padding:"4px 0",borderBottom:"1px solid rgba(255,255,255,0.05)"}}>{a.make} {a.model} — {a.type}</div>
+            ))}
+          </div>
+        )}
+
+        {/* Field Forms */}
+        {(fieldForms||[]).length>0&&(
+          <div style={S.card}>
+            <span style={S.label}>Job Forms</span>
+            {(fieldForms||[]).map(f=>{
+              const done = completedForms.includes(f.id);
+              return(
+                <div key={f.id} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 0",borderBottom:"1px solid rgba(255,255,255,0.06)"}}>
+                  <div style={{flex:1}}>
+                    <div style={{fontSize:13,fontWeight:700,color:done?"#4ade80":"#f1f5f9"}}>{done?"✓ ":""}{f.name}</div>
+                    <div style={{fontSize:11,color:"#64748b",marginTop:2}}>{f.badge} · {f.questions.length} questions{f.badgeRequired==="required"?" · Required":""}</div>
+                  </div>
+                  <button onClick={()=>setActiveFormId(f.id)}
+                    style={{background:done?"rgba(34,197,94,0.15)":"rgba(14,165,233,0.2)",border:`1px solid ${done?"rgba(34,197,94,0.3)":"rgba(14,165,233,0.3)"}`,borderRadius:8,padding:"6px 14px",fontSize:12,fontWeight:700,color:done?"#4ade80":"#7dd3fc",cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>
+                    {done?"Review":"Fill In"}
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Inline form filler */}
+        {activeFormId&&(()=>{
+          const form = (fieldForms||[]).find(f=>f.id===activeFormId);
+          if(!form) return null;
+          const ans = formAnswers[activeFormId]||{};
+          const setAns = (qId,val) => setFormAnswers(prev=>({...prev,[activeFormId]:{...(prev[activeFormId]||{}),[qId]:val}}));
+          const mandatoryDone = form.questions.filter(q=>q.mandatory).every(q=>ans[q.id]);
+          const submitForm = () => {
+            setCompletedForms(prev=>[...prev.filter(x=>x!==form.id),form.id]);
+            setActiveFormId(null);
+          };
+          return(
+            <div style={{position:"fixed",inset:0,background:"#0f172a",zIndex:1100,overflowY:"auto",fontFamily:"'Inter','Segoe UI',sans-serif",color:"#f1f5f9"}}>
+              <div style={{padding:"16px 20px",borderBottom:"1px solid rgba(255,255,255,0.08)",display:"flex",alignItems:"center",gap:12,position:"sticky",top:0,background:"#0f172a",zIndex:1}}>
+                <button onClick={()=>setActiveFormId(null)} style={{background:"none",border:"none",color:"#94a3b8",fontSize:20,cursor:"pointer",fontFamily:"inherit",padding:0}}>←</button>
+                <div style={{flex:1}}>
+                  <div style={{fontWeight:800,fontSize:15}}>{form.name}</div>
+                  <div style={{fontSize:11,color:"#64748b"}}>{job.ref} · {form.questions.length} questions</div>
+                </div>
+              </div>
+              <div style={{padding:"20px",maxWidth:520,margin:"0 auto",display:"flex",flexDirection:"column",gap:16}}>
+                {form.questions.map((q,qi)=>{
+                  const val = ans[q.id];
+                  return(
+                    <div key={q.id} style={{background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:14,padding:"16px 18px"}}>
+                      <div style={{fontSize:13,fontWeight:700,marginBottom:4,lineHeight:1.4}}>
+                        {qi+1}. {q.text}
+                        {q.mandatory&&<span style={{color:"#f87171",marginLeft:4}}>*</span>}
+                      </div>
+                      <div style={{fontSize:10,color:"#475569",marginBottom:10,textTransform:"uppercase",letterSpacing:0.5}}>{FORM_Q_TYPES.find(t=>t.id===q.type)?.icon} {q.type}</div>
+
+                      {q.type==="yesno"&&(
+                        <div style={{display:"flex",gap:8}}>
+                          {["Yes","No"].map(opt=>(
+                            <button key={opt} onClick={()=>setAns(q.id,opt)}
+                              style={{flex:1,padding:"10px",borderRadius:10,border:`2px solid ${val===opt?(opt==="Yes"?"#22c55e":"#ef4444"):"rgba(255,255,255,0.15)"}`,background:val===opt?(opt==="Yes"?"rgba(34,197,94,0.15)":"rgba(239,68,68,0.15)"):"transparent",color:val===opt?(opt==="Yes"?"#4ade80":"#fca5a5"):"#94a3b8",fontWeight:700,fontSize:14,cursor:"pointer",fontFamily:"inherit"}}>
+                              {opt==="Yes"?"✓ Yes":"✗ No"}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+
+                      {q.type==="multi"&&(
+                        <div style={{display:"flex",flexDirection:"column",gap:6}}>
+                          {(q.options||[]).map(opt=>(
+                            <button key={opt} onClick={()=>setAns(q.id,opt)}
+                              style={{textAlign:"left",padding:"10px 14px",borderRadius:10,border:`2px solid ${val===opt?"#0ea5e9":"rgba(255,255,255,0.1)"}`,background:val===opt?"rgba(14,165,233,0.15)":"transparent",color:val===opt?"#7dd3fc":"#94a3b8",fontSize:13,fontWeight:val===opt?700:400,cursor:"pointer",fontFamily:"inherit"}}>
+                              {val===opt?"✓ ":""}{opt}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+
+                      {(q.type==="text"||q.type==="number")&&(
+                        q.type==="text"
+                          ? <textarea rows={3} value={val||""} onChange={e=>setAns(q.id,e.target.value)}
+                              placeholder="Type your answer…"
+                              style={{width:"100%",background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:8,padding:"10px 12px",color:"#f1f5f9",fontSize:13,fontFamily:"inherit",resize:"vertical",boxSizing:"border-box"}}/>
+                          : <input type="number" value={val||""} onChange={e=>setAns(q.id,e.target.value)}
+                              placeholder="Enter number…"
+                              style={{width:"100%",background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:8,padding:"10px 12px",color:"#f1f5f9",fontSize:13,fontFamily:"inherit",boxSizing:"border-box"}}/>
+                      )}
+
+                      {q.type==="photo"&&(
+                        <div>
+                          <label style={{display:"inline-flex",alignItems:"center",gap:8,background:"rgba(14,165,233,0.15)",border:"1px solid rgba(14,165,233,0.3)",borderRadius:10,padding:"10px 16px",cursor:"pointer",fontSize:13,fontWeight:700,color:"#7dd3fc"}}>
+                            📷 {val?"Photo captured ✓":"Take Photo"}
+                            <input type="file" accept="image/*" capture="environment" style={{display:"none"}}
+                              onChange={e=>{if(e.target.files[0]){const r=new FileReader();r.onload=ev=>setAns(q.id,ev.target.result);r.readAsDataURL(e.target.files[0]);}}}/>
+                          </label>
+                          {val&&<img src={val} alt="captured" style={{marginTop:10,width:"100%",borderRadius:8,maxHeight:200,objectFit:"cover"}}/>}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+                <button onClick={submitForm} disabled={!mandatoryDone}
+                  style={{background:mandatoryDone?"#0ea5e9":"#334155",color:"#fff",border:"none",borderRadius:14,padding:"16px",fontSize:15,fontWeight:800,cursor:mandatoryDone?"pointer":"not-allowed",fontFamily:"inherit",marginTop:8}}>
+                  {mandatoryDone?"✓ Submit Form":"Complete required questions first"}
+                </button>
+                <div style={{height:40}}/>
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* Outcome */}
+        <div style={S.card}>
+          <span style={S.label}>Job outcome</span>
+          <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
+            {VISIT_OUTCOMES.map(o=>(
+              <button key={o} onClick={()=>setOutcome(o)} style={S.chip(outcome===o)}>{o}</button>
+            ))}
+          </div>
+        </div>
+
+        {/* Notes */}
+        <div style={S.card}>
+          <span style={S.label}>Job notes</span>
+          <textarea value={notes} onChange={e=>setNotes(e.target.value)} rows={4}
+            placeholder="What was done, parts used, issues found…"
+            style={{width:"100%",background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:8,padding:"10px 12px",color:"#f1f5f9",fontSize:13,fontFamily:"inherit",resize:"vertical",boxSizing:"border-box"}}/>
+        </div>
+
+        <button onClick={handleCloseJob} disabled={!outcome}
+          style={{...S.bigBtn(outcome?"#dc2626":"#334155"),cursor:outcome?"pointer":"not-allowed"}}>
+          {!outcome?"Select an outcome first":"✓ Close Job"}
+        </button>
+        <div style={{textAlign:"center",fontSize:11,color:"#475569",marginTop:-8}}>This will record drive time + job time automatically</div>
+      </div>
+    </div>
+  );
+
+  // ── CLOSED PHASE ───────────────────────────────
+  if(phase==="closed") {
+    const driveMins = driveStartTs&&arrivalTs ? Math.round((new Date(arrivalTs)-new Date(driveStartTs))/60000) : 0;
+    const jobMins = jobStartTs&&jobEndTs ? Math.round((new Date(jobEndTs)-new Date(jobStartTs))/60000) : 0;
+    const allTechNames = [leadTech,...fellowTechs].filter(Boolean);
+    return (
+      <div style={S.screen}>
+        <div style={S.header}>
+          <div style={{width:10,height:10,borderRadius:"50%",background:"#22c55e",flexShrink:0}}/>
+          <div><div style={{fontWeight:800,fontSize:15}}>✅ Job Closed</div><div style={{fontSize:12,color:"#64748b"}}>{job.ref}</div></div>
+        </div>
+        <div style={S.body}>
+          <div style={{textAlign:"center",padding:"20px 0"}}>
+            <div style={{fontSize:48,marginBottom:8}}>✅</div>
+            <div style={{fontSize:20,fontWeight:900,marginBottom:4}}>Job Complete</div>
+            <div style={{fontSize:13,color:"#64748b"}}>{job.address}</div>
+          </div>
+
+          <div style={{...S.card,display:"grid",gridTemplateColumns:"1fr 1fr",gap:16,textAlign:"center"}}>
+            <div>
+              <div style={{fontSize:28,fontWeight:900,color:"#60a5fa"}}>{fmtDuration(driveMins)}</div>
+              <div style={{fontSize:11,color:"#64748b",marginTop:2}}>🚗 Drive time</div>
+            </div>
+            <div>
+              <div style={{fontSize:28,fontWeight:900,color:"#4ade80"}}>{fmtDuration(jobMins)}</div>
+              <div style={{fontSize:11,color:"#64748b",marginTop:2}}>🔧 Job time</div>
+            </div>
+          </div>
+
+          <div style={S.card}>
+            <span style={S.label}>Technicians</span>
+            <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
+              {allTechNames.map(n=>(
+                <span key={n} style={{background:"rgba(14,165,233,0.15)",border:"1px solid rgba(14,165,233,0.3)",borderRadius:99,padding:"4px 12px",fontSize:13,fontWeight:700,color:"#7dd3fc"}}>{n}</span>
+              ))}
+            </div>
+          </div>
+
+          <div style={S.card}>
+            <span style={S.label}>Outcome</span>
+            <div style={{fontSize:15,fontWeight:700}}>{outcome}</div>
+            {notes&&<div style={{fontSize:13,color:"#94a3b8",marginTop:6,lineHeight:1.5}}>{notes}</div>}
+          </div>
+
+          <div style={{padding:"12px 16px",background:"rgba(34,197,94,0.08)",border:"1px solid rgba(34,197,94,0.15)",borderRadius:10,fontSize:12,color:"#86efac"}}>
+            ✓ Visit record saved · drive + job time auto-filled · diary updated
+          </div>
+
+          <button onClick={onClose} style={S.bigBtn()}>← Back to Jobs</button>
+        </div>
+      </div>
+    );
+  }
+  return null;
+}
+
+/* ═══════════════════════════════════════════
    DISPATCH BOARD
 ═══════════════════════════════════════════ */
-function DispatchTab({settings}) {
-  const jobs = allJobs();
+function DispatchTab({settings, companies, setCompanies, fieldMode, setFieldMode}) {
+  const jobs = allJobs(companies);
   const open = jobs.filter(j=>j.status==="Open");
   const techs = [...new Set(open.map(j=>j.tech||"Unassigned"))];
   const [filter,setFilter]=useState("All");
@@ -912,17 +1877,17 @@ function DispatchTab({settings}) {
             <span style={{color:C.text,fontWeight:700,fontSize:14}}>{tech}</span>
             <span style={{background:C.raised,border:`1px solid ${C.border}`,color:C.sub,borderRadius:99,padding:"1px 8px",fontSize:11,fontWeight:700}}>{techJobs.length}</span>
           </div>
-          {techJobs.map(job=>(<DispatchCard key={job.id} job={job}/>))}
+          {techJobs.map(job=>(<DispatchCard key={job.id} job={job} onStartDriving={()=>setFieldMode(job)}/>))}
         </div>);
       })
     ):(
-      filtered.map(job=><DispatchCard key={job.id} job={job}/>)
+      filtered.map(job=><DispatchCard key={job.id} job={job} onStartDriving={()=>setFieldMode(job)}/>)
     )}
     {filtered.length===0&&<div style={{textAlign:"center",padding:"40px 0",color:C.muted}}><div style={{fontSize:32,marginBottom:8}}>📋</div><div style={{fontSize:14,fontWeight:600}}>No open jobs found</div></div>}
   </div>);
 }
 
-function DispatchCard({job}) {
+function DispatchCard({job, onStartDriving}) {
   const keyLabel = job.keyMethod==="tenant"?"🧑 Tenant":job.keyMethod==="office"?"🏢 Office":"🔑 Other";
   return(
     <div style={{background:"#fff",border:`1px solid ${C.border}`,borderRadius:12,padding:"14px 16px",marginBottom:10,boxShadow:"0 1px 3px rgba(0,0,0,0.04)"}}>
@@ -933,13 +1898,17 @@ function DispatchCard({job}) {
           {job.stage&&<Badge label={job.stage} color={stageColor(job.stage)}/>}
           {job.subStage&&<Badge label={job.subStage} color="purple"/>}
         </div>
+        <button onClick={onStartDriving}
+          style={{background:"#0ea5e9",color:"#fff",border:"none",borderRadius:8,padding:"6px 14px",fontSize:12,fontWeight:800,cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap",marginLeft:8,flexShrink:0}}>
+          🚗 Start
+        </button>
       </div>
       <div style={{color:C.text,fontWeight:700,fontSize:14,marginBottom:2}}>{job.address}</div>
       <div style={{color:C.sub,fontSize:12,marginBottom:8}}>{job.description}</div>
       <div style={{display:"flex",gap:8,flexWrap:"wrap",paddingTop:8,borderTop:`1px solid ${C.border}`}}>
         <span style={{fontSize:12,color:C.sub}}>🏢 {job.companyName}</span>
         <span style={{fontSize:12,color:C.sub}}>👤 {job.agentName}</span>
-        <span style={{fontSize:12,color:C.sub}}>👥 {job.tenants.length} tenant{job.tenants.length!==1?"s":""}</span>
+        <span style={{fontSize:12,color:C.sub}}>👥 {(job.tenants||[]).length} tenant{(job.tenants||[]).length!==1?"s":""}</span>
         {job.keyMethod&&<span style={{fontSize:12,color:C.sub}}>{keyLabel}</span>}
         <span style={{fontSize:12,color:C.sub}}>📅 {job.createdDate}</span>
       </div>
@@ -1117,9 +2086,11 @@ function QuickAssignPicker({companies,setCompanies,selCo,setSelCo,selBr,setSelBr
 ═══════════════════════════════════════════ */
 const VISIT_OUTCOMES = ["Completed","Parts Needed","Recall Required","No Access","Quote Required","Other"];
 
-const calcMins = (arrival, departure) => {
-  if(!arrival || !departure) return null;
-  const diff = new Date(departure) - new Date(arrival);
+const calcMins = (date, arrivalTime, departureTime) => {
+  if(!date || !arrivalTime || !departureTime) return null;
+  const arr = new Date(`${date}T${arrivalTime}`);
+  const dep = new Date(`${date}T${departureTime}`);
+  const diff = dep - arr;
   return diff > 0 ? Math.round(diff / 60000) : null;
 };
 const fmtDuration = mins => {
@@ -1150,13 +2121,35 @@ function VisitsSection({job, onUpdate, fieldStaff}) {
 
   const activeTechs = fieldStaff.filter(f=>f.status==="Active");
 
+  const nowTime = () => { const d=new Date(); return `${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`; };
+
   const toggleTech = name => {
     const exists = form.techs.find(t=>t.techName===name);
     if(exists) {
       setForm({...form, techs: form.techs.filter(t=>t.techName!==name)});
     } else {
-      setForm({...form, techs: [...form.techs, {techName:name, arrival:`${form.date}T08:00`, departure:`${form.date}T12:00`}]});
+      // Auto clock-in with current time
+      setForm({...form, techs: [...form.techs, {techName:name, arrivalTime:nowTime(), departureTime:"", durationHrs:""}]});
     }
+  };
+
+  const clockOut = name => {
+    const t = nowTime();
+    setForm({...form, techs: form.techs.map(r => r.techName===name ? {...r, departureTime:t, durationHrs:""} : r)});
+  };
+
+  const setDuration = (name, hrs) => {
+    // departure = arrival + hrs
+    setForm({...form, techs: form.techs.map(r => {
+      if(r.techName!==name) return r;
+      const dep = (() => {
+        if(!r.arrivalTime || !hrs) return "";
+        const [h,m] = r.arrivalTime.split(":").map(Number);
+        const totalMins = h*60 + m + Math.round(parseFloat(hrs)*60);
+        return `${String(Math.floor(totalMins/60)%24).padStart(2,"0")}:${String(totalMins%60).padStart(2,"0")}`;
+      })();
+      return {...r, durationHrs:hrs, departureTime:dep};
+    })});
   };
 
   const updateTechTime = (name, field, val) => {
@@ -1179,7 +2172,7 @@ function VisitsSection({job, onUpdate, fieldStaff}) {
     if(editIdx === null) {
       const label = `${visitLabels[visits.length]||""}  Visit`;
       const techSummary = form.techs.map(t=>{
-        const mins = calcMins(t.arrival, t.departure);
+        const mins = calcMins(form.date, t.arrivalTime, t.departureTime);
         return `${t.techName}${mins?` (${fmtDuration(mins)})` : ""}`;
       }).join(", ");
       const diaryEntry = {
@@ -1203,7 +2196,7 @@ function VisitsSection({job, onUpdate, fieldStaff}) {
   // Total hours per tech across all visits — for KPI summary
   const techTotals = {};
   visits.forEach(v=>(v.techs||[]).forEach(t=>{
-    const mins = calcMins(t.arrival, t.departure);
+    const mins = calcMins(v.date, t.arrivalTime, t.departureTime);
     if(mins) techTotals[t.techName] = (techTotals[t.techName]||0) + mins;
   }));
 
@@ -1240,11 +2233,11 @@ function VisitsSection({job, onUpdate, fieldStaff}) {
               </div>
               {/* Per-tech time rows */}
               {(v.techs||[]).map(t=>{
-                const mins = calcMins(t.arrival, t.departure);
+                const mins = calcMins(v.date, t.arrivalTime, t.departureTime);
                 return(
                   <div key={t.techName} style={{display:"flex",gap:8,alignItems:"center",marginBottom:3,flexWrap:"wrap"}}>
                     <span style={{fontSize:12,fontWeight:700,color:C.text,minWidth:90}}>{t.techName}</span>
-                    <span style={{fontSize:11,color:C.sub}}>{t.arrival?t.arrival.slice(11,16):""} → {t.departure?t.departure.slice(11,16):""}</span>
+                    <span style={{fontSize:11,color:C.sub}}>{t.arrivalTime||""} → {t.departureTime||""}</span>
                     {mins&&<span style={{background:"#f0fdf4",border:"1px solid #bbf7d0",borderRadius:99,padding:"1px 7px",fontSize:11,fontWeight:700,color:C.green}}>{fmtDuration(mins)}</span>}
                   </div>
                 );
@@ -1297,27 +2290,43 @@ function VisitsSection({job, onUpdate, fieldStaff}) {
               })}
             </div>
 
-            {/* Per-tech time inputs */}
+            {/* Per-tech clock-in/out */}
             {form.techs.length>0&&(
               <div style={{background:"#fff",border:`1px solid ${C.border}`,borderRadius:8,overflow:"hidden"}}>
-                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr auto",gap:0,background:C.raised,padding:"4px 10px",borderBottom:`1px solid ${C.border}`}}>
-                  <span style={{fontSize:10,fontWeight:700,color:C.sub,textTransform:"uppercase",letterSpacing:0.5}}>Technician</span>
-                  <span style={{fontSize:10,fontWeight:700,color:C.sub,textTransform:"uppercase",letterSpacing:0.5}}>Arrival</span>
-                  <span style={{fontSize:10,fontWeight:700,color:C.sub,textTransform:"uppercase",letterSpacing:0.5}}>Departure</span>
-                  <span style={{fontSize:10,fontWeight:700,color:C.sub,textTransform:"uppercase",letterSpacing:0.5}}>Hours</span>
-                </div>
-                {form.techs.map(t=>{
-                  const mins = calcMins(t.arrival, t.departure);
+                {form.techs.map((t,i)=>{
+                  const mins = calcMins(form.date, t.arrivalTime, t.departureTime);
                   return(
-                    <div key={t.techName} style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr auto",gap:0,padding:"6px 10px",borderBottom:`1px solid ${C.border}`,alignItems:"center"}}>
-                      <span style={{fontSize:12,fontWeight:700,color:C.text}}>{t.techName}</span>
-                      <input type="datetime-local" value={t.arrival||""} onChange={e=>updateTechTime(t.techName,"arrival",e.target.value)}
-                        style={{...iSel,fontSize:11,padding:"4px 6px",marginRight:4}}/>
-                      <input type="datetime-local" value={t.departure||""} onChange={e=>updateTechTime(t.techName,"departure",e.target.value)}
-                        style={{...iSel,fontSize:11,padding:"4px 6px",marginRight:4}}/>
-                      <span style={{fontSize:11,fontWeight:700,color:mins?C.green:C.muted,minWidth:36,textAlign:"right"}}>
-                        {mins?fmtDuration(mins):"—"}
-                      </span>
+                    <div key={t.techName} style={{padding:"10px 12px",borderBottom:i<form.techs.length-1?`1px solid ${C.border}`:"none"}}>
+                      {/* Tech name + duration badge */}
+                      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+                        <span style={{fontSize:13,fontWeight:700,color:C.text}}>{t.techName}</span>
+                        {mins
+                          ? <span style={{background:"#f0fdf4",border:"1px solid #bbf7d0",borderRadius:99,padding:"2px 10px",fontSize:12,fontWeight:800,color:C.green}}>{fmtDuration(mins)}</span>
+                          : <span style={{color:C.muted,fontSize:11}}>—</span>}
+                      </div>
+                      {/* Clock in row */}
+                      <div style={{display:"flex",gap:8,alignItems:"center",marginBottom:6}}>
+                        <span style={{fontSize:11,color:C.sub,width:60,flexShrink:0}}>Clocked in</span>
+                        <input type="time" value={t.arrivalTime||""} onChange={e=>updateTechTime(t.techName,"arrivalTime",e.target.value)}
+                          style={{flex:1,background:C.raised,border:`1px solid ${C.border}`,borderRadius:6,padding:"5px 8px",color:C.text,fontSize:12,fontFamily:"inherit"}}/>
+                        <button onClick={()=>updateTechTime(t.techName,"arrivalTime", (() => { const d=new Date(); return `${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`; })())}
+                          style={{background:C.accent,color:"#fff",border:"none",borderRadius:6,padding:"5px 10px",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>
+                          ⏱ Now
+                        </button>
+                      </div>
+                      {/* Clock out OR duration */}
+                      <div style={{display:"flex",gap:8,alignItems:"center"}}>
+                        <span style={{fontSize:11,color:C.sub,width:60,flexShrink:0}}>Duration</span>
+                        <input type="number" min="0.5" max="24" step="0.5"
+                          value={t.durationHrs||""} onChange={e=>setDuration(t.techName,e.target.value)}
+                          placeholder="hrs e.g. 2.5"
+                          style={{flex:1,background:C.raised,border:`1px solid ${C.border}`,borderRadius:6,padding:"5px 8px",color:C.text,fontSize:12,fontFamily:"inherit"}}/>
+                        <button onClick={()=>clockOut(t.techName)}
+                          style={{background:"#dc2626",color:"#fff",border:"none",borderRadius:6,padding:"5px 10px",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>
+                          🔴 Clock Out
+                        </button>
+                      </div>
+                      {t.departureTime&&<div style={{marginTop:4,fontSize:11,color:C.sub}}>Out: {t.departureTime}</div>}
                     </div>
                   );
                 })}
@@ -1851,7 +2860,7 @@ function ReportForm({template, job, fieldStaff, vendors, onSave, onCancel}) {
    REPORTS PANE — tabbed Diary | Reports
    Lives in the right pane of JobDrawer
 ═══════════════════════════════════════════ */
-function ReportsPane({job, onUpdate, onOpenAttachment, reportTemplates, fieldStaff, vendors}) {
+function ReportsPane({job, onUpdate, onOpenAttachment, reportTemplates, fieldStaff, vendors, emailTemplates}) {
   const [activeTab, setActiveTab] = useState("diary");
   const [fillingTemplate, setFillingTemplate] = useState(null);
   const [viewReport, setViewReport] = useState(null);
@@ -1951,7 +2960,7 @@ function ReportsPane({job, onUpdate, onOpenAttachment, reportTemplates, fieldSta
       </div>
 
       {activeTab==="diary"&&(
-        <JobDiary job={job} onUpdate={onUpdate} onOpenAttachment={onOpenAttachment}/>
+        <JobDiary job={job} onUpdate={onUpdate} onOpenAttachment={onOpenAttachment} emailTemplates={emailTemplates}/>
       )}
 
       {activeTab==="reports"&&(
@@ -2037,7 +3046,7 @@ function PdfViewer({file}) {
 ═══════════════════════════════════════════ */
 function JobDrawer({job, onClose, onUpdate, settings, companies, setCompanies, vendors}) {
   const [expanded, setExpanded] = useState(false);
-  const {jobStages, jobSubStages, fieldStaff, jobTypes, reportTemplates=DEFAULT_REPORT_TEMPLATES} = settings;
+  const {jobStages, jobSubStages, fieldStaff, jobTypes, reportTemplates=DEFAULT_REPORT_TEMPLATES, emailTemplates=DEFAULT_EMAIL_TEMPLATES, fieldForms=DEFAULT_FIELD_FORMS} = settings;
   const [applianceTypes, setApplianceTypes] = useState(DEFAULT_APPLIANCE_TYPES);
   const [workPresets, setWorkPresets] = useState(DEFAULT_WORK_PRESETS);
   const [showAddTenant, setShowAddTenant] = useState(false);
@@ -2266,7 +3275,7 @@ function JobDrawer({job, onClose, onUpdate, settings, companies, setCompanies, v
 
         {/* RIGHT — diary + reports tabs */}
         <div style={{flex:attachment?"0 0 280px":"1",overflowY:"auto",padding:"14px 14px 40px",minWidth:0,borderRight:attachment?`1px solid ${C.border}`:"none",transition:"flex 0.2s"}}>
-          <ReportsPane job={job} onUpdate={updateJob} onOpenAttachment={openAttachment} reportTemplates={reportTemplates} fieldStaff={fieldStaff} vendors={vendors}/>
+          <ReportsPane job={job} onUpdate={updateJob} onOpenAttachment={openAttachment} reportTemplates={reportTemplates} fieldStaff={fieldStaff} vendors={vendors} emailTemplates={emailTemplates}/>
         </div>{/* end diary pane */}
 
         {/* Attachment preview panel */}
@@ -2543,15 +3552,15 @@ function InventoryTab() {
 /* ═══════════════════════════════════════════
    REPORTS
 ═══════════════════════════════════════════ */
-function ReportsTab() {
-  const jobs=allJobs();
+function ReportsTab({companies}) {
+  const jobs=allJobs(companies);
   const invoices=SEED_INVOICES;
   const openJobs=jobs.filter(j=>j.status==="Open");
   const closedJobs=jobs.filter(j=>j.status==="Closed");
   const revenue=invoices.filter(i=>i.status==="Paid").reduce((s,i)=>s+i.total,0);
   const outstanding=invoices.filter(i=>i.status!=="Paid").reduce((s,i)=>s+i.total,0);
   const jobsByType=DEFAULT_JOB_TYPES.map(t=>({type:t,count:jobs.filter(j=>j.type===t).length}));
-  const jobsByTech=DEFAULT_TECHNICIANS.map(t=>({tech:t,open:openJobs.filter(j=>j.tech===t).length,closed:closedJobs.filter(j=>j.tech===t).length}));
+  const techs=[...new Set(jobs.map(j=>j.tech).filter(Boolean))];const jobsByTech=techs.map(t=>({tech:t,open:openJobs.filter(j=>j.tech===t).length,closed:closedJobs.filter(j=>j.tech===t).length}));
   return(<div><div style={{marginBottom:16}}><h2 style={{fontSize:18,fontWeight:800,color:C.text}}>Reports</h2><p style={{color:C.sub,fontSize:12,marginTop:2}}>Business overview</p></div><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:20}}><StatCard label="Total Revenue" value={fmtMoney(revenue)} sub="from paid invoices" icon="💰" color={C.green}/><StatCard label="Outstanding" value={fmtMoney(outstanding)} sub="unpaid invoices" icon="⏳" color={C.red}/><StatCard label="Open Jobs" value={openJobs.length} sub="awaiting completion" icon="🔓" color={C.orange}/><StatCard label="Jobs Completed" value={closedJobs.length} sub="all time" icon="✅" color={C.accent}/></div><Card style={{marginBottom:16}}><SectionHead title="📊 Jobs by Type"/>{jobsByType.map(jt=>(<div key={jt.type} style={{marginBottom:12}}><div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}><span style={{fontSize:13,fontWeight:600,color:C.text}}>{jt.type}</span><span style={{fontSize:13,fontWeight:700,color:C.sub}}>{jt.count} jobs</span></div><div style={{background:C.raised,borderRadius:99,height:8,overflow:"hidden"}}><div style={{background:jt.type==="HVAC"?C.accent:jt.type==="Plumbing"?C.purple:C.orange,height:"100%",borderRadius:99,width:`${jobs.length?Math.round(jt.count/jobs.length*100):0}%`,transition:"width 0.5s"}}/></div></div>))}</Card><Card style={{marginBottom:16}}><SectionHead title="👷 Technician Workload"/>{jobsByTech.map(jt=>(<div key={jt.tech} style={{display:"flex",alignItems:"center",gap:12,padding:"10px 0",borderBottom:`1px solid ${C.border}`}}><Avatar name={jt.tech} size={34} bg="#dbeafe" fg="#1d4ed8"/><div style={{flex:1}}><div style={{color:C.text,fontWeight:700,fontSize:13}}>{jt.tech}</div><div style={{color:C.sub,fontSize:12}}>{jt.open} open · {jt.closed} completed</div></div><div style={{display:"flex",gap:6}}><Badge label={`${jt.open} open`} color="blue"/><Badge label={`${jt.closed} done`} color="green"/></div></div>))}</Card><Card><SectionHead title="📋 Invoice Summary"/>{[["Paid",invoices.filter(i=>i.status==="Paid"),"green"],["Overdue",invoices.filter(i=>i.status==="Overdue"),"red"],["Sent",invoices.filter(i=>i.status==="Sent"),"blue"]].map(([label,items,color])=>(<div key={label} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"10px 0",borderBottom:`1px solid ${C.border}`}}><div style={{display:"flex",gap:10,alignItems:"center"}}><Badge label={label} color={color}/><span style={{fontSize:12,color:C.sub}}>{items.length} invoice{items.length!==1?"s":""}</span></div><span style={{fontWeight:700,color:C.text}}>{fmtMoney(items.reduce((s,i)=>s+i.total,0))}</span></div>))}</Card></div>);
 }
 
@@ -2592,7 +3601,16 @@ function App() {
   const settings = useSettings();
   const [companies,setCompanies]=useState(SEED_COMPANIES);
   const [vendors,setVendors]=useState(SEED_VENDORS);
+  const [fieldMode,setFieldMode]=useState(null); // job being worked on in field
   useEffect(()=>{const h=()=>setIsMobile(window.innerWidth<768);window.addEventListener("resize",h);return()=>window.removeEventListener("resize",h);},[]);
+
+  const handleFieldJobUpdate = updatedJob => {
+    setCompanies(companies.map(co=>({...co,branches:co.branches.map(br=>({...br,
+      agents:br.agents.map(ag=>({...ag,
+        jobs:(ag.jobs||[]).map(j=>j.id===updatedJob.id?updatedJob:j)
+      }))
+    }))})));
+  };
 
   return(
     <div style={{display:"flex",minHeight:"100vh",background:C.bg,fontFamily:"'Inter','Segoe UI',sans-serif"}}>
@@ -2648,7 +3666,7 @@ function App() {
         {tab==="customers"&&<CustomersTab settings={settings} companies={companies} setCompanies={setCompanies}/>}
         {tab==="vendors"&&<VendorsTab vendors={vendors} setVendors={setVendors}/>}
         {tab==="products"&&<ProductsTab/>}
-        {tab==="dispatch"&&<DispatchTab settings={settings} companies={companies}/>}
+        {tab==="dispatch"&&<DispatchTab settings={settings} companies={companies} setCompanies={setCompanies} fieldMode={fieldMode} setFieldMode={setFieldMode}/>}
         {tab==="history"&&<HistoryTab settings={settings} companies={companies} setCompanies={setCompanies} vendors={vendors}/>}
         {tab==="quotes"&&<QuotesTab/>}
         {tab==="invoices"&&<InvoicesTab/>}
@@ -2668,6 +3686,17 @@ function App() {
             </button>
           ))}
         </div>
+      )}
+
+      {/* FIELD MODE FULLSCREEN OVERLAY */}
+      {fieldMode&&(
+        <FieldMode
+          job={fieldMode}
+          fieldStaff={settings.fieldStaff||[]}
+          fieldForms={settings.fieldForms||[]}
+          onClose={()=>setFieldMode(null)}
+          onJobUpdate={updatedJob=>{ handleFieldJobUpdate(updatedJob); setFieldMode(null); }}
+        />
       )}
     </div>
   );
