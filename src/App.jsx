@@ -147,9 +147,22 @@ const SEED_VENDORS = [
 const allJobs = (companies) => (companies||SEED_COMPANIES).flatMap(co=>co.branches.flatMap(b=>b.agents.flatMap(a=>(a.jobs||[]).map(j=>({...j,agentName:a.name,branchName:b.name,companyName:co.name})))));
 
 const SEED_QUOTES = [
-  {id:"q1",ref:"QUO-001",client:"Ray White Parramatta",contact:"Karen Lim",date:"2026-03-01",expiry:"2026-03-31",status:"Sent",total:2850,items:[{desc:"Replace kitchen mixer tap",qty:1,unit:"each",rate:320,amount:320},{desc:"Labour – tap replacement",qty:2,unit:"hr",rate:120,amount:240},{desc:"Rinnai 25L Hot Water System",qty:1,unit:"each",rate:1450,amount:1450},{desc:"Labour – HWS install",qty:7,unit:"hr",rate:120,amount:840}]},
-  {id:"q2",ref:"QUO-002",client:"LJ Hooker Penrith",contact:"Rachel Park",date:"2026-03-05",expiry:"2026-04-05",status:"Draft",total:1560,items:[{desc:"Split system supply & install",qty:1,unit:"each",rate:899,amount:899},{desc:"Labour – HVAC install",qty:4,unit:"hr",rate:120,amount:480},{desc:"Electrical connection",qty:1,unit:"each",rate:181,amount:181}]},
-  {id:"q3",ref:"QUO-003",client:"Ray White Blacktown",contact:"Tom Nguyen",date:"2026-02-20",expiry:"2026-03-20",status:"Accepted",total:980,items:[{desc:"Smoke alarm x4 supply",qty:4,unit:"each",rate:85,amount:340},{desc:"Labour – installation",qty:4,unit:"hr",rate:120,amount:480},{desc:"Compliance certificate",qty:1,unit:"each",rate:160,amount:160}]},
+  {id:"q1",ref:"QUO-001",client:"Ray White Parramatta",contact:"Karen Lim",date:"2026-03-01",expiry:"2026-03-31",status:"Sent",total:2850,items:[
+    {desc:"Replace kitchen mixer tap",qty:1,unit:"each",rate:320,amount:320,itemId:"in2"},
+    {desc:"Labour – tap replacement",qty:2,unit:"hr",rate:120,amount:240},
+    {desc:"Rinnai 25L Hot Water System",qty:1,unit:"each",rate:1450,amount:1450,itemId:"in1"},
+    {desc:"Labour – HWS install",qty:7,unit:"hr",rate:120,amount:840},
+  ]},
+  {id:"q2",ref:"QUO-002",client:"LJ Hooker Penrith",contact:"Rachel Park",date:"2026-03-05",expiry:"2026-04-05",status:"Draft",total:1560,items:[
+    {desc:"Split system supply & install",qty:1,unit:"each",rate:899,amount:899,itemId:"in5"},
+    {desc:"Labour – HVAC install",qty:4,unit:"hr",rate:120,amount:480},
+    {desc:"Electrical connection",qty:1,unit:"each",rate:181,amount:181},
+  ]},
+  {id:"q3",ref:"QUO-003",client:"Ray White Blacktown",contact:"Tom Nguyen",date:"2026-02-20",expiry:"2026-03-20",status:"Accepted",total:980,items:[
+    {desc:"Smoke alarm x4 supply",qty:4,unit:"each",rate:85,amount:340,itemId:"in4"},
+    {desc:"Labour – installation",qty:4,unit:"hr",rate:120,amount:480},
+    {desc:"Compliance certificate",qty:1,unit:"each",rate:160,amount:160},
+  ]},
 ];
 const SEED_INVOICES = [
   {id:"i1",ref:"INV-0041",client:"Ray White Parramatta",contact:"Karen Lim",jobRef:"1002",date:"2026-02-21",due:"2026-03-21",status:"Paid",paidDate:"2026-03-10",total:1380,items:[{desc:"Power point replacement x3",qty:3,unit:"each",rate:220,amount:660},{desc:"Labour – electrical",qty:3,unit:"hr",rate:120,amount:360},{desc:"Cable replacement",qty:1,unit:"each",rate:360,amount:360}]},
@@ -237,16 +250,60 @@ const SEED_PURCHASE_ORDERS = [
 ];
 
 const SEED_MOVEMENTS = [
-  {id:"mv1",type:"receive",itemId:"in1",qty:5,fromLocation:null,toLocation:"warehouse",jobId:null,techId:null,poId:"po1",date:"2026-03-05",note:"PO-001 received"},
-  {id:"mv2",type:"collect",itemId:"in1",qty:1,fromLocation:"warehouse",toLocation:"van_fs4",jobId:"1006",techId:"fs4",poId:null,date:"2026-03-06",note:"Anita collected for job 1006"},
-  {id:"mv3",type:"transfer",itemId:"in3",qty:12,fromLocation:"warehouse",toLocation:"van_fs1",jobId:null,techId:"fs1",poId:null,date:"2026-03-07",note:"Van restock for Jake"},
-  {id:"mv4",type:"return",itemId:"in2",qty:1,fromLocation:"van_fs1",toLocation:"warehouse",jobId:"1001",techId:"fs1",poId:null,date:"2026-03-08",note:"Unused part returned"},
+  {id:"mv1",type:"receive",itemId:"in1",qty:5,fromLocation:null,toLocation:"warehouse",jobId:null,techId:null,poId:"po1",batchId:"bt1",date:"2026-03-05",note:"PO-001 received"},
+  {id:"mv2",type:"collect",itemId:"in1",qty:1,fromLocation:"warehouse",toLocation:"van_fs4",jobId:"1006",techId:"fs4",poId:null,batchId:"bt1",date:"2026-03-06",note:"Anita collected for job 1006"},
+  {id:"mv3",type:"transfer",itemId:"in3",qty:12,fromLocation:"warehouse",toLocation:"van_fs1",jobId:null,techId:"fs1",poId:null,batchId:"bt2",date:"2026-03-07",note:"Van restock for Jake"},
+  {id:"mv4",type:"return",itemId:"in2",qty:1,fromLocation:"van_fs1",toLocation:"warehouse",jobId:"1001",techId:"fs1",poId:null,batchId:"bt3",date:"2026-03-08",note:"Unused part returned"},
+];
+
+/* Batches — one per receive line per location */
+const SEED_BATCHES = [
+  {id:"bt1",itemId:"in1",batchRef:"PO-001-1",receivedDate:"2026-03-05",supplierId:"sup1",supplierName:"Reece Plumbing",unitCost:1450,qtyOriginal:5,qtyRemaining:4,location:"warehouse",poId:"po1",invoiceRef:""},
+  {id:"bt2",itemId:"in3",batchRef:"PO-001-2",receivedDate:"2026-03-05",supplierId:"sup1",supplierName:"Reece Plumbing",unitCost:8.50,qtyOriginal:50,qtyRemaining:50,location:"warehouse",poId:"po1",invoiceRef:""},
+  {id:"bt3",itemId:"in2",batchRef:"ADHOC-001",receivedDate:"2026-02-10",supplierId:"sup1",supplierName:"Reece Plumbing",unitCost:295,qtyOriginal:10,qtyRemaining:9,location:"warehouse",poId:null,invoiceRef:"INV-7711"},
 ];
 
 let _poNum = 3;
 const nextPORef = () => `PO-${String(++_poNum).padStart(3,"0")}`;
 let _mvNum = 4;
 const nextMvId = () => `mv${++_mvNum}`;
+let _btNum = 3;
+const nextBtId = () => `bt${++_btNum}`;
+
+/* ─── INVENTORY AVAILABILITY HELPER ───
+ * onHand      = total physical stock across all locations
+ * onOrder     = qty on open POs (sent or partial) not yet received
+ * committed   = qty on approved quotes (Sent or Accepted) not yet invoiced
+ * available   = onHand − committed  (what you can sell right now)
+ * toOrder     = max(0, committed − onHand − onOrder)  (shortfall to cover all demand)
+ */
+const calcAvailability = (itemId, invItems, quotes=[], purchaseOrders=[]) => {
+  const item = invItems.find(i=>i.id===itemId);
+  if(!item) return {onHand:0, onOrder:0, committed:0, available:0, toOrder:0};
+
+  const onHand = Object.values(item.qtyOnHand||{}).reduce((s,v)=>s+(v||0),0);
+
+  // On order: open POs (sent or partial) — lines not yet received
+  const onOrder = purchaseOrders
+    .filter(po=>po.status==="sent"||po.status==="partial")
+    .reduce((s,po)=>{
+      const line = po.lines.find(l=>l.itemId===itemId);
+      if(!line) return s;
+      return s + Math.max(0, line.qtyOrdered - (line.qtyReceived||0));
+    }, 0);
+
+  // Committed: qty on Sent or Accepted quotes that have an itemId link
+  const committed = quotes
+    .filter(q=>q.status==="Sent"||q.status==="Accepted")
+    .reduce((s,q)=>{
+      return s + q.items.filter(l=>l.itemId===itemId).reduce((qs,l)=>qs+(l.qty||0),0);
+    }, 0);
+
+  const available = onHand - committed;
+  const toOrder = Math.max(0, committed - onHand - onOrder);
+
+  return {onHand, onOrder, committed, available, toOrder};
+};
 
 /* ─── SHARED UI ─── */
 const Badge = ({label,color}) => {const map={green:{bg:"#dcfce7",text:"#15803d"},blue:{bg:"#dbeafe",text:"#1d4ed8"},orange:{bg:"#ffedd5",text:"#c2410c"},red:{bg:"#fee2e2",text:"#b91c1c"},purple:{bg:"#ede9fe",text:"#6d28d9"},gray:{bg:"#f1f5f9",text:"#475569"},yellow:{bg:"#fef9c3",text:"#854d0e"}};const s=map[color]||map.gray;return <span style={{background:s.bg,color:s.text,padding:"3px 10px",borderRadius:20,fontSize:11,fontWeight:700,letterSpacing:0.3,whiteSpace:"nowrap"}}>{label}</span>;};
@@ -328,11 +385,12 @@ const useSettings = () => {
   const [invSuppliers, setInvSuppliers] = useState(SEED_SUPPLIERS);
   const [purchaseOrders, setPurchaseOrders] = useState(SEED_PURCHASE_ORDERS);
   const [stockMovements, setStockMovements] = useState(SEED_MOVEMENTS);
+  const [stockBatches, setStockBatches] = useState(SEED_BATCHES);
   return { jobStages,setJobStages, jobSubStages,setJobSubStages, fieldStaff,setFieldStaff,
     jobTypes,setJobTypes, reportTemplates,setReportTemplates,
     fieldForms,setFieldForms, emailTemplates,setEmailTemplates, fieldApp,setFieldApp,
     invItems, setInvItems, invSuppliers, setInvSuppliers, purchaseOrders, setPurchaseOrders,
-    stockMovements, setStockMovements };
+    stockMovements, setStockMovements, stockBatches, setStockBatches };
 };
 
 /* ─── LIST MANAGER ─── */
@@ -4697,8 +4755,7 @@ function HistoryTab({settings, companies, setCompanies, vendors}) {
 /* ═══════════════════════════════════════════
    QUOTES
 ═══════════════════════════════════════════ */
-function QuotesTab() {
-  const [quotes]=useState(SEED_QUOTES);
+function QuotesTab({quotes, setQuotes}) {
   const [sel,setSel]=useState(null);
   const [search,setSearch]=useState("");
   const [statusFilter,setStatusFilter]=useState("All");
@@ -5415,70 +5472,117 @@ Rules:
 }
 
 /* ── Transfer Modal ── */
-function TransferModal({items, fieldStaff, onSave, onClose}) {
-  const [itemId, setItemId] = useState("");
-  const [qty, setQty] = useState(1);
-  const [from, setFrom] = useState("warehouse");
-  const [to, setTo] = useState("");
+/* shared mini row style for multi-item operation modals */
+function OpLineRow({children}) {
+  return <div style={{display:"flex",gap:8,alignItems:"flex-end",flexWrap:"wrap",padding:"10px 0",borderBottom:`1px solid #f1f5f9`}}>{children}</div>;
+}
+
+function TransferModal({items, fieldStaff, batches, onSave, onClose}) {
+  const [lines, setLines] = useState([{selItem:null, batchId:"", qty:1, from:"warehouse", to:""}]);
   const locs = ["warehouse",...fieldStaff.filter(f=>f.status==="Active").map(f=>"van_"+f.id)];
-  const locName = l => l==="warehouse" ? "🏠 Warehouse" : "🚐 "+fieldStaff.find(f=>"van_"+f.id===l)?.name||l;
-  const selItem = items.find(i=>i.id===itemId);
-  const avail = selItem ? (selItem.qtyOnHand[from]||0) : 0;
+  const locName = l => l==="warehouse" ? "🏠 Warehouse" : "🚐 "+(fieldStaff.find(f=>"van_"+f.id===l)?.name||l);
+
+  const addLine = () => setLines(p=>[...p,{selItem:null,batchId:"",qty:1,from:"warehouse",to:""}]);
+  const removeLine = i => setLines(p=>p.filter((_,xi)=>xi!==i));
+  const upd = (i,k,v) => setLines(p=>p.map((l,xi)=>xi===i?{...l,[k]:v}:l));
+
+  const batchesFor = (itemId, loc) => batches.filter(b=>b.itemId===itemId&&b.location===loc&&b.qtyRemaining>0);
+
   return (
-    <Modal title="Transfer Stock" onClose={onClose}
-      onSave={()=>{ if(!itemId||!to||from===to) return; onSave({itemId,qty:Number(qty),from,to}); }}>
-      <div style={{marginBottom:14}}>
-        <label style={{display:"block",color:C.sub,fontSize:12,fontWeight:600,textTransform:"uppercase",letterSpacing:0.5,marginBottom:5}}>Item</label>
-        <select value={itemId} onChange={e=>setItemId(e.target.value)}
-          style={{width:"100%",background:C.raised,border:`1px solid ${C.border}`,borderRadius:8,padding:"9px 12px",color:C.text,fontSize:13,fontFamily:"inherit"}}>
-          <option value="">— Select item —</option>
-          {items.map(i=><option key={i.id} value={i.id}>{i.name} ({i.code})</option>)}
-        </select>
-      </div>
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16,marginBottom:14}}>
-        <div>
-          <label style={{display:"block",color:C.sub,fontSize:12,fontWeight:600,textTransform:"uppercase",letterSpacing:0.5,marginBottom:5}}>From</label>
-          <select value={from} onChange={e=>setFrom(e.target.value)}
-            style={{width:"100%",background:C.raised,border:`1px solid ${C.border}`,borderRadius:8,padding:"9px 12px",color:C.text,fontSize:13,fontFamily:"inherit"}}>
-            {locs.map(l=><option key={l} value={l}>{locName(l)}</option>)}
-          </select>
-          {selItem&&<div style={{fontSize:11,color:avail<1?C.red:C.green,marginTop:4,fontWeight:600}}>Available: {avail}</div>}
+    <Modal title="↔ Transfer Stock" onClose={onClose} wide
+      onSave={()=>{
+        const valid = lines.filter(l=>l.selItem&&l.to&&l.from!==l.to&&l.qty>0);
+        if(!valid.length) return;
+        valid.forEach(l => onSave({itemId:l.selItem.id, qty:Number(l.qty), from:l.from, to:l.to, batchId:l.batchId||null}));
+      }}>
+      <p style={{color:C.sub,fontSize:13,marginBottom:14}}>Move stock between locations. Add multiple lines to transfer several items at once.</p>
+      {lines.map((l,i)=>(
+        <div key={i} style={{background:C.raised,borderRadius:10,padding:12,marginBottom:10,border:`1px solid ${C.border}`}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+            <span style={{fontSize:12,fontWeight:700,color:C.sub}}>LINE {i+1}</span>
+            {lines.length>1&&<button onClick={()=>removeLine(i)} style={{background:"none",border:"none",color:C.red,cursor:"pointer",fontSize:16,fontFamily:"inherit"}}>× Remove</button>}
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"0 12px"}}>
+            <div style={{marginBottom:10,gridColumn:"1/-1"}}>
+              <label style={{display:"block",color:C.sub,fontSize:11,fontWeight:700,textTransform:"uppercase",marginBottom:4}}>Item</label>
+              {l.selItem
+                ? <div style={{display:"flex",gap:8,alignItems:"center",background:"#fff",border:`1.5px solid ${C.accent}`,borderRadius:8,padding:"7px 10px"}}>
+                    <div style={{flex:1}}><div style={{fontWeight:600,fontSize:13}}>{l.selItem.name}</div><div style={{fontSize:10,color:C.muted,fontFamily:"monospace"}}>{l.selItem.code}</div></div>
+                    <button onClick={()=>upd(i,"selItem",null)} style={{background:"none",border:"none",color:C.muted,cursor:"pointer",fontSize:16}}>×</button>
+                  </div>
+                : <ItemSearchSelect items={items} placeholder="Search item…" onSelect={item=>upd(i,"selItem",item)} onNewItem={()=>{}}/>
+              }
+            </div>
+            <div style={{marginBottom:10}}>
+              <label style={{display:"block",color:C.sub,fontSize:11,fontWeight:700,textTransform:"uppercase",marginBottom:4}}>From</label>
+              <select value={l.from} onChange={e=>{upd(i,"from",e.target.value);upd(i,"batchId","");}}
+                style={{width:"100%",background:"#fff",border:`1px solid ${C.border}`,borderRadius:8,padding:"8px 10px",fontSize:13,fontFamily:"inherit",color:C.text}}>
+                {locs.map(loc=><option key={loc} value={loc}>{locName(loc)}</option>)}
+              </select>
+              {l.selItem&&<div style={{fontSize:11,color:C.green,marginTop:3,fontWeight:600}}>Available: {l.selItem.qtyOnHand?.[l.from]||0}</div>}
+            </div>
+            <div style={{marginBottom:10}}>
+              <label style={{display:"block",color:C.sub,fontSize:11,fontWeight:700,textTransform:"uppercase",marginBottom:4}}>To</label>
+              <select value={l.to} onChange={e=>upd(i,"to",e.target.value)}
+                style={{width:"100%",background:"#fff",border:`1px solid ${C.border}`,borderRadius:8,padding:"8px 10px",fontSize:13,fontFamily:"inherit",color:C.text}}>
+                <option value="">— Select —</option>
+                {locs.filter(loc=>loc!==l.from).map(loc=><option key={loc} value={loc}>{locName(loc)}</option>)}
+              </select>
+            </div>
+            {l.selItem&&batchesFor(l.selItem.id,l.from).length>0&&(
+              <div style={{marginBottom:10,gridColumn:"1/-1"}}>
+                <label style={{display:"block",color:C.sub,fontSize:11,fontWeight:700,textTransform:"uppercase",marginBottom:4}}>Batch (optional — leave blank for FIFO)</label>
+                <select value={l.batchId} onChange={e=>upd(i,"batchId",e.target.value)}
+                  style={{width:"100%",background:"#fff",border:`1px solid ${C.border}`,borderRadius:8,padding:"8px 10px",fontSize:13,fontFamily:"inherit",color:C.text}}>
+                  <option value="">Auto (FIFO)</option>
+                  {batchesFor(l.selItem.id,l.from).map(b=><option key={b.id} value={b.id}>{b.batchRef} — {b.qtyRemaining} avail @ {fmtMoney(b.unitCost)} · {fmtDate(b.receivedDate)}</option>)}
+                </select>
+              </div>
+            )}
+            <div>
+              <label style={{display:"block",color:C.sub,fontSize:11,fontWeight:700,textTransform:"uppercase",marginBottom:4}}>Qty</label>
+              <input type="number" min={1} value={l.qty} onChange={e=>upd(i,"qty",e.target.value)}
+                style={{width:"100%",background:"#fff",border:`1px solid ${C.border}`,borderRadius:8,padding:"8px 10px",fontSize:13,fontFamily:"inherit",color:C.text}}/>
+            </div>
+          </div>
         </div>
-        <div>
-          <label style={{display:"block",color:C.sub,fontSize:12,fontWeight:600,textTransform:"uppercase",letterSpacing:0.5,marginBottom:5}}>To</label>
-          <select value={to} onChange={e=>setTo(e.target.value)}
-            style={{width:"100%",background:C.raised,border:`1px solid ${C.border}`,borderRadius:8,padding:"9px 12px",color:C.text,fontSize:13,fontFamily:"inherit"}}>
-            <option value="">— Select destination —</option>
-            {locs.filter(l=>l!==from).map(l=><option key={l} value={l}>{locName(l)}</option>)}
-          </select>
-        </div>
-      </div>
-      <FF label="Quantity" value={qty} onChange={v=>setQty(v)} type="number"/>
+      ))}
+      <button onClick={addLine} style={{background:"none",border:`1.5px dashed ${C.border}`,borderRadius:10,padding:"10px 0",width:"100%",color:C.sub,fontWeight:700,fontSize:13,cursor:"pointer",fontFamily:"inherit",marginBottom:8}}>
+        + Add Another Item
+      </button>
     </Modal>
   );
 }
 
 /* ── Collect / Scan Modal ── */
-function CollectModal({items, fieldStaff, jobs, onSave, onClose}) {
+function CollectModal({items, batches, fieldStaff, jobs, onSave, onClose}) {
   const [scan, setScan] = useState("");
   const [techId, setTechId] = useState("");
   const [jobRef, setJobRef] = useState("");
-  const [collected, setCollected] = useState([]); // [{item, qty}]
+  const [collected, setCollected] = useState([]);
   const [err, setErr] = useState("");
   const inputRef = useRef(null);
+
+  const loc = techId ? "van_"+techId : "warehouse";
 
   const handleScan = (e) => {
     if(e.key !== "Enter") return;
     const code = scan.trim();
     const item = items.find(i=>i.barcode===code||i.code===code);
     if(!item){ setErr("Item not found: "+code); setScan(""); return; }
-    const loc = techId ? "van_"+techId : "warehouse";
     const avail = item.qtyOnHand[loc]||0;
     if(avail < 1){ setErr(`${item.name} — none available at ${loc==="warehouse"?"Warehouse":"this van"}`); setScan(""); return; }
-    setCollected(c=>{const ex=c.find(x=>x.item.id===item.id); return ex ? c.map(x=>x.item.id===item.id?{...x,qty:x.qty+1}:x) : [...c,{item,qty:1}];});
+    setCollected(c=>{const ex=c.find(x=>x.item.id===item.id); return ex ? c.map(x=>x.item.id===item.id?{...x,qty:x.qty+1}:x) : [...c,{item,qty:1,batchId:""}];});
     setErr(""); setScan("");
     inputRef.current?.focus();
   };
+
+  const addManual = (item) => {
+    if(!item) return;
+    setCollected(c=>{const ex=c.find(x=>x.item.id===item.id); return ex?c:[ ...c,{item,qty:1,batchId:""}];});
+  };
+
+  const batchesFor = (itemId) => batches.filter(b=>b.itemId===itemId&&b.location===loc&&b.qtyRemaining>0);
 
   return (
     <Modal title="📦 Collect Items" onClose={onClose} wide
@@ -5503,31 +5607,48 @@ function CollectModal({items, fieldStaff, jobs, onSave, onClose}) {
       </div>
 
       <div style={{background:"#f0fdf4",border:"1px solid #bbf7d0",borderRadius:10,padding:12,marginBottom:12}}>
-        <div style={{fontWeight:700,fontSize:12,color:C.green,marginBottom:6}}>🔍 Scan or type barcode/SKU — press Enter</div>
+        <div style={{fontWeight:700,fontSize:12,color:C.green,marginBottom:6}}>🔍 Scan barcode/SKU — press Enter</div>
         <input ref={inputRef} autoFocus value={scan} onChange={e=>setScan(e.target.value)} onKeyDown={handleScan}
           placeholder="Scan barcode or type item code…"
           style={{width:"100%",background:"#fff",border:`2px solid ${C.green}`,borderRadius:8,padding:"10px 14px",color:C.text,fontSize:14,fontFamily:"inherit",boxSizing:"border-box"}}/>
         {err&&<div style={{color:C.red,fontSize:12,marginTop:6,fontWeight:600}}>⚠️ {err}</div>}
       </div>
 
+      <div style={{marginBottom:12}}>
+        <label style={{display:"block",color:C.sub,fontSize:11,fontWeight:700,textTransform:"uppercase",marginBottom:5}}>Or search and add manually</label>
+        <ItemSearchSelect items={items} placeholder="Search item to add…" onSelect={addManual} onNewItem={()=>{}}/>
+      </div>
+
       {collected.length>0&&(
         <div>
           <div style={{fontWeight:700,fontSize:13,color:C.text,marginBottom:8}}>Items to collect ({collected.length})</div>
           {collected.map((c,i)=>(
-            <div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"8px 0",borderBottom:`1px solid ${C.border}`}}>
-              <div>
-                <div style={{fontWeight:600,fontSize:13,color:C.text}}>{c.item.name}</div>
-                <div style={{fontSize:11,color:C.muted}}>{c.item.code}</div>
+            <div key={i} style={{padding:"10px 0",borderBottom:`1px solid ${C.border}`}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:batchesFor(c.item.id).length>0?8:0}}>
+                <div>
+                  <div style={{fontWeight:600,fontSize:13,color:C.text}}>{c.item.name}</div>
+                  <div style={{fontSize:11,color:C.muted}}>{c.item.code} · {c.item.qtyOnHand?.[loc]||0} available</div>
+                </div>
+                <div style={{display:"flex",gap:8,alignItems:"center"}}>
+                  <button onClick={()=>setCollected(cl=>cl.map((x,xi)=>xi===i?{...x,qty:Math.max(1,x.qty-1)}:x))}
+                    style={{width:26,height:26,borderRadius:6,border:`1px solid ${C.border}`,background:C.raised,cursor:"pointer",fontFamily:"inherit",fontSize:16}}>−</button>
+                  <span style={{fontWeight:800,fontSize:15,minWidth:24,textAlign:"center"}}>{c.qty}</span>
+                  <button onClick={()=>setCollected(cl=>cl.map((x,xi)=>xi===i?{...x,qty:x.qty+1}:x))}
+                    style={{width:26,height:26,borderRadius:6,border:`1px solid ${C.border}`,background:C.raised,cursor:"pointer",fontFamily:"inherit",fontSize:16}}>+</button>
+                  <button onClick={()=>setCollected(cl=>cl.filter((_,xi)=>xi!==i))}
+                    style={{background:"none",border:"none",color:C.red,cursor:"pointer",fontSize:18,fontFamily:"inherit"}}>×</button>
+                </div>
               </div>
-              <div style={{display:"flex",gap:8,alignItems:"center"}}>
-                <button onClick={()=>setCollected(cl=>cl.map((x,xi)=>xi===i?{...x,qty:Math.max(1,x.qty-1)}:x))}
-                  style={{width:24,height:24,borderRadius:4,border:`1px solid ${C.border}`,background:C.raised,cursor:"pointer",fontFamily:"inherit",fontSize:14}}>−</button>
-                <span style={{fontWeight:800,fontSize:15,minWidth:20,textAlign:"center"}}>{c.qty}</span>
-                <button onClick={()=>setCollected(cl=>cl.map((x,xi)=>xi===i?{...x,qty:x.qty+1}:x))}
-                  style={{width:24,height:24,borderRadius:4,border:`1px solid ${C.border}`,background:C.raised,cursor:"pointer",fontFamily:"inherit",fontSize:14}}>+</button>
-                <button onClick={()=>setCollected(cl=>cl.filter((_,xi)=>xi!==i))}
-                  style={{background:"none",border:"none",color:C.red,cursor:"pointer",fontSize:18,fontFamily:"inherit"}}>×</button>
-              </div>
+              {batchesFor(c.item.id).length>0&&(
+                <div>
+                  <label style={{display:"block",fontSize:10,fontWeight:700,color:C.sub,textTransform:"uppercase",marginBottom:3}}>Batch (leave blank for FIFO)</label>
+                  <select value={c.batchId||""} onChange={e=>setCollected(cl=>cl.map((x,xi)=>xi===i?{...x,batchId:e.target.value}:x))}
+                    style={{width:"100%",background:C.raised,border:`1px solid ${C.border}`,borderRadius:6,padding:"6px 10px",fontSize:12,fontFamily:"inherit",color:C.text}}>
+                    <option value="">Auto (FIFO)</option>
+                    {batchesFor(c.item.id).map(b=><option key={b.id} value={b.id}>{b.batchRef} — {b.qtyRemaining} avail · {fmtMoney(b.unitCost)} · {fmtDate(b.receivedDate)}</option>)}
+                  </select>
+                </div>
+              )}
             </div>
           ))}
         </div>
@@ -5537,55 +5658,98 @@ function CollectModal({items, fieldStaff, jobs, onSave, onClose}) {
 }
 
 /* ── Return Modal ── */
-function ReturnModal({items, fieldStaff, jobs, onSave, onClose}) {
-  const [itemId, setItemId] = useState("");
-  const [qty, setQty] = useState(1);
-  const [from, setFrom] = useState("");
-  const [jobRef, setJobRef] = useState("");
-  const [note, setNote] = useState("");
+function ReturnModal({items, batches, fieldStaff, jobs, onSave, onClose}) {
+  const [lines, setLines] = useState([{selItem:null,batchId:"",qty:1,from:"",jobRef:"",note:""}]);
   const locs = ["warehouse",...fieldStaff.filter(f=>f.status==="Active").map(f=>"van_"+f.id)];
-  const locName = l => l==="warehouse" ? "🏠 Warehouse" : "🚐 "+fieldStaff.find(f=>"van_"+f.id===l)?.name||l;
+  const locName = l => l==="warehouse" ? "🏠 Warehouse" : "🚐 "+(fieldStaff.find(f=>"van_"+f.id===l)?.name||l);
+
+  const addLine = () => setLines(p=>[...p,{selItem:null,batchId:"",qty:1,from:"",jobRef:"",note:""}]);
+  const removeLine = i => setLines(p=>p.filter((_,xi)=>xi!==i));
+  const upd = (i,k,v) => setLines(p=>p.map((l,xi)=>xi===i?{...l,[k]:v}:l));
+
+  const batchesFor = (itemId, loc) => batches.filter(b=>b.itemId===itemId&&b.location===loc&&b.qtyRemaining>0);
+
   return (
-    <Modal title="Return Stock to Warehouse" onClose={onClose}
-      onSave={()=>{ if(!itemId||!from) return; onSave({itemId, qty:Number(qty), from, jobRef, note}); }}>
-      <div style={{marginBottom:14}}>
-        <label style={{display:"block",color:C.sub,fontSize:12,fontWeight:600,textTransform:"uppercase",letterSpacing:0.5,marginBottom:5}}>Item</label>
-        <select value={itemId} onChange={e=>setItemId(e.target.value)}
-          style={{width:"100%",background:C.raised,border:`1px solid ${C.border}`,borderRadius:8,padding:"9px 12px",color:C.text,fontSize:13,fontFamily:"inherit"}}>
-          <option value="">— Select item —</option>
-          {items.map(i=><option key={i.id} value={i.id}>{i.name} ({i.code})</option>)}
-        </select>
-      </div>
-      <div style={{marginBottom:14}}>
-        <label style={{display:"block",color:C.sub,fontSize:12,fontWeight:600,textTransform:"uppercase",letterSpacing:0.5,marginBottom:5}}>Return From</label>
-        <select value={from} onChange={e=>setFrom(e.target.value)}
-          style={{width:"100%",background:C.raised,border:`1px solid ${C.border}`,borderRadius:8,padding:"9px 12px",color:C.text,fontSize:13,fontFamily:"inherit"}}>
-          <option value="">— Select source —</option>
-          {locs.map(l=><option key={l} value={l}>{locName(l)}</option>)}
-        </select>
-      </div>
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16}}>
-        <FF label="Quantity" value={qty} onChange={v=>setQty(v)} type="number"/>
-        <div>
-          <label style={{display:"block",color:C.sub,fontSize:12,fontWeight:600,textTransform:"uppercase",letterSpacing:0.5,marginBottom:5}}>Linked Job</label>
-          <select value={jobRef} onChange={e=>setJobRef(e.target.value)}
-            style={{width:"100%",background:C.raised,border:`1px solid ${C.border}`,borderRadius:8,padding:"9px 12px",color:C.text,fontSize:13,fontFamily:"inherit"}}>
-            <option value="">— Optional —</option>
-            {jobs.map(j=><option key={j.id} value={j.ref}>{j.ref}</option>)}
-          </select>
+    <Modal title="↩ Return Stock to Warehouse" onClose={onClose} wide
+      onSave={()=>{
+        const valid = lines.filter(l=>l.selItem&&l.from&&l.qty>0);
+        if(!valid.length) return;
+        valid.forEach(l=>onSave({itemId:l.selItem.id, qty:Number(l.qty), from:l.from, jobRef:l.jobRef, note:l.note, batchId:l.batchId||null}));
+      }}>
+      <p style={{color:C.sub,fontSize:13,marginBottom:14}}>Return unused items to warehouse. Add multiple lines to return several items at once.</p>
+      {lines.map((l,i)=>(
+        <div key={i} style={{background:C.raised,borderRadius:10,padding:12,marginBottom:10,border:`1px solid ${C.border}`}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+            <span style={{fontSize:12,fontWeight:700,color:C.sub}}>LINE {i+1}</span>
+            {lines.length>1&&<button onClick={()=>removeLine(i)} style={{background:"none",border:"none",color:C.red,cursor:"pointer",fontSize:16,fontFamily:"inherit"}}>× Remove</button>}
+          </div>
+          <div style={{marginBottom:10}}>
+            <label style={{display:"block",color:C.sub,fontSize:11,fontWeight:700,textTransform:"uppercase",marginBottom:4}}>Item</label>
+            {l.selItem
+              ? <div style={{display:"flex",gap:8,alignItems:"center",background:"#fff",border:`1.5px solid ${C.accent}`,borderRadius:8,padding:"7px 10px"}}>
+                  <div style={{flex:1}}><div style={{fontWeight:600,fontSize:13}}>{l.selItem.name}</div><div style={{fontSize:10,color:C.muted,fontFamily:"monospace"}}>{l.selItem.code}</div></div>
+                  <button onClick={()=>upd(i,"selItem",null)} style={{background:"none",border:"none",color:C.muted,cursor:"pointer",fontSize:16}}>×</button>
+                </div>
+              : <ItemSearchSelect items={items} placeholder="Search item…" onSelect={item=>upd(i,"selItem",item)} onNewItem={()=>{}}/>
+            }
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"0 12px"}}>
+            <div style={{marginBottom:10}}>
+              <label style={{display:"block",color:C.sub,fontSize:11,fontWeight:700,textTransform:"uppercase",marginBottom:4}}>Return From</label>
+              <select value={l.from} onChange={e=>{upd(i,"from",e.target.value);upd(i,"batchId","");}}
+                style={{width:"100%",background:"#fff",border:`1px solid ${C.border}`,borderRadius:8,padding:"8px 10px",fontSize:13,fontFamily:"inherit",color:C.text}}>
+                <option value="">— Select source —</option>
+                {locs.map(loc=><option key={loc} value={loc}>{locName(loc)}</option>)}
+              </select>
+            </div>
+            <div style={{marginBottom:10}}>
+              <label style={{display:"block",color:C.sub,fontSize:11,fontWeight:700,textTransform:"uppercase",marginBottom:4}}>Qty</label>
+              <input type="number" min={1} value={l.qty} onChange={e=>upd(i,"qty",e.target.value)}
+                style={{width:"100%",background:"#fff",border:`1px solid ${C.border}`,borderRadius:8,padding:"8px 10px",fontSize:13,fontFamily:"inherit",color:C.text}}/>
+            </div>
+          </div>
+          {l.selItem&&l.from&&batchesFor(l.selItem.id,l.from).length>0&&(
+            <div style={{marginBottom:10}}>
+              <label style={{display:"block",color:C.sub,fontSize:11,fontWeight:700,textTransform:"uppercase",marginBottom:4}}>Batch (optional — leave blank for FIFO)</label>
+              <select value={l.batchId||""} onChange={e=>upd(i,"batchId",e.target.value)}
+                style={{width:"100%",background:"#fff",border:`1px solid ${C.border}`,borderRadius:8,padding:"8px 10px",fontSize:13,fontFamily:"inherit",color:C.text}}>
+                <option value="">Auto (FIFO)</option>
+                {batchesFor(l.selItem.id,l.from).map(b=><option key={b.id} value={b.id}>{b.batchRef} — {b.qtyRemaining} avail · received {fmtDate(b.receivedDate)}</option>)}
+              </select>
+            </div>
+          )}
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"0 12px"}}>
+            <div style={{marginBottom:10}}>
+              <label style={{display:"block",color:C.sub,fontSize:11,fontWeight:700,textTransform:"uppercase",marginBottom:4}}>Linked Job</label>
+              <select value={l.jobRef} onChange={e=>upd(i,"jobRef",e.target.value)}
+                style={{width:"100%",background:"#fff",border:`1px solid ${C.border}`,borderRadius:8,padding:"8px 10px",fontSize:13,fontFamily:"inherit",color:C.text}}>
+                <option value="">— Optional —</option>
+                {jobs.map(j=><option key={j.id} value={j.ref}>{j.ref}</option>)}
+              </select>
+            </div>
+            <div style={{marginBottom:10}}>
+              <label style={{display:"block",color:C.sub,fontSize:11,fontWeight:700,textTransform:"uppercase",marginBottom:4}}>Note</label>
+              <input value={l.note} onChange={e=>upd(i,"note",e.target.value)} placeholder="Reason…"
+                style={{width:"100%",background:"#fff",border:`1px solid ${C.border}`,borderRadius:8,padding:"8px 10px",fontSize:13,fontFamily:"inherit",color:C.text}}/>
+            </div>
+          </div>
         </div>
-      </div>
-      <FF label="Notes" value={note} onChange={setNote} type="textarea" placeholder="Reason for return…"/>
+      ))}
+      <button onClick={addLine} style={{background:"none",border:`1.5px dashed ${C.border}`,borderRadius:10,padding:"10px 0",width:"100%",color:C.sub,fontWeight:700,fontSize:13,cursor:"pointer",fontFamily:"inherit"}}>
+        + Return Another Item
+      </button>
     </Modal>
   );
 }
 
 /* ── Item Detail View ── */
-function ItemDetail({item, suppliers, fieldStaff, onBack, onEdit}) {
+function ItemDetail({item, suppliers, fieldStaff, invItems, quotes=[], purchaseOrders=[], onBack, onEdit}) {
   const sup = suppliers.find(s=>s.id===item.supplierId);
   const totalQty = Object.values(item.qtyOnHand||{}).reduce((s,v)=>s+(v||0),0);
   const stockStatus = totalQty===0?"red":totalQty<=item.reorderPoint?"orange":"green";
   const locs = [["warehouse","🏠 Warehouse"],...fieldStaff.filter(f=>f.status==="Active").map(f=>["van_"+f.id,"🚐 "+f.name])];
+  const av = calcAvailability(item.id, invItems, quotes, purchaseOrders);
+  const committedQuotes = quotes.filter(q=>(q.status==="Sent"||q.status==="Accepted")&&q.items.some(l=>l.itemId===item.id));
   return (
     <div>
       <Breadcrumb items={[{label:"Inventory",fn:onBack},{label:item.name}]}/>
@@ -5645,14 +5809,46 @@ function ItemDetail({item, suppliers, fieldStaff, onBack, onEdit}) {
           </Card>
         </div>
 
-        <div style={{flex:1,minWidth:200}}>
-          {/* Stock levels */}
+        <div style={{flex:1,minWidth:220}}>
+          {/* Availability panel */}
           <Card style={{marginBottom:12}}>
-            <SectionHead title="📦 Stock Levels"/>
-            <div style={{textAlign:"center",margin:"8px 0 16px"}}>
-              <div style={{fontSize:48,fontWeight:900,color:totalQty===0?C.red:totalQty<=item.reorderPoint?C.orange:C.green}}>{totalQty}</div>
-              <div style={{fontSize:12,color:C.muted}}>Total on hand</div>
+            <SectionHead title="📊 Availability"/>
+            {/* Four-number breakdown */}
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:1,background:C.border,borderRadius:10,overflow:"hidden",marginBottom:12}}>
+              {[
+                {label:"On Hand", value:av.onHand, color:av.onHand===0?C.red:av.onHand<=item.reorderPoint?C.orange:C.text, tip:"Physical stock across all locations"},
+                {label:"On Order", value:av.onOrder, color:av.onOrder>0?C.accent:C.muted, tip:"Open POs not yet received"},
+                {label:"Committed", value:av.committed, color:av.committed>0?"#7c3aed":C.muted, tip:"Qty on approved quotes"},
+                {label:"Available", value:av.available, color:av.available<0?C.red:av.available===0?C.orange:C.green, tip:"On Hand minus Committed"},
+              ].map(({label,value,color,tip})=>(
+                <div key={label} style={{background:C.card,padding:"12px 10px",textAlign:"center"}}>
+                  <div style={{fontSize:10,color:C.muted,fontWeight:700,textTransform:"uppercase",letterSpacing:0.5,marginBottom:4}}>{label}</div>
+                  <div style={{fontSize:32,fontWeight:900,color,lineHeight:1}}>{value}</div>
+                  <div style={{fontSize:10,color:C.muted,marginTop:4}}>{tip}</div>
+                </div>
+              ))}
             </div>
+
+            {/* To Order alert */}
+            {av.toOrder>0&&(
+              <div style={{background:"#ede9fe",border:"1px solid #c4b5fd",borderRadius:8,padding:"10px 12px",marginBottom:10}}>
+                <div style={{fontWeight:800,fontSize:13,color:"#5b21b6",marginBottom:2}}>🛒 Order {av.toOrder} more</div>
+                <div style={{fontSize:12,color:"#6d28d9"}}>
+                  {av.committed} committed − {av.onHand} on hand − {av.onOrder} on order = {av.toOrder} shortfall
+                </div>
+              </div>
+            )}
+
+            {/* Formula explanation */}
+            <div style={{background:C.raised,borderRadius:8,padding:"8px 10px",fontSize:11,color:C.muted,lineHeight:1.6}}>
+              <strong style={{color:C.sub}}>Available</strong> = On Hand − Committed<br/>
+              <strong style={{color:C.sub}}>To Order</strong> = max(0, Committed − On Hand − On Order)
+            </div>
+          </Card>
+
+          {/* Stock by location */}
+          <Card style={{marginBottom:12}}>
+            <SectionHead title="📦 Stock by Location"/>
             {locs.map(([loc,label])=>(
               <div key={loc} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"7px 0",borderTop:`1px solid ${C.border}`}}>
                 <span style={{fontSize:13,color:C.sub}}>{label}</span>
@@ -5660,6 +5856,25 @@ function ItemDetail({item, suppliers, fieldStaff, onBack, onEdit}) {
               </div>
             ))}
           </Card>
+
+          {/* Committed quotes breakdown */}
+          {committedQuotes.length>0&&(
+            <Card style={{marginBottom:12}}>
+              <SectionHead title="📋 Committed on Quotes"/>
+              {committedQuotes.map(q=>{
+                const qtyOnQuote = q.items.filter(l=>l.itemId===item.id).reduce((s,l)=>s+(l.qty||0),0);
+                return (
+                  <div key={q.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"7px 0",borderBottom:`1px solid ${C.border}`}}>
+                    <div>
+                      <div style={{fontWeight:700,fontSize:12,color:C.accent}}>{q.ref}</div>
+                      <div style={{fontSize:11,color:C.muted}}>{q.client} · <Badge label={q.status} color={q.status==="Accepted"?"green":"blue"}/></div>
+                    </div>
+                    <span style={{fontWeight:800,fontSize:15,color:"#7c3aed"}}>×{qtyOnQuote}</span>
+                  </div>
+                );
+              })}
+            </Card>
+          )}
 
           {/* Barcode */}
           {item.barcode&&(
@@ -5678,8 +5893,8 @@ function ItemDetail({item, suppliers, fieldStaff, onBack, onEdit}) {
 }
 
 /* ── Main InventoryTab ── */
-function InventoryTab({settings, companies}) {
-  const {invItems, setInvItems, invSuppliers, setInvSuppliers, purchaseOrders, setPurchaseOrders, stockMovements, setStockMovements, fieldStaff} = settings;
+function InventoryTab({settings, companies, quotes=[]}) {
+  const {invItems, setInvItems, invSuppliers, setInvSuppliers, purchaseOrders, setPurchaseOrders, stockMovements, setStockMovements, stockBatches, setStockBatches, fieldStaff} = settings;
   const [invTab, setInvTab] = useState("items");
   const [search, setSearch] = useState("");
   const [catFilter, setCatFilter] = useState("All");
@@ -5694,6 +5909,7 @@ function InventoryTab({settings, companies}) {
   const totalQty = item => Object.values(item.qtyOnHand||{}).reduce((s,v)=>s+(v||0),0);
   const stockStatus = item => { const t=totalQty(item); return t===0?"red":t<=item.reorderPoint?"orange":"green"; };
   const locName = l => l==="warehouse" ? "Warehouse" : "Van — "+fieldStaff?.find(f=>"van_"+f.id===l)?.name||l;
+  const avail = item => calcAvailability(item.id, invItems, quotes, purchaseOrders);
 
   const cats = ["All",...new Set(invItems.map(i=>i.category))];
   const filtered = invItems.filter(i=>{
@@ -5704,6 +5920,7 @@ function InventoryTab({settings, companies}) {
 
   const lowStock = invItems.filter(i=>totalQty(i)<=i.reorderPoint&&totalQty(i)>0);
   const outOfStock = invItems.filter(i=>totalQty(i)===0);
+  const needsOrder = invItems.map(i=>({item:i,...calcAvailability(i.id,invItems,quotes,purchaseOrders)})).filter(x=>x.toOrder>0);
   const totalValue = invItems.reduce((s,i)=>s+totalQty(i)*i.purchasePrice,0);
 
   /* ── PO status colours ── */
@@ -5723,9 +5940,25 @@ function InventoryTab({settings, companies}) {
   };
 
   /* ── Receive stock ── */
+  /* ── Helpers ── */
+  // Deduct qty from batches FIFO for a given item+location, return updated batches + batchIds used
+  const deductBatchesFIFO = (batches, itemId, location, qty) => {
+    let remaining = qty;
+    const usedBatchIds = [];
+    const updated = batches.map(b => {
+      if(b.itemId !== itemId || b.location !== location || b.qtyRemaining <= 0 || remaining <= 0) return b;
+      const take = Math.min(b.qtyRemaining, remaining);
+      remaining -= take;
+      usedBatchIds.push(b.id);
+      return {...b, qtyRemaining: b.qtyRemaining - take};
+    });
+    return {updated, usedBatchIds};
+  };
+
   const receiveStock = (po, receivedLines) => {
     const now = new Date().toISOString().slice(0,10);
     const newMovements = [];
+    const newBatches = [];
     const updatedItems = [...invItems];
 
     receivedLines.forEach(l => {
@@ -5734,32 +5967,50 @@ function InventoryTab({settings, companies}) {
       if(idx>=0) {
         updatedItems[idx] = {...updatedItems[idx], qtyOnHand:{...updatedItems[idx].qtyOnHand, warehouse:(updatedItems[idx].qtyOnHand?.warehouse||0)+l.receiving}};
       }
-      newMovements.push({id:nextMvId(),type:"receive",itemId:l.itemId,qty:l.receiving,fromLocation:null,toLocation:"warehouse",jobId:po.jobId||null,techId:null,poId:po.id,date:now,note:`${po.ref} received`});
+      const btId = nextBtId();
+      newBatches.push({id:btId, itemId:l.itemId, batchRef:`${po.ref}-B${newBatches.length+1}`,
+        receivedDate:now, supplierId:po.supplierId, supplierName:po.supplierName,
+        unitCost:l.unitCost, qtyOriginal:l.receiving, qtyRemaining:l.receiving,
+        location:"warehouse", poId:po.id, invoiceRef:""});
+      newMovements.push({id:nextMvId(),type:"receive",itemId:l.itemId,qty:l.receiving,fromLocation:null,toLocation:"warehouse",jobId:po.jobId||null,techId:null,poId:po.id,batchId:btId,date:now,note:`${po.ref} received`});
     });
 
     const allReceived = receivedLines.every(l=>(l.qtyReceived+(l.receiving||0))>=l.qtyOrdered);
-    const updatedPO = {...po,
-      status: allReceived?"received":"partial",
-      receivedDate: now,
-      lines: po.lines.map(l=>{ const rl=receivedLines.find(r=>r.itemId===l.itemId); return rl?{...l,qtyReceived:l.qtyReceived+(rl.receiving||0)}:l; })
-    };
+    const updatedPO = {...po, status:allReceived?"received":"partial", receivedDate:now,
+      lines:po.lines.map(l=>{ const rl=receivedLines.find(r=>r.itemId===l.itemId); return rl?{...l,qtyReceived:l.qtyReceived+(rl.receiving||0)}:l; })};
 
     setInvItems(updatedItems);
+    setStockBatches(prev=>[...prev,...newBatches]);
     setStockMovements(prev=>[...prev,...newMovements]);
     setPurchaseOrders(prev=>prev.map(p=>p.id===po.id?updatedPO:p));
-
-    // Auto-move linked job to "Parts Received"
-    if(po.jobId && allReceived) {
-      const jRef = po.jobId;
-      // Update job stage in companies — find and update
-      // We surface a toast-style note since job update requires companies setter
-      alert(`✅ Stock received for PO ${po.ref}. Job ${jRef} should now be moved to "Parts Received".`);
-    }
+    if(po.jobId && allReceived) alert(`✅ Stock received for PO ${po.ref}. Job ${po.jobId} should now be moved to "Parts Received".`);
     setModal(null);
   };
 
   /* ── Transfer ── */
-  const doTransfer = ({itemId, qty, from, to}) => {
+  const doTransfer = ({itemId, qty, from, to, batchId}) => {
+    const now = new Date().toISOString().slice(0,10);
+    let batchIds = [];
+    if(batchId) {
+      // Specific batch transfer — move batch location
+      setStockBatches(prev=>prev.map(b=>{
+        if(b.id!==batchId) return b;
+        batchIds.push(b.id);
+        return {...b, location:to};
+      }));
+    } else {
+      // FIFO across all batches at source location
+      const {updated, usedBatchIds} = deductBatchesFIFO(stockBatches, itemId, from, qty);
+      batchIds = usedBatchIds;
+      // Create new batch at destination
+      const btId = nextBtId();
+      const srcBatch = stockBatches.find(b=>b.itemId===itemId&&b.location===from&&b.qtyRemaining>0);
+      setStockBatches([...updated, {id:btId, itemId, batchRef:`TRF-${now}-${itemId.slice(-3)}`,
+        receivedDate:now, supplierId:srcBatch?.supplierId||"", supplierName:srcBatch?.supplierName||"",
+        unitCost:srcBatch?.unitCost||0, qtyOriginal:qty, qtyRemaining:qty,
+        location:to, poId:null, invoiceRef:""}]);
+      batchIds.push(btId);
+    }
     setInvItems(prev=>prev.map(i=>{
       if(i.id!==itemId) return i;
       const oh={...i.qtyOnHand};
@@ -5767,26 +6018,57 @@ function InventoryTab({settings, companies}) {
       oh[to]=(oh[to]||0)+qty;
       return {...i,qtyOnHand:oh};
     }));
-    setStockMovements(prev=>[...prev,{id:nextMvId(),type:"transfer",itemId,qty,fromLocation:from,toLocation:to,jobId:null,techId:null,poId:null,date:new Date().toISOString().slice(0,10),note:"Transfer"}]);
+    setStockMovements(prev=>[...prev,{id:nextMvId(),type:"transfer",itemId,qty,fromLocation:from,toLocation:to,jobId:null,techId:null,poId:null,batchId:batchIds[0]||null,date:now,note:"Transfer"}]);
     setModal(null);
   };
 
   /* ── Collect ── */
   const doCollect = ({collected, techId, jobRef}) => {
     const loc = techId ? "van_"+techId : "warehouse";
+    const now = new Date().toISOString().slice(0,10);
+    let updatedBatches = [...stockBatches];
+    const newMovements = [];
+
+    collected.forEach(c => {
+      let batchId = c.batchId || null;
+      if(batchId) {
+        updatedBatches = updatedBatches.map(b=>b.id===batchId?{...b,qtyRemaining:Math.max(0,b.qtyRemaining-c.qty)}:b);
+      } else {
+        const {updated, usedBatchIds} = deductBatchesFIFO(updatedBatches, c.item.id, loc, c.qty);
+        updatedBatches = updated;
+        batchId = usedBatchIds[0]||null;
+      }
+      newMovements.push({id:nextMvId(),type:"collect",itemId:c.item.id,qty:c.qty,fromLocation:loc,toLocation:null,jobId:jobRef||null,techId:techId||null,poId:null,batchId,date:now,note:"Collected"+(jobRef?" for job "+jobRef:"")});
+    });
+
+    setStockBatches(updatedBatches);
     setInvItems(prev=>prev.map(i=>{
       const c=collected.find(x=>x.item.id===i.id); if(!c) return i;
       const oh={...i.qtyOnHand};
       oh[loc]=Math.max(0,(oh[loc]||0)-c.qty);
       return {...i,qtyOnHand:oh};
     }));
-    const now=new Date().toISOString().slice(0,10);
-    setStockMovements(prev=>[...prev,...collected.map(c=>({id:nextMvId(),type:"collect",itemId:c.item.id,qty:c.qty,fromLocation:loc,toLocation:null,jobId:jobRef||null,techId:techId||null,poId:null,date:now,note:"Collected"+" "+(jobRef?"for job "+jobRef:"")}))]);
+    setStockMovements(prev=>[...prev,...newMovements]);
     setModal(null);
   };
 
   /* ── Return ── */
-  const doReturn = ({itemId,qty,from,jobRef,note}) => {
+  const doReturn = ({itemId, qty, from, jobRef, note, batchId}) => {
+    const now = new Date().toISOString().slice(0,10);
+    let usedBatchId = batchId || null;
+    if(batchId) {
+      // Return to original batch — restore qty
+      setStockBatches(prev=>prev.map(b=>b.id===batchId?{...b,qtyRemaining:b.qtyRemaining+qty,location:"warehouse"}:b));
+    } else {
+      // Create a return batch
+      const btId = nextBtId();
+      usedBatchId = btId;
+      const srcBatch = stockBatches.find(b=>b.itemId===itemId&&b.location===from&&b.qtyRemaining>0);
+      setStockBatches(prev=>[...prev,{id:btId,itemId,batchRef:`RTN-${now}`,receivedDate:now,
+        supplierId:srcBatch?.supplierId||"",supplierName:srcBatch?.supplierName||"",
+        unitCost:srcBatch?.unitCost||0,qtyOriginal:qty,qtyRemaining:qty,
+        location:"warehouse",poId:null,invoiceRef:""}]);
+    }
     setInvItems(prev=>prev.map(i=>{
       if(i.id!==itemId) return i;
       const oh={...i.qtyOnHand};
@@ -5794,31 +6076,36 @@ function InventoryTab({settings, companies}) {
       oh["warehouse"]=(oh["warehouse"]||0)+qty;
       return {...i,qtyOnHand:oh};
     }));
-    setStockMovements(prev=>[...prev,{id:nextMvId(),type:"return",itemId,qty,fromLocation:from,toLocation:"warehouse",jobId:jobRef||null,techId:null,poId:null,date:new Date().toISOString().slice(0,10),note:note||"Return to warehouse"}]);
+    setStockMovements(prev=>[...prev,{id:nextMvId(),type:"return",itemId,qty,fromLocation:from,toLocation:"warehouse",jobId:jobRef||null,techId:null,poId:null,batchId:usedBatchId,date:now,note:note||"Return to warehouse"}]);
     setModal(null);
   };
 
   const doAdHocReceive = ({supplierId, supplierName, date, refNote, lines, newItems=[]}) => {
-    // Add any new items created in the modal to the catalogue first
+    const now = date||new Date().toISOString().slice(0,10);
+    const newBatches = [];
+    const newMovements = [];
     if(newItems.length>0) setInvItems(prev=>[...prev,...newItems]);
-    // Update stock quantities
     setInvItems(prev=>prev.map(i=>{
       const l=lines.find(l=>l.itemId===i.id); if(!l) return i;
       const oh={...i.qtyOnHand};
       oh["warehouse"]=(oh["warehouse"]||0)+l.qty;
-      // Update purchase price and log price history if price changed
       const priceH=[...(i.priceHistory||[])];
-      if(l.unitCost&&l.unitCost!==i.purchasePrice) priceH.push({date,price:l.unitCost,supplierId,note:refNote||"Ad-hoc receive"});
+      if(l.unitCost&&l.unitCost!==i.purchasePrice) priceH.push({date:now,price:l.unitCost,supplierId,note:refNote||"Ad-hoc receive"});
       return {...i,qtyOnHand:oh,priceHistory:priceH};
     }));
-    // Log a movement per line
-    const now=date||new Date().toISOString().slice(0,10);
-    setStockMovements(prev=>[...prev,...lines.map(l=>({
-      id:nextMvId(),type:"receive",itemId:l.itemId,qty:l.qty,
-      fromLocation:null,toLocation:"warehouse",
-      jobId:null,techId:null,poId:null,
-      date:now,note:[supplierName,refNote].filter(Boolean).join(" · ")||"Ad-hoc receive"
-    }))]);
+    lines.forEach((l,li) => {
+      const btId = nextBtId();
+      newBatches.push({id:btId, itemId:l.itemId,
+        batchRef:`RCV-${now.replace(/-/g,"")}-${String(li+1).padStart(2,"0")}`,
+        receivedDate:now, supplierId, supplierName,
+        unitCost:l.unitCost, qtyOriginal:l.qty, qtyRemaining:l.qty,
+        location:"warehouse", poId:null, invoiceRef:refNote||""});
+      newMovements.push({id:nextMvId(),type:"receive",itemId:l.itemId,qty:l.qty,
+        fromLocation:null,toLocation:"warehouse",jobId:null,techId:null,poId:null,batchId:btId,
+        date:now,note:[supplierName,refNote].filter(Boolean).join(" · ")||"Ad-hoc receive"});
+    });
+    setStockBatches(prev=>[...prev,...newBatches]);
+    setStockMovements(prev=>[...prev,...newMovements]);
     setModal(null);
   };
 
@@ -5827,6 +6114,7 @@ function InventoryTab({settings, companies}) {
 
   if(selItem) return (
     <ItemDetail item={selItem} suppliers={invSuppliers} fieldStaff={fieldStaff||[]}
+      invItems={invItems} quotes={quotes} purchaseOrders={purchaseOrders}
       onBack={()=>setSelItem(null)} onEdit={()=>setModal("editItem")}/>
   );
 
@@ -5852,15 +6140,20 @@ function InventoryTab({settings, companies}) {
         <StatCard label="Total Items" value={invItems.length} icon="📦" color={C.accent}/>
         <StatCard label="Low Stock" value={lowStock.length} sub="near reorder point" icon="⚠️" color={C.orange}/>
         <StatCard label="Out of Stock" value={outOfStock.length} icon="🚫" color={C.red}/>
-        <StatCard label="Stock Value" value={fmtMoney(totalValue)} icon="💰" color={C.green}/>
+        <StatCard label="Needs Ordering" value={needsOrder.length} sub="demand exceeds supply" icon="🛒" color={needsOrder.length>0?C.purple:C.green}/>
       </div>
 
-      {/* Low stock alert */}
-      {(lowStock.length>0||outOfStock.length>0)&&(
+      {/* Alerts banner */}
+      {(lowStock.length>0||outOfStock.length>0||needsOrder.length>0)&&(
         <div style={{background:"#fef9c3",border:"1px solid #fde047",borderRadius:10,padding:"12px 14px",marginBottom:14}}>
           <div style={{fontWeight:700,fontSize:13,color:"#854d0e",marginBottom:6}}>⚠️ Stock Alerts</div>
           {outOfStock.map(i=><div key={i.id} style={{fontSize:12,color:C.red,marginTop:2,fontWeight:600}}>🚫 {i.name} — Out of stock</div>)}
           {lowStock.map(i=><div key={i.id} style={{fontSize:12,color:"#92400e",marginTop:2}}>• {i.name} — {totalQty(i)} on hand (reorder at {i.reorderPoint})</div>)}
+          {needsOrder.map(({item,toOrder,committed,onHand,onOrder})=>(
+            <div key={item.id} style={{fontSize:12,color:"#5b21b6",marginTop:2,fontWeight:600}}>
+              🛒 {item.name} — need to order {toOrder} more ({committed} committed, {onHand} on hand, {onOrder} on order)
+            </div>
+          ))}
         </div>
       )}
 
@@ -5885,7 +6178,9 @@ function InventoryTab({settings, companies}) {
           <div style={{display:"flex",gap:8,marginBottom:14,overflowX:"auto",paddingBottom:4}}>
             {cats.map(c=><Pill key={c} label={c} active={catFilter===c} onClick={()=>setCatFilter(c)}/>)}
           </div>
-          {filtered.map(item=>(
+          {filtered.map(item=>{
+            const av = avail(item);
+            return (
             <RowCard key={item.id} onClick={()=>setSelItem(item)}>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
                 <div style={{flex:1,minWidth:0,marginRight:12}}>
@@ -5893,6 +6188,7 @@ function InventoryTab({settings, companies}) {
                     <span style={{color:C.accent,fontWeight:800,fontSize:11,fontFamily:"monospace"}}>{item.code}</span>
                     <Badge label={item.category} color="blue"/>
                     <Badge label={totalQty(item)===0?"Out of Stock":totalQty(item)<=item.reorderPoint?"Low Stock":"In Stock"} color={stockStatus(item)}/>
+                    {av.toOrder>0&&<Badge label={`Order ${av.toOrder} more`} color="purple"/>}
                   </div>
                   <div style={{color:C.text,fontWeight:700,fontSize:14}}>{item.name}</div>
                   <div style={{color:C.muted,fontSize:12,marginTop:2}}>{item.description}</div>
@@ -5900,13 +6196,32 @@ function InventoryTab({settings, companies}) {
                     <span>Cost: {fmtMoney(item.purchasePrice)}</span>
                     <span>Sell: {fmtMoney(item.sellPrice)}</span>
                     <span>Markup: {item.markup}%</span>
-                    <span>Reorder at: {item.reorderPoint}</span>
                   </div>
                 </div>
-                <div style={{textAlign:"right",flexShrink:0}}>
-                  <div style={{color:totalQty(item)===0?C.red:totalQty(item)<=item.reorderPoint?C.orange:C.green,fontWeight:900,fontSize:28}}>{totalQty(item)}</div>
-                  <div style={{color:C.muted,fontSize:10,marginTop:2}}>total on hand</div>
-                  <div style={{display:"flex",gap:4,marginTop:6,justifyContent:"flex-end",flexWrap:"wrap"}}>
+                {/* Availability breakdown */}
+                <div style={{flexShrink:0,display:"grid",gridTemplateColumns:"1fr 1fr",gap:"4px 16px",textAlign:"right",minWidth:160}}>
+                  <div>
+                    <div style={{fontSize:11,color:C.muted,fontWeight:600,textTransform:"uppercase",letterSpacing:0.3}}>On Hand</div>
+                    <div style={{fontSize:20,fontWeight:900,color:av.onHand===0?C.red:av.onHand<=item.reorderPoint?C.orange:C.text}}>{av.onHand}</div>
+                  </div>
+                  <div>
+                    <div style={{fontSize:11,color:C.muted,fontWeight:600,textTransform:"uppercase",letterSpacing:0.3}}>On Order</div>
+                    <div style={{fontSize:20,fontWeight:900,color:av.onOrder>0?C.accent:C.muted}}>{av.onOrder}</div>
+                  </div>
+                  <div>
+                    <div style={{fontSize:11,color:C.muted,fontWeight:600,textTransform:"uppercase",letterSpacing:0.3}}>Committed</div>
+                    <div style={{fontSize:20,fontWeight:900,color:av.committed>0?"#7c3aed":C.muted}}>{av.committed}</div>
+                  </div>
+                  <div>
+                    <div style={{fontSize:11,color:C.muted,fontWeight:600,textTransform:"uppercase",letterSpacing:0.3}}>Available</div>
+                    <div style={{fontSize:20,fontWeight:900,color:av.available<0?C.red:av.available===0?C.orange:C.green}}>{av.available}</div>
+                  </div>
+                  {av.toOrder>0&&(
+                    <div style={{gridColumn:"1/-1",background:"#ede9fe",borderRadius:6,padding:"3px 8px",marginTop:2}}>
+                      <span style={{fontSize:11,color:"#5b21b6",fontWeight:800}}>🛒 Order {av.toOrder} to cover demand</span>
+                    </div>
+                  )}
+                  <div style={{gridColumn:"1/-1",display:"flex",gap:4,marginTop:4,justifyContent:"flex-end",flexWrap:"wrap"}}>
                     {Object.entries(item.qtyOnHand||{}).filter(([,v])=>v>0).map(([loc,v])=>(
                       <span key={loc} style={{background:C.raised,border:`1px solid ${C.border}`,borderRadius:6,padding:"2px 7px",fontSize:10,fontWeight:700,color:C.sub}}>{locName(loc)}: {v}</span>
                     ))}
@@ -5914,7 +6229,8 @@ function InventoryTab({settings, companies}) {
                 </div>
               </div>
             </RowCard>
-          ))}
+            );
+          })}
           {filtered.length===0&&<div style={{textAlign:"center",padding:"40px 0",color:C.muted}}><div style={{fontSize:36,marginBottom:8}}>📦</div>No items found</div>}
         </div>
       )}
@@ -6012,13 +6328,13 @@ function InventoryTab({settings, companies}) {
         <ReceiveModal po={modalData} onSave={lines=>receiveStock(modalData,lines)} onClose={()=>setModal(null)}/>
       )}
       {modal==="transfer"&&(
-        <TransferModal items={invItems} fieldStaff={fieldStaff||[]} onSave={doTransfer} onClose={()=>setModal(null)}/>
+        <TransferModal items={invItems} batches={stockBatches} fieldStaff={fieldStaff||[]} onSave={doTransfer} onClose={()=>setModal(null)}/>
       )}
       {modal==="collect"&&(
-        <CollectModal items={invItems} fieldStaff={fieldStaff||[]} jobs={openJobs} onSave={doCollect} onClose={()=>setModal(null)}/>
+        <CollectModal items={invItems} batches={stockBatches} fieldStaff={fieldStaff||[]} jobs={openJobs} onSave={doCollect} onClose={()=>setModal(null)}/>
       )}
       {modal==="return"&&(
-        <ReturnModal items={invItems} fieldStaff={fieldStaff||[]} jobs={openJobs} onSave={doReturn} onClose={()=>setModal(null)}/>
+        <ReturnModal items={invItems} batches={stockBatches} fieldStaff={fieldStaff||[]} jobs={openJobs} onSave={doReturn} onClose={()=>setModal(null)}/>
       )}
     </div>
   );
@@ -6076,6 +6392,7 @@ function App() {
   const settings = useSettings();
   const [companies,setCompanies]=useState(SEED_COMPANIES);
   const [vendors,setVendors]=useState(SEED_VENDORS);
+  const [quotes,setQuotes]=useState(SEED_QUOTES);
   const [fieldMode,setFieldMode]=useState(null); // job being worked on in field
   useEffect(()=>{const h=()=>setIsMobile(window.innerWidth<768);window.addEventListener("resize",h);return()=>window.removeEventListener("resize",h);},[]);
 
@@ -6143,9 +6460,9 @@ function App() {
         {tab==="products"&&<ProductsTab/>}
         {tab==="dispatch"&&<DispatchTab settings={settings} companies={companies} setCompanies={setCompanies} vendors={vendors} fieldMode={fieldMode} setFieldMode={setFieldMode}/>}
         {tab==="history"&&<HistoryTab settings={settings} companies={companies} setCompanies={setCompanies} vendors={vendors}/>}
-        {tab==="quotes"&&<QuotesTab/>}
+        {tab==="quotes"&&<QuotesTab quotes={quotes} setQuotes={setQuotes}/>}
         {tab==="invoices"&&<InvoicesTab/>}
-        {tab==="inventory"&&<InventoryTab settings={settings} companies={companies} setCompanies={setCompanies}/>}
+        {tab==="inventory"&&<InventoryTab settings={settings} companies={companies} setCompanies={setCompanies} quotes={quotes}/>}
         {tab==="reports"&&<ReportsTab companies={companies}/>}
         {tab==="settings"&&<SettingsTab settings={settings}/>}
       </div>
