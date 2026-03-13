@@ -789,7 +789,7 @@ function JobsSection({agent,onUpdate,settings}) {
         <div style={{background:"#eff6ff",border:`1px solid ${C.accent}`,borderRadius:8,padding:"8px 12px",marginBottom:14,fontSize:12,color:C.accent,fontWeight:600}}>🔢 Number assigned automatically (e.g. 1007, 1007a for recalls)</div>
         <ListManager label="Job Type" items={jobTypes} onChange={setJobTypes}/>
         <div style={{marginBottom:14}}><label style={{display:"block",color:C.sub,fontSize:12,fontWeight:600,textTransform:"uppercase",letterSpacing:0.5,marginBottom:5}}>Job Type</label><select value={newJob.type||jobTypes[0]} onChange={e=>setNewJob({...newJob,type:e.target.value})} style={{width:"100%",background:C.raised,border:`1px solid ${C.border}`,borderRadius:8,padding:"9px 12px",color:C.text,fontSize:13,fontFamily:"inherit",boxSizing:"border-box"}}>{jobTypes.map(t=><option key={t}>{t}</option>)}</select></div>
-        <FF label="Property Address" value={newJob.address} onChange={v=>setNewJob({...newJob,address:v})} placeholder="e.g. 22 Oak St, Parramatta NSW" required/>
+        <AddressAutocomplete value={newJob.address} onChange={(addr,coords)=>setNewJob({...newJob,address:addr,...(coords||{})})} placeholder="e.g. 22 Oak St, Parramatta NSW" required/>
         <FF label="Description" value={newJob.description} onChange={v=>setNewJob({...newJob,description:v})} placeholder="Describe the work needed..." type="textarea"/>
         {/* Stage */}
         <div style={{marginBottom:14}}><label style={{display:"block",color:C.sub,fontSize:12,fontWeight:600,textTransform:"uppercase",letterSpacing:0.5,marginBottom:5}}>Stage</label><select value={newJob.stage} onChange={e=>setNewJob({...newJob,stage:e.target.value})} style={{width:"100%",background:C.raised,border:`1px solid ${C.border}`,borderRadius:8,padding:"9px 12px",color:C.text,fontSize:13,fontFamily:"inherit",boxSizing:"border-box"}}>{jobStages.map(s=><option key={s}>{s}</option>)}</select></div>
@@ -1915,6 +1915,10 @@ function MapPinTooltip({job, project, allTechNames}) {
 
 // Colour palette per tech (cycles)
 const TECH_COLORS = ["#3b82f6","#f97316","#10b981","#8b5cf6","#ec4899","#14b8a6","#f59e0b","#6366f1"];
+
+// 🔑 Google Maps API Key — paste yours here, enable Maps JS API + Places API
+// 🔑 Set your Google Maps API key below — enables map view + address autocomplete
+const GMAPS_KEY = "AIzaSyD_JdutSUbztewIWTqP1Xihy3KmQ2alXmY";
 const techColor = (techName, allTechs) => {
   const idx = allTechs.indexOf(techName);
   return TECH_COLORS[idx % TECH_COLORS.length] || "#64748b";
@@ -2255,179 +2259,354 @@ function DispatchCalendar({jobs, allTechNames, onOpen}) {
 }
 
 /* ─── MAP VIEW ───────────────────────────────────────── */
-function DispatchMap({jobs, allTechNames, onOpen}) {
-  const [hovTech, setHovTech] = useState(null);
-  const [hovJob,  setHovJob]  = useState(null);
+/* ═══════════════════════════════════════════
+   ADDRESS AUTOCOMPLETE
+   Uses Google Places if API key is set, otherwise plain text input
+   Props: value, onChange(address, {lat,lng}), placeholder, required
+═══════════════════════════════════════════ */
 
-  const W=880, H=560;
-  const pad={t:20,r:20,b:20,l:20};
-  const lngMin=150.56, lngMax=151.46, latMin=-34.22, latMax=-33.52;
+/* ═══════════════════════════════════════════
+   GOOGLE MAPS LOADER
+   Uses the modern importLibrary pattern from Google's official docs.
+   Call loadGoogleMaps() once — safe to call multiple times.
+═══════════════════════════════════════════ */
+function loadGoogleMaps() {
+  if(GMAPS_KEY === "YOUR_GOOGLE_MAPS_API_KEY") return Promise.reject("no-key");
+  // Already loaded
+  if(window.google?.maps?.importLibrary) return Promise.resolve();
+  // Already loading
+  if(window.__gmapsPromise__) return window.__gmapsPromise__;
 
-  const px = (lat,lng) => [
-    pad.l + ((lng-lngMin)/(lngMax-lngMin))*(W-pad.l-pad.r),
-    H-pad.b - ((lat-latMin)/(latMax-latMin))*(H-pad.t-pad.b),
-  ];
+  window.__gmapsPromise__ = new Promise((resolve, reject) => {
+    // Official Google Maps bootstrap loader snippet
+    (g => {
+      var h,a,k,p="The Google Maps JavaScript API",c="google",l="importLibrary",
+          q="__ib__",m=document,b=window;
+      b=b[c]||(b[c]={});
+      var d=b.maps||(b.maps={}),r=new Set,e=new URLSearchParams,
+          u=()=>h||(h=new Promise(async(f,n)=>{
+            a=m.createElement("script");
+            e.set("libraries",[...r]+"");
+            for(k in g) e.set(k.replace(/[A-Z]/g,t=>"_"+t[0].toLowerCase()),g[k]);
+            e.set("callback",c+".maps."+q);
+            a.src=`https://maps.${c}apis.com/maps/api/js?`+e;
+            d[q]=f; a.onerror=()=>h=n(Error(p+" could not load."));
+            a.nonce=m.querySelector("script[nonce]")?.nonce||"";
+            m.head.append(a);
+          }));
+      d[l]?console.warn(p+" only loads once. Ignoring:",g):d[l]=(f,...n)=>r.add(f)&&u().then(()=>d[l](f,...n));
+    })({key: GMAPS_KEY, v: "weekly"});
 
-  const openJobs = jobs.filter(j=>j.status==="Open");
-  const withXY   = openJobs.map(j=>{ const c=jobCoords(j); const [x,y]=px(c.lat,c.lng); return {...j,x,y}; });
+    // Poll until importLibrary is available
+    const iv = setInterval(() => {
+      if(window.google?.maps?.importLibrary) {
+        clearInterval(iv);
+        resolve();
+      }
+    }, 100);
+    setTimeout(() => { clearInterval(iv); reject(new Error("timeout")); }, 15000);
+  });
 
-  const routes = allTechNames.map((tech,ti)=>({
-    tech, color:TECH_COLORS[ti%TECH_COLORS.length],
-    stops: withXY.filter(j=>j.tech===tech).sort((a,b)=>(timeToMinutes(a.scheduledTime)||9999)-(timeToMinutes(b.scheduledTime)||9999)),
-  })).filter(r=>r.stops.length>0);
+  return window.__gmapsPromise__;
+}
 
-  const suburbs=[
-    ["Sydney CBD",-33.8688,151.2093],["Parramatta",-33.8150,151.0011],["Blacktown",-33.7690,150.9054],
-    ["Penrith",-33.7510,150.6942],["Liverpool",-33.9200,150.9231],["Chatswood",-33.7969,151.1808],
-    ["Hornsby",-33.7028,151.0988],["Campbelltown",-34.0651,150.8141],["Castle Hill",-33.7300,151.0000],
-    ["Merrylands",-33.8380,150.9880],["Auburn",-33.8490,151.0340],["Seven Hills",-33.7745,150.9360],
-  ];
 
-  const roadSegs=[
-    // Parramatta Rd → CBD
-    [[-33.815,151.001],[-33.842,151.065],[-33.869,151.209]],
-    // Great Western Hwy
-    [[-33.815,151.001],[-33.769,150.905],[-33.763,150.724],[-33.751,150.694]],
-    // Pacific Hwy
-    [[-33.869,151.209],[-33.797,151.181],[-33.703,151.099]],
-    // Hume Hwy → Campbelltown
-    [[-33.869,151.209],[-33.920,150.923],[-34.065,150.814]],
-    // M7: Blacktown → Liverpool
-    [[-33.769,150.905],[-33.840,150.872],[-33.920,150.923]],
-    // Windsor Rd
-    [[-33.769,150.905],[-33.759,150.980],[-33.730,151.000]],
-    // Parramatta → Merrylands → Auburn
-    [[-33.815,151.001],[-33.838,150.988],[-33.849,151.034]],
-  ];
+/* ═══════════════════════════════════════════
+   ADDRESS AUTOCOMPLETE
+   Drop-in replacement for the address <FF> field.
+   When Google Places is available: shows predictive AU address suggestions.
+   When no API key: works as a plain text input — no errors.
+   
+   Props:
+     value       string
+     onChange    (address: string, coords: {lat,lng}|null) => void
+     placeholder string
+     required    bool
+═══════════════════════════════════════════ */
+function AddressAutocomplete({value, onChange, placeholder, required}) {
+  const inputRef = React.useRef(null);
+  const acRef    = React.useRef(null);
+  const [ready, setReady] = useState(false);
 
-  const tooltip = hovJob;
+  useEffect(() => {
+    let cancelled = false;
+    loadGoogleMaps()
+      .then(() => google.maps.importLibrary("places"))
+      .then(() => {
+        if(cancelled || !inputRef.current || acRef.current) return;
+        acRef.current = new google.maps.places.Autocomplete(inputRef.current, {
+          componentRestrictions: {country: "au"},
+          fields: ["formatted_address", "address_components", "geometry"],
+          types: ["address"],
+        });
+        acRef.current.addListener("place_changed", () => {
+          const place = acRef.current.getPlace();
+          if(!place.formatted_address) return;
+
+          // Build a clean AU address string from components
+          let streetNum = "", route = "", suburb = "", state = "", postcode = "";
+          for(const c of (place.address_components || [])) {
+            const t = c.types[0];
+            if(t === "street_number") streetNum = c.long_name;
+            if(t === "route")         route     = c.short_name;
+            if(t === "locality")      suburb    = c.long_name;
+            if(t === "administrative_area_level_1") state = c.short_name;
+            if(t === "postal_code")   postcode  = c.long_name;
+          }
+          const addr = [
+            [streetNum, route].filter(Boolean).join(" "),
+            suburb, state, postcode
+          ].filter(Boolean).join(", ");
+
+          const lat = place.geometry?.location?.lat();
+          const lng = place.geometry?.location?.lng();
+          onChange(addr || place.formatted_address, lat && lng ? {lat, lng} : null);
+        });
+        if(!cancelled) setReady(true);
+      })
+      .catch(() => {}); // no key or load error — silent fallback to plain input
+
+    return () => { cancelled = true; };
+  }, []);
 
   return (
-    <div style={{display:"flex",gap:12,alignItems:"flex-start",fontFamily:"'Inter','Segoe UI',sans-serif"}}>
+    <div style={{marginBottom:14}}>
+      <label style={{display:"block",color:C.sub,fontSize:12,fontWeight:600,textTransform:"uppercase",letterSpacing:0.5,marginBottom:5}}>
+        Property Address
+        {required && <span style={{color:"#ef4444",marginLeft:2}}>*</span>}
+        {ready && <span style={{marginLeft:8,fontSize:10,color:"#22c55e",fontWeight:500,textTransform:"none"}}>📍 autocomplete on</span>}
+      </label>
+      <input
+        ref={inputRef}
+        value={value}
+        onChange={e => onChange(e.target.value, null)}
+        placeholder={placeholder || "e.g. 22 Oak St, Parramatta NSW"}
+        autoComplete="new-password"
+        style={{
+          width:"100%", background:C.raised, border:`1px solid ${C.border}`,
+          borderRadius:8, padding:"9px 12px", color:C.text, fontSize:13,
+          fontFamily:"inherit", boxSizing:"border-box", outline:"none",
+        }}
+      />
+    </div>
+  );
+}
 
-      {/* ── SVG MAP ── */}
-      <div style={{flex:1,minWidth:0,borderRadius:12,overflow:"hidden",border:"1px solid #1e3a5f",lineHeight:0}}>
-        <svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox={`0 0 ${W} ${H}`}>
 
-          {/* bg */}
-          <rect width={W} height={H} fill="#0c1a28"/>
+/* ═══════════════════════════════════════════
+   DISPATCH MAP
+   Google Maps when key is set, friendly placeholder when not.
+═══════════════════════════════════════════ */
+function DispatchMap({jobs, allTechNames, onOpen}) {
+  const mapDivRef    = React.useRef(null);
+  const gMapRef      = React.useRef(null);
+  const markersRef   = React.useRef([]);
+  const polylinesRef = React.useRef([]);
+  const infoWinRef   = React.useRef(null);
+  const [status, setStatus] = useState("idle"); // idle | loading | ready | error | nokey
 
-          {/* grid */}
-          {Array.from({length:9},(_,i)=>(i+1)/10).map(f=>(
-            <g key={f}>
-              <line x1={f*W} y1={0} x2={f*W} y2={H} stroke="#162840" strokeWidth={1}/>
-              <line x1={0} y1={f*H} x2={W} y2={f*H} stroke="#162840" strokeWidth={1}/>
-            </g>
-          ))}
+  const openJobs = jobs.filter(j => j.status === "Open");
 
-          {/* roads */}
-          {roadSegs.map((seg,ri)=>{
-            const pts=seg.map(([la,ln])=>px(la,ln));
-            const d=pts.map(([x,y],i)=>`${i?"L":"M"}${x.toFixed(1)},${y.toFixed(1)}`).join(" ");
-            return <path key={ri} d={d} fill="none" stroke="#1e3d60" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"/>;
-          })}
+  const techRoutes = allTechNames.map((tech, ti) => ({
+    tech,
+    color: TECH_COLORS[ti % TECH_COLORS.length],
+    stops: openJobs
+      .filter(j => j.tech === tech)
+      .sort((a,b) => (timeToMinutes(a.scheduledTime)||9999)-(timeToMinutes(b.scheduledTime)||9999))
+      .map(j => ({...j, coords: jobCoords(j)})),
+  })).filter(r => r.stops.length > 0);
 
-          {/* suburb labels */}
-          {suburbs.map(([name,lat,lng])=>{
-            const [x,y]=px(lat,lng);
-            return (
-              <g key={name}>
-                <circle cx={x} cy={y} r={2} fill="#2a5080"/>
-                <text x={x+5} y={y+4} fontSize={9} fill="#3a6a9a" fontFamily="sans-serif">{name}</text>
-              </g>
-            );
-          })}
+  // Load Google Maps using the official importLibrary pattern
+  useEffect(() => {
+    if(GMAPS_KEY === "YOUR_GOOGLE_MAPS_API_KEY") { setStatus("nokey"); return; }
+    setStatus("loading");
+    loadGoogleMaps()
+      .then(() => google.maps.importLibrary("maps"))
+      .then(() => setStatus("ready"))
+      .catch(() => setStatus("error"));
+  }, []);
 
-          {/* route lines — glow then solid */}
-          {routes.map(({tech,color,stops})=>{
-            const isHov=hovTech===tech;
-            const fade=hovTech&&!isHov;
-            if(stops.length<2) return null;
-            return (
-              <g key={tech} opacity={fade?0.07:1}>
-                {stops.slice(0,-1).map((s,i)=>{
-                  const n=stops[i+1];
-                  return (
-                    <g key={i}>
-                      <line x1={s.x} y1={s.y} x2={n.x} y2={n.y} stroke={color} strokeWidth={10} opacity={0.15} strokeLinecap="round"/>
-                      <line x1={s.x} y1={s.y} x2={n.x} y2={n.y} stroke={color} strokeWidth={3}   opacity={1}    strokeLinecap="round"/>
-                    </g>
-                  );
-                })}
-              </g>
-            );
-          })}
+  // Init map once status=ready and div is mounted
+  useEffect(() => {
+    if(status !== "ready" || !mapDivRef.current || gMapRef.current) return;
+    google.maps.importLibrary("maps").then(({Map}) => {
+      gMapRef.current = new Map(mapDivRef.current, {
+        center: {lat: -33.83, lng: 150.95},
+        zoom: 10,
+        mapTypeId: "roadmap",
+        streetViewControl: false,
+        mapTypeControl: false,
+        fullscreenControl: true,
+        styles: [
+          {elementType:"geometry",       stylers:[{color:"#1a2744"}]},
+          {elementType:"labels.text.fill",stylers:[{color:"#8ec3b9"}]},
+          {elementType:"labels.text.stroke",stylers:[{color:"#1a3646"}]},
+          {featureType:"road",elementType:"geometry",stylers:[{color:"#304a7d"}]},
+          {featureType:"road.highway",elementType:"geometry",stylers:[{color:"#2c6675"}]},
+          {featureType:"water",elementType:"geometry",stylers:[{color:"#0e1626"}]},
+          {featureType:"poi",stylers:[{visibility:"off"}]},
+          {featureType:"transit",stylers:[{visibility:"off"}]},
+        ],
+      });
+      infoWinRef.current = new google.maps.InfoWindow();
+    });
+  }, [status]);
 
-          {/* direction arrows */}
-          {routes.map(({tech,color,stops})=>{
-            if(stops.length<2) return null;
-            return (
-              <g key={"arr"+tech}>
-                {stops.slice(0,-1).map((s,i)=>{
-                  const n=stops[i+1];
-                  const mx=(s.x+n.x)/2, my=(s.y+n.y)/2;
-                  const ang=Math.atan2(n.y-s.y,n.x-s.x)*180/Math.PI;
-                  return (
-                    <g key={i} transform={`translate(${mx},${my}) rotate(${ang})`}>
-                      <polygon points="0,-5 9,0 0,5" fill={color} opacity={0.95}/>
-                    </g>
-                  );
-                })}
-              </g>
-            );
-          })}
+  // Draw/redraw markers and polylines whenever routes change
+  useEffect(() => {
+    if(!gMapRef.current || status !== "ready") return;
+    const routeKey = techRoutes.map(r => r.tech + r.stops.length).join(",");
+    // Small delay to ensure map is initialised
+    const t = setTimeout(() => drawMarkers(routeKey), 200);
+    return () => clearTimeout(t);
+  }, [status, techRoutes.map(r => r.tech + r.stops.length).join(",")]);
 
-          {/* pins */}
-          {withXY.map(job=>{
-            const ti=allTechNames.indexOf(job.tech);
-            const col=TECH_COLORS[ti%TECH_COLORS.length]||"#888";
-            const isHov=hovJob?.id===job.id;
-            const fade=hovTech&&hovTech!==job.tech;
-            const r=isHov?14:10;
-            return (
-              <g key={job.id} style={{cursor:"pointer"}} opacity={fade?0.1:1}
-                onMouseEnter={()=>setHovJob(job)} onMouseLeave={()=>setHovJob(null)}
-                onClick={()=>onOpen(job)}>
-                <circle cx={job.x} cy={job.y} r={r+2} fill="#fff"/>
-                <circle cx={job.x} cy={job.y} r={r}   fill={col}/>
-                <text x={job.x} y={job.y+3.5} textAnchor="middle" fontSize={7}
-                  fill="#fff" fontWeight="900" fontFamily="sans-serif">{job.ref}</text>
-              </g>
-            );
-          })}
+  function drawMarkers() {
+    if(!gMapRef.current) return;
+    const gm = google.maps;
 
-          {/* stop-order numbers above each pin */}
-          {routes.map(({tech,color,stops})=>
-            stops.map((s,i)=>(
-              <text key={tech+i} x={s.x} y={s.y-15} textAnchor="middle"
-                fontSize={9} fill={color} fontWeight="900" fontFamily="sans-serif">{i+1}</text>
-            ))
-          )}
+    markersRef.current.forEach(m => m.setMap(null));
+    polylinesRef.current.forEach(p => p.setMap(null));
+    markersRef.current = [];
+    polylinesRef.current = [];
 
-          {/* tooltip */}
-          {tooltip&&<MapPinTooltip job={tooltip} project={({lat,lng})=>{const [x,y]=px(lat,lng);return {x,y};}} allTechNames={allTechNames}/>}
+    const bounds = new gm.LatLngBounds();
 
-        </svg>
+    techRoutes.forEach(({tech, color, stops}) => {
+      // Polyline with directional arrows
+      if(stops.length > 1) {
+        const line = new gm.Polyline({
+          path: stops.map(s => ({lat: s.coords.lat, lng: s.coords.lng})),
+          strokeColor: color,
+          strokeOpacity: 0.9,
+          strokeWeight: 4,
+          map: gMapRef.current,
+          icons: [{
+            icon: {
+              path: gm.SymbolPath.FORWARD_CLOSED_ARROW,
+              scale: 3,
+              fillColor: color, fillOpacity: 1,
+              strokeColor: color,
+            },
+            offset: "50%", repeat: "100px",
+          }],
+        });
+        polylinesRef.current.push(line);
+      }
+
+      stops.forEach((job, i) => {
+        const pos = {lat: job.coords.lat, lng: job.coords.lng};
+        bounds.extend(pos);
+
+        const svg = encodeURIComponent(`
+          <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40">
+            <circle cx="20" cy="20" r="18" fill="${color}" stroke="white" stroke-width="2.5"/>
+            <text x="20" y="16" text-anchor="middle" font-size="9" fill="white" font-weight="900" font-family="Inter,Arial,sans-serif">${job.ref}</text>
+            <text x="20" y="27" text-anchor="middle" font-size="10" fill="white" font-weight="700" font-family="Inter,Arial,sans-serif">${i+1}</text>
+          </svg>`);
+
+        const marker = new gm.Marker({
+          position: pos,
+          map: gMapRef.current,
+          icon: {url: `data:image/svg+xml;charset=UTF-8,${svg}`, anchor: new gm.Point(20, 20)},
+          title: `${job.ref} — ${(job.address||"").split(",")[0]}`,
+          zIndex: 10 + i,
+        });
+
+        marker.addListener("click", () => {
+          infoWinRef.current.setContent(`
+            <div style="font-family:'Inter',Arial,sans-serif;padding:4px;min-width:190px">
+              <div style="font-weight:800;font-size:13px;color:${color};margin-bottom:6px">${job.ref} · Stop ${i+1}</div>
+              <div style="font-size:12px;color:#1e293b;font-weight:600;margin-bottom:3px">${(job.address||"").split(",")[0]}</div>
+              <div style="font-size:11px;color:#64748b;margin-bottom:2px">🕐 ${job.scheduledTime||"TBD"} &nbsp;·&nbsp; ${job.durationHrs||1}hr</div>
+              <div style="font-size:11px;color:#64748b;margin-bottom:2px">👷 ${job.tech}</div>
+              <div style="font-size:11px;color:#64748b;margin-bottom:8px">📋 ${job.stage}</div>
+              <button onclick="window.__fpOpen('${job.id}')"
+                style="background:${color};color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;width:100%">
+                Open Job ›
+              </button>
+            </div>
+          `);
+          infoWinRef.current.open(gMapRef.current, marker);
+        });
+
+        markersRef.current.push(marker);
+      });
+    });
+
+    window.__fpOpen = (jobId) => {
+      const j = openJobs.find(x => x.id === jobId);
+      if(j) { onOpen(j); infoWinRef.current?.close(); }
+    };
+
+    if(!bounds.isEmpty()) {
+      gMapRef.current.fitBounds(bounds, {top:50, right:50, bottom:50, left:50});
+    }
+  }
+
+  return (
+    <div style={{display:"flex", gap:12, alignItems:"flex-start"}}>
+
+      {/* Map panel */}
+      <div style={{flex:1, minWidth:0}}>
+
+        {status === "nokey" && (
+          <div style={{height:520,borderRadius:12,border:"2px dashed #cbd5e1",background:"#f8fafc",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:16,padding:32}}>
+            <div style={{fontSize:52}}>🗺️</div>
+            <div style={{fontSize:18,fontWeight:800,color:"#0f172a"}}>Google Maps Ready to Connect</div>
+            <div style={{fontSize:13,color:"#64748b",textAlign:"center",maxWidth:380,lineHeight:1.7}}>
+              Set your API key in <code style={{background:"#e2e8f0",padding:"2px 6px",borderRadius:4,fontSize:12}}>App.jsx</code> to enable live maps with real routes, satellite view, and address autocomplete on new jobs.
+            </div>
+            <div style={{background:"#0f172a",borderRadius:8,padding:"12px 20px",fontSize:12,color:"#94a3b8",fontFamily:"monospace"}}>
+              const GMAPS_KEY = "<span style={{color:"#fbbf24"}}>YOUR_KEY_HERE</span>";
+            </div>
+            <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noreferrer"
+              style={{background:"#2563eb",color:"#fff",borderRadius:8,padding:"10px 24px",fontSize:13,fontWeight:700,textDecoration:"none"}}>
+              Get API Key →
+            </a>
+            <div style={{fontSize:11,color:"#94a3b8",textAlign:"center"}}>
+              Enable: <strong>Maps JavaScript API</strong> and <strong>Places API</strong>
+            </div>
+          </div>
+        )}
+
+        {status === "loading" && (
+          <div style={{height:520,borderRadius:12,border:"1px solid #e2e8f0",background:"#f8fafc",display:"flex",alignItems:"center",justifyContent:"center",gap:12,color:"#64748b",fontSize:14}}>
+            <div style={{width:22,height:22,border:"3px solid #e2e8f0",borderTopColor:"#2563eb",borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/>
+            Loading Google Maps…
+          </div>
+        )}
+
+        {status === "error" && (
+          <div style={{height:520,borderRadius:12,border:"1px solid #fecaca",background:"#fef2f2",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:10}}>
+            <div style={{fontSize:36}}>⚠️</div>
+            <div style={{fontSize:14,fontWeight:700,color:"#dc2626"}}>Map failed to load</div>
+            <div style={{fontSize:12,color:"#ef4444",textAlign:"center",maxWidth:300}}>Check your API key is valid and Maps JavaScript API + Places API are enabled in Google Cloud Console.</div>
+          </div>
+        )}
+
+        {/* The map div — always rendered once ready so the ref is stable */}
+        <div ref={mapDivRef} style={{
+          width:"100%", height:520,
+          borderRadius:12, border:"1px solid #e2e8f0",
+          display: status === "ready" ? "block" : "none",
+        }}/>
       </div>
 
-      {/* ── SIDE PANEL ── */}
-      <div style={{width:196,flexShrink:0,display:"flex",flexDirection:"column",gap:8,maxHeight:560,overflowY:"auto"}}>
+      {/* Side panel */}
+      <div style={{width:200,flexShrink:0,display:"flex",flexDirection:"column",gap:8,maxHeight:520,overflowY:"auto"}}>
         <div style={{fontSize:10,fontWeight:800,color:"#64748b",textTransform:"uppercase",letterSpacing:1}}>Today's Routes</div>
 
-        {routes.map(({tech,color,stops})=>(
-          <div key={tech}
-            style={{background:hovTech===tech?"#fff":"#f8fafc",border:`2px solid ${hovTech===tech?color:"#e2e8f0"}`,borderRadius:10,padding:"10px 11px",cursor:"pointer",boxShadow:hovTech===tech?`0 2px 12px ${color}44`:"none"}}
-            onMouseEnter={()=>setHovTech(tech)} onMouseLeave={()=>setHovTech(null)}>
+        {techRoutes.map(({tech, color, stops}) => (
+          <div key={tech} style={{background:"#f8fafc",border:`2px solid ${color}33`,borderRadius:10,padding:"10px 11px"}}>
             <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:7}}>
-              <div style={{width:10,height:10,borderRadius:"50%",background:color,flexShrink:0}}/>
+              <div style={{width:10,height:10,borderRadius:"50%",background:color,flexShrink:0,boxShadow:`0 0 6px ${color}`}}/>
               <span style={{fontWeight:700,fontSize:12,color:"#0f172a",flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{tech.split(" ")[0]}</span>
               <span style={{background:color,color:"#fff",borderRadius:99,fontSize:10,fontWeight:800,padding:"1px 7px"}}>{stops.length}</span>
             </div>
-            {stops.map((j,i)=>(
-              <div key={j.id}
-                style={{display:"flex",gap:6,alignItems:"flex-start",padding:"4px 0",borderTop:i>0?"1px solid #e2e8f0":"none"}}
-                onMouseEnter={()=>setHovJob(j)} onMouseLeave={()=>setHovJob(null)}
-                onClick={e=>{e.stopPropagation();onOpen(j);}}>
+            {stops.map((j,i) => (
+              <div key={j.id} onClick={()=>onOpen(j)}
+                style={{display:"flex",gap:6,alignItems:"flex-start",padding:"4px 0",borderTop:i>0?"1px solid #e2e8f0":"none",cursor:"pointer"}}>
                 <div style={{width:16,height:16,borderRadius:"50%",background:color,color:"#fff",fontSize:8,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginTop:1}}>{i+1}</div>
                 <div style={{minWidth:0}}>
                   <div style={{fontSize:11,fontWeight:600,color:"#0f172a",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{(j.address||"").split(",")[0]}</div>
@@ -2438,11 +2617,11 @@ function DispatchMap({jobs, allTechNames, onOpen}) {
           </div>
         ))}
 
-        {routes.length===0&&<div style={{color:"#94a3b8",fontSize:12,padding:12}}>No open jobs</div>}
+        {techRoutes.length === 0 && <div style={{color:"#94a3b8",fontSize:12,padding:12}}>No open jobs</div>}
 
         <div style={{padding:"10px 11px",background:"#f8fafc",borderRadius:10,border:"1px solid #e2e8f0",flexShrink:0}}>
           <div style={{fontSize:10,fontWeight:700,color:"#64748b",textTransform:"uppercase",letterSpacing:0.5,marginBottom:6}}>Technicians</div>
-          {allTechNames.map((t,i)=>(
+          {allTechNames.map((t,i) => (
             <div key={t} style={{display:"flex",alignItems:"center",gap:7,marginBottom:4,fontSize:11,color:"#64748b"}}>
               <span style={{width:9,height:9,borderRadius:"50%",background:TECH_COLORS[i%TECH_COLORS.length],display:"inline-block",flexShrink:0}}/>
               {t}
@@ -2455,9 +2634,6 @@ function DispatchMap({jobs, allTechNames, onOpen}) {
 }
 
 
-/* ═══════════════════════════════════════════
-   QUICK ASSIGN PICKER (Company → Branch → Agent with Add New)
-═══════════════════════════════════════════ */
 function QuickAssignPicker({companies,setCompanies,selCo,setSelCo,selBr,setSelBr,selAg,setSelAg}){
   const [miniModal,setMiniModal]=useState(null); // "company"|"branch"|"agent"
   const [mf,setMf]=useState({});
@@ -4015,7 +4191,7 @@ function HistoryTab({settings, companies, setCompanies, vendors}) {
           selBr={selBr} setSelBr={v=>{setSelBr(v);setSelAg("");}}
           selAg={selAg} setSelAg={setSelAg}
         />
-        <FF label="Property Address" value={nj.address} onChange={v=>setNj({...nj,address:v})} placeholder="e.g. 22 Oak St, Parramatta NSW" required/>
+        <AddressAutocomplete value={nj.address} onChange={(addr,coords)=>setNj({...nj,address:addr,...(coords||{})})} placeholder="e.g. 22 Oak St, Parramatta NSW" required/>
         <FF label="Description" value={nj.description} onChange={v=>setNj({...nj,description:v})} placeholder="Describe the work needed..." type="textarea"/>
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:14}}>
           <div><label style={{display:"block",color:C.sub,fontSize:12,fontWeight:600,textTransform:"uppercase",letterSpacing:0.5,marginBottom:5}}>Job Type</label><select value={nj.type||jobTypes[0]} onChange={e=>setNj({...nj,type:e.target.value})} style={{width:"100%",background:C.raised,border:`1px solid ${C.border}`,borderRadius:8,padding:"9px 12px",color:C.text,fontSize:13,fontFamily:"inherit",boxSizing:"border-box"}}>{jobTypes.map(t=><option key={t}>{t}</option>)}</select></div>
