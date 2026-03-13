@@ -64,10 +64,10 @@ const DEFAULT_REPORT_TEMPLATES = [
 ];
 const DEFAULT_JOB_SUBSTAGES = ["Waiting on tenant","Parts ordered","Awaiting approval","Pending inspection","Follow-up required","On hold – weather","Subcontractor booked","Materials delivered"];
 const DEFAULT_FIELD_STAFF = [
-  {id:"fs1",name:"Jake Rivera",role:"Lead Technician",phone:"0411 100 200",email:"jake@fieldpro.com",trades:["Plumbing","HVAC"],status:"Active"},
-  {id:"fs2",name:"Tom Yuen",role:"Electrician",phone:"0411 200 300",email:"tom@fieldpro.com",trades:["Electrical"],status:"Active"},
-  {id:"fs3",name:"Maria Flores",role:"HVAC Specialist",phone:"0411 300 400",email:"maria@fieldpro.com",trades:["HVAC"],status:"Active"},
-  {id:"fs4",name:"Anita Shaw",role:"Plumber",phone:"0411 400 500",email:"anita@fieldpro.com",trades:["Plumbing"],status:"Active"},
+  {id:"fs1",name:"Jake Rivera",role:"Lead Technician",phone:"0411 100 200",email:"jake@fieldpro.com",trades:["Plumbing","HVAC"],status:"Active",zone:null},
+  {id:"fs2",name:"Tom Yuen",role:"Electrician",phone:"0411 200 300",email:"tom@fieldpro.com",trades:["Electrical"],status:"Active",zone:null},
+  {id:"fs3",name:"Maria Flores",role:"HVAC Specialist",phone:"0411 300 400",email:"maria@fieldpro.com",trades:["HVAC"],status:"Active",zone:null},
+  {id:"fs4",name:"Anita Shaw",role:"Plumber",phone:"0411 400 500",email:"anita@fieldpro.com",trades:["Plumbing"],status:"Active",zone:null},
 ];
 
 /* ─── HELPERS ─── */
@@ -804,6 +804,274 @@ function JobsSection({agent,onUpdate,settings}) {
   </div>);
 }
 
+
+/* ═══════════════════════════════════════════
+   ZONES EDITOR — Settings → Zones tab
+   Draw polygon zones per technician on Google Maps.
+   Uses DrawingManager to click-place vertices.
+═══════════════════════════════════════════ */
+function ZonesEditor({fieldStaff, setFieldStaff}) {
+  const [selTechId, setSelTechId] = useState(null);
+  const mapDivRef    = useRef(null);
+  const gMapRef      = useRef(null);
+  const dmRef        = useRef(null);  // DrawingManager
+  const polyRef      = useRef(null);  // current editable polygon
+  const zonesRef     = useRef([]);    // rendered zone polygons [{techId, polygon}]
+  const [mapStatus, setMapStatus] = useState("idle");
+  const [drawing, setDrawing] = useState(false);
+  const [hasDraft, setHasDraft] = useState(false);
+
+  const selTech = fieldStaff.find(f=>f.id===selTechId);
+  const activeTechs = fieldStaff.filter(f=>f.status==="Active");
+  const allTechNames = activeTechs.map(f=>f.name);
+
+  // Load maps with drawing library
+  const loadMapsForZones = () => {
+    if(GMAPS_KEY === "YOUR_GOOGLE_MAPS_API_KEY") { setMapStatus("nokey"); return; }
+    if(window.__gmapsPromise__) { window.__gmapsPromise__.then(()=>setMapStatus("ready")).catch(()=>setMapStatus("error")); return; }
+    setMapStatus("loading");
+    window.__gmapsPromise__ = new Promise((resolve, reject) => {
+      if(window.google && window.google.maps) { resolve(); return; }
+      const cb = "__gmapsReady__";
+      window[cb] = resolve;
+      const s = document.createElement("script");
+      s.src = `https://maps.googleapis.com/maps/api/js?key=${GMAPS_KEY}&libraries=places,drawing&callback=${cb}&loading=async`;
+      s.async = true; s.defer = true;
+      s.onerror = () => reject(new Error("failed"));
+      document.head.appendChild(s);
+      setTimeout(() => reject(new Error("timeout")), 15000);
+    });
+    window.__gmapsPromise__.then(()=>setMapStatus("ready")).catch(()=>setMapStatus("error"));
+  };
+
+  useEffect(()=>{ loadMapsForZones(); }, []);
+
+  // Init map once ready
+  useEffect(()=>{
+    if(mapStatus !== "ready" || !mapDivRef.current || gMapRef.current) return;
+    gMapRef.current = new window.google.maps.Map(mapDivRef.current, {
+      center: {lat:-33.83, lng:150.95}, zoom:10,
+      mapTypeId:"roadmap", streetViewControl:false, mapTypeControl:false, fullscreenControl:false,
+      styles:[
+        {elementType:"geometry",stylers:[{color:"#1a2744"}]},
+        {elementType:"labels.text.fill",stylers:[{color:"#8ec3b9"}]},
+        {elementType:"labels.text.stroke",stylers:[{color:"#1a3646"}]},
+        {featureType:"road",elementType:"geometry",stylers:[{color:"#304a7d"}]},
+        {featureType:"road.highway",elementType:"geometry",stylers:[{color:"#2c6675"}]},
+        {featureType:"water",elementType:"geometry",stylers:[{color:"#0e1626"}]},
+        {featureType:"poi",stylers:[{visibility:"off"}]},
+        {featureType:"transit",stylers:[{visibility:"off"}]},
+      ],
+    });
+    // Create DrawingManager
+    dmRef.current = new window.google.maps.drawing.DrawingManager({
+      drawingMode: null,
+      drawingControl: false,
+      polygonOptions: {
+        fillOpacity: 0.15,
+        strokeWeight: 2,
+        editable: true,
+        draggable: false,
+        zIndex: 1,
+      },
+    });
+    dmRef.current.setMap(gMapRef.current);
+    window.google.maps.event.addListener(dmRef.current, "polygoncomplete", poly => {
+      // Switch off drawing mode
+      dmRef.current.setDrawingMode(null);
+      if(polyRef.current) polyRef.current.setMap(null);
+      polyRef.current = poly;
+      // Style with tech colour
+      const ti = allTechNames.indexOf(selTech?.name||"");
+      const col = TECH_COLORS[ti%TECH_COLORS.length]||"#0ea5e9";
+      poly.setOptions({strokeColor:col, fillColor:col});
+      setDrawing(false);
+      setHasDraft(true);
+    });
+    renderZones();
+  }, [mapStatus]);
+
+  // Re-render all saved zones when fieldStaff changes
+  useEffect(()=>{
+    if(mapStatus === "ready" && gMapRef.current) renderZones();
+  }, [fieldStaff, mapStatus, selTechId]);
+
+  const renderZones = () => {
+    if(!gMapRef.current) return;
+    zonesRef.current.forEach(({polygon,label})=>{ polygon.setMap(null); if(label) label.setMap(null); });
+    zonesRef.current = [];
+    fieldStaff.forEach((f,fi)=>{
+      if(!f.zone || f.zone.length<3) return;
+      const col = TECH_COLORS[allTechNames.indexOf(f.name)%TECH_COLORS.length]||"#64748b";
+      const isSelected = f.id === selTechId;
+      const poly = new window.google.maps.Polygon({
+        paths: f.zone,
+        strokeColor: col,
+        strokeOpacity: isSelected ? 1 : 0.7,
+        strokeWeight: isSelected ? 3 : 2,
+        fillColor: col,
+        fillOpacity: isSelected ? 0.2 : 0.08,
+        map: gMapRef.current,
+        zIndex: isSelected ? 2 : 1,
+      });
+      // Label at centroid
+      const lats = f.zone.map(p=>p.lat);
+      const lngs = f.zone.map(p=>p.lng);
+      const centerLat = (Math.min(...lats)+Math.max(...lats))/2;
+      const centerLng = (Math.min(...lngs)+Math.max(...lngs))/2;
+      const label = new window.google.maps.Marker({
+        position:{lat:centerLat,lng:centerLng},
+        map:gMapRef.current,
+        icon:{url:`data:image/svg+xml;charset=UTF-8,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="80" height="22"><rect width="80" height="22" rx="5" fill="${col}" opacity="0.85"/><text x="40" y="15" text-anchor="middle" font-size="11" fill="white" font-weight="700" font-family="Inter,Arial,sans-serif">${f.name.split(" ")[0]}</text></svg>`)}`,anchor:new window.google.maps.Point(40,11)},
+        zIndex:5,
+      });
+      zonesRef.current.push({polygon:poly, label, techId:f.id});
+    });
+  };
+
+  const startDraw = () => {
+    if(!gMapRef.current || !dmRef.current) return;
+    // Clear existing draft
+    if(polyRef.current) { polyRef.current.setMap(null); polyRef.current=null; }
+    setHasDraft(false);
+    const ti = allTechNames.indexOf(selTech?.name||"");
+    const col = TECH_COLORS[ti%TECH_COLORS.length]||"#0ea5e9";
+    dmRef.current.setOptions({polygonOptions:{fillColor:col,strokeColor:col,fillOpacity:0.2,strokeWeight:2.5,editable:true,zIndex:10}});
+    dmRef.current.setDrawingMode(window.google.maps.drawing.OverlayType.POLYGON);
+    setDrawing(true);
+  };
+
+  const cancelDraw = () => {
+    if(dmRef.current) dmRef.current.setDrawingMode(null);
+    if(polyRef.current) { polyRef.current.setMap(null); polyRef.current=null; }
+    setDrawing(false);
+    setHasDraft(false);
+  };
+
+  const saveZone = () => {
+    if(!polyRef.current || !selTechId) return;
+    const path = polyRef.current.getPath().getArray().map(ll=>({lat:ll.lat(),lng:ll.lng()}));
+    if(path.length < 3) return;
+    setFieldStaff(fieldStaff.map(f=>f.id===selTechId?{...f,zone:path}:f));
+    if(polyRef.current) { polyRef.current.setMap(null); polyRef.current=null; }
+    setHasDraft(false);
+    setDrawing(false);
+  };
+
+  const clearZone = () => {
+    if(!selTechId) return;
+    setFieldStaff(fieldStaff.map(f=>f.id===selTechId?{...f,zone:null}:f));
+    if(polyRef.current) { polyRef.current.setMap(null); polyRef.current=null; }
+    setHasDraft(false);
+  };
+
+  return (
+    <div>
+      <div style={{marginBottom:16}}>
+        <div style={{fontWeight:800,fontSize:16,color:C.text,marginBottom:4}}>🗺️ Technician Zones</div>
+        <p style={{color:C.sub,fontSize:13}}>Draw service zones for each technician. Jobs outside a tech's zone will show a warning on the Dispatch Board. Select a technician below, then draw their zone on the map.</p>
+      </div>
+
+      {/* Tech selector cards */}
+      <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:16}}>
+        {activeTechs.map((f,i)=>{
+          const col = TECH_COLORS[i%TECH_COLORS.length];
+          const hasZone = f.zone && f.zone.length>=3;
+          const isSelected = f.id===selTechId;
+          return(
+            <div key={f.id} onClick={()=>{
+              if(drawing) return;
+              if(polyRef.current){polyRef.current.setMap(null);polyRef.current=null;setHasDraft(false);}
+              setSelTechId(isSelected?null:f.id);
+            }} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",borderRadius:10,border:`2px solid ${isSelected?col:C.border}`,background:isSelected?col+"18":"#fff",cursor:drawing?"not-allowed":"pointer",transition:"all 0.15s"}}>
+              <div style={{width:10,height:10,borderRadius:"50%",background:col,flexShrink:0}}/>
+              <div>
+                <div style={{fontWeight:700,fontSize:13,color:isSelected?col:C.text}}>{f.name}</div>
+                <div style={{fontSize:11,color:hasZone?C.green:C.muted,marginTop:1,fontWeight:600}}>
+                  {hasZone?"✓ Zone defined":"No zone yet"}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Map */}
+      {mapStatus==="nokey"&&(
+        <div style={{height:480,borderRadius:12,border:"2px dashed #cbd5e1",background:"#f8fafc",display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:12,color:C.muted,fontSize:14}}>
+          <div style={{fontSize:40}}>🗺️</div>
+          <div style={{fontWeight:700,color:C.text}}>Google Maps API key required</div>
+          <div style={{fontSize:12}}>Set GMAPS_KEY in App.jsx to enable zone drawing</div>
+        </div>
+      )}
+      {mapStatus==="loading"&&(
+        <div style={{height:480,borderRadius:12,border:`1px solid ${C.border}`,background:"#f8fafc",display:"flex",alignItems:"center",justifyContent:"center",gap:12,color:C.sub}}>
+          <div style={{width:22,height:22,border:"3px solid #e2e8f0",borderTopColor:C.accent,borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/>
+          Loading Google Maps…
+        </div>
+      )}
+      {mapStatus==="error"&&(
+        <div style={{height:480,borderRadius:12,border:`1px solid #fecaca`,background:"#fef2f2",display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:8,color:C.red,fontSize:14}}>
+          <div style={{fontSize:36}}>⚠️</div>Map failed to load — check API key
+        </div>
+      )}
+      <div ref={mapDivRef} style={{width:"100%",height:480,borderRadius:12,border:`1px solid ${C.border}`,display:mapStatus==="ready"?"block":"none"}}/>
+
+      {/* Controls below map */}
+      {mapStatus==="ready"&&(
+        <div style={{marginTop:12,display:"flex",gap:10,alignItems:"center",flexWrap:"wrap"}}>
+          {!selTechId&&(
+            <div style={{color:C.muted,fontSize:13,fontStyle:"italic"}}>← Select a technician above to start drawing their zone</div>
+          )}
+          {selTechId&&!drawing&&!hasDraft&&(
+            <>
+              <button onClick={startDraw}
+                style={{background:C.accent,color:"#fff",border:"none",borderRadius:8,padding:"9px 18px",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
+                ✏️ Draw Zone for {selTech?.name?.split(" ")[0]}
+              </button>
+              {selTech?.zone&&(
+                <button onClick={clearZone}
+                  style={{background:"none",border:`1px solid #fecaca`,color:C.red,borderRadius:8,padding:"9px 14px",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
+                  🗑 Clear Zone
+                </button>
+              )}
+              <span style={{color:C.muted,fontSize:12}}>
+                {selTech?.zone ? "Zone saved — redraw to update" : "Click the map to place polygon vertices, close the shape to finish"}
+              </span>
+            </>
+          )}
+          {selTechId&&drawing&&(
+            <>
+              <div style={{background:"#fffbeb",border:"1px solid #fde68a",borderRadius:8,padding:"8px 14px",fontSize:12,fontWeight:700,color:"#92400e"}}>
+                🖊️ Click to place vertices · Click the first point to close the polygon
+              </div>
+              <button onClick={cancelDraw}
+                style={{background:"none",border:`1px solid ${C.border}`,color:C.sub,borderRadius:8,padding:"8px 14px",fontSize:13,cursor:"pointer",fontFamily:"inherit"}}>
+                Cancel
+              </button>
+            </>
+          )}
+          {selTechId&&hasDraft&&!drawing&&(
+            <>
+              <div style={{background:"#f0fdf4",border:"1px solid #bbf7d0",borderRadius:8,padding:"8px 14px",fontSize:12,fontWeight:700,color:C.green}}>
+                ✓ Polygon drawn — drag vertices to adjust, then save
+              </div>
+              <button onClick={saveZone}
+                style={{background:C.green,color:"#fff",border:"none",borderRadius:8,padding:"9px 18px",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
+                💾 Save Zone
+              </button>
+              <button onClick={cancelDraw}
+                style={{background:"none",border:`1px solid ${C.border}`,color:C.sub,borderRadius:8,padding:"9px 14px",fontSize:13,cursor:"pointer",fontFamily:"inherit"}}>
+                Discard
+              </button>
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ═══════════════════════════════════════════
    SETTINGS TAB
 ═══════════════════════════════════════════ */
@@ -823,7 +1091,7 @@ function SettingsTab({settings}) {
   const toggleStaffStatus=id=>setFieldStaff(fieldStaff.map(f=>f.id===id?{...f,status:f.status==="Active"?"Inactive":"Active"}:f));
   const removeStaff=id=>setFieldStaff(fieldStaff.filter(f=>f.id!==id));
 
-  const sections=[{id:"stages",icon:"🎯",label:"Job Stages"},{id:"substages",icon:"🏷️",label:"Sub-stages"},{id:"staff",icon:"👷",label:"Field Staff"},{id:"jobtypes",icon:"🔧",label:"Job Types"},{id:"reports",icon:"📋",label:"Report Templates"},{id:"forms",icon:"📱",label:"Field Forms"},{id:"email",icon:"📧",label:"Email Templates"},{id:"fieldapp",icon:"📱",label:"Field App"}];
+  const sections=[{id:"stages",icon:"🎯",label:"Job Stages"},{id:"substages",icon:"🏷️",label:"Sub-stages"},{id:"staff",icon:"👷",label:"Field Staff"},{id:"jobtypes",icon:"🔧",label:"Job Types"},{id:"reports",icon:"📋",label:"Report Templates"},{id:"forms",icon:"📱",label:"Field Forms"},{id:"email",icon:"📧",label:"Email Templates"},{id:"fieldapp",icon:"📱",label:"Field App"},{id:"zones",icon:"🗺️",label:"Zones"}];
 
   return(<div>
     <div style={{marginBottom:20}}><h2 style={{fontSize:18,fontWeight:800,color:C.text}}>Settings</h2><p style={{color:C.sub,fontSize:12,marginTop:2}}>Manage lists, field staff, and job configuration</p></div>
@@ -955,6 +1223,9 @@ function SettingsTab({settings}) {
         <p style={{color:C.sub,fontSize:13,marginBottom:16}}>Build reusable email templates for sending from the job diary. Use merge fields to auto-fill job details.</p>
         <EmailTemplateEditor emailTemplates={emailTemplates} setEmailTemplates={setEmailTemplates}/>
       </Card>
+    )}
+    {section==="zones"&&(
+      <ZonesEditor fieldStaff={fieldStaff} setFieldStaff={setFieldStaff}/>
     )}
   </div>);
 }
@@ -1914,7 +2185,20 @@ function MapPinTooltip({job, project, allTechNames}) {
 ═══════════════════════════════════════════ */
 
 // Colour palette per tech (cycles)
-const TECH_COLORS = ["#3b82f6","#f97316","#10b981","#8b5cf6","#ec4899","#14b8a6","#f59e0b","#6366f1"];
+// Tech route colours — never green (completed) or red (visited/incomplete), those are reserved for job status
+const TECH_COLORS = ["#3b82f6","#f97316","#8b5cf6","#ec4899","#14b8a6","#f59e0b","#6366f1","#0ea5e9"];
+
+// Pin colour for a job on the map — reflects job status, not tech
+// 🟢 green  = Completed or Invoiced
+// 🔴 red    = visited (has visits logged) but not yet complete
+// tech colour = everything else (scheduled, new, on hold, in progress with no visits)
+const JOB_PIN_COMPLETE  = "#16a34a"; // green
+const JOB_PIN_VISITED   = "#dc2626"; // red
+function jobPinColor(job, techColor) {
+  if(job.stage === "Completed" || job.stage === "Invoiced") return JOB_PIN_COMPLETE;
+  if((job.visits||[]).length > 0) return JOB_PIN_VISITED;
+  return techColor;
+}
 
 // 🔑 Google Maps API Key — paste yours here, enable Maps JS API + Places API
 // 🔑 Set your Google Maps API key below — enables map view + address autocomplete
@@ -2059,7 +2343,7 @@ function DispatchTab({settings, companies, setCompanies, vendors, fieldMode, set
 
       {/* MAP VIEW */}
       {dispView==="map"&&(
-        <DispatchMap jobs={open} allTechNames={allTechNames} onOpen={setDrawerJob}/>
+        <DispatchMap jobs={open} allTechNames={allTechNames} onOpen={setDrawerJob} fieldStaff={fieldStaff}/>
       )}
 
       {/* Job Drawer */}
@@ -2373,16 +2657,18 @@ function AddressAutocomplete({value, onChange, placeholder, required}) {
    DISPATCH MAP
    Google Maps when key is set, friendly placeholder when not.
 ═══════════════════════════════════════════ */
-function DispatchMap({jobs, allTechNames, onOpen}) {
+function DispatchMap({jobs, allTechNames, onOpen, fieldStaff=[]}) {
   const mapDivRef    = useRef(null);
   const gMapRef      = useRef(null);
   const markersRef   = useRef([]);
   const polylinesRef = useRef([]);
   const infoWinRef   = useRef(null);
   const markerMapRef = useRef({}); // jobId -> {marker, color, job, stopIndex}
+  const zonesLayerRef= useRef([]); // [{polygon, label}]
   const [status, setStatus] = useState("idle");
   const [hovJob,  setHovJob]  = useState(null); // hovered job id
   const [hovTech, setHovTech] = useState(null); // hovered tech name
+  const [showZones, setShowZones] = useState(false);
 
   const openJobs = jobs.filter(j => j.status === "Open");
 
@@ -2437,6 +2723,50 @@ function DispatchMap({jobs, allTechNames, onOpen}) {
     return () => clearTimeout(t);
   }, [status, techRoutes.map(r => r.tech + r.stops.length).join(",")]);
 
+  // Show/hide technician zones overlay
+  useEffect(() => {
+    if(!gMapRef.current || status !== "ready") return;
+    // Clear existing zone polygons
+    zonesLayerRef.current.forEach(({polygon, label}) => {
+      polygon.setMap(null);
+      if(label) label.setMap(null);
+    });
+    zonesLayerRef.current = [];
+    if(!showZones) return;
+    // Draw each tech's zone
+    fieldStaff.forEach((f, fi) => {
+      if(!f.zone || f.zone.length < 3) return;
+      const col = TECH_COLORS[allTechNames.indexOf(f.name) % TECH_COLORS.length] || "#64748b";
+      const poly = new window.google.maps.Polygon({
+        paths: f.zone,
+        strokeColor: col, strokeOpacity: 0.8, strokeWeight: 2,
+        fillColor: col, fillOpacity: 0.12,
+        map: gMapRef.current, zIndex: 1,
+      });
+      // Centroid label
+      const lats = f.zone.map(p=>p.lat);
+      const lngs = f.zone.map(p=>p.lng);
+      const cLat = (Math.min(...lats)+Math.max(...lats))/2;
+      const cLng = (Math.min(...lngs)+Math.max(...lngs))/2;
+      const label = new window.google.maps.Marker({
+        position:{lat:cLat, lng:cLng},
+        map: gMapRef.current,
+        icon:{url:`data:image/svg+xml;charset=UTF-8,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="80" height="22"><rect width="80" height="22" rx="5" fill="${col}" opacity="0.85"/><text x="40" y="15" text-anchor="middle" font-size="11" fill="white" font-weight="700" font-family="Inter,Arial,sans-serif">${f.name.split(" ")[0]}</text></svg>`)}`,anchor:new window.google.maps.Point(40,11)},
+        zIndex: 5,
+      });
+      zonesLayerRef.current.push({polygon: poly, label, techId: f.id});
+    });
+  }, [showZones, status, fieldStaff]);
+
+  // Helper: is job coords inside a tech's zone polygon?
+  function isInsideZone(lat, lng, zone) {
+    if(!zone || zone.length < 3) return true; // no zone = no warning
+    const poly = new window.google.maps.Polygon({paths: zone});
+    return window.google.maps.geometry && window.google.maps.geometry.poly
+      ? window.google.maps.geometry.poly.containsLocation(new window.google.maps.LatLng(lat, lng), poly)
+      : true; // geometry lib not loaded — skip check
+  };
+
   // Build SVG marker icon — larger + glow ring when highlighted
   function makeIcon(color, ref, stopNum, highlighted) {
     const r = highlighted ? 22 : 18;
@@ -2457,7 +2787,7 @@ function DispatchMap({jobs, allTechNames, onOpen}) {
   useEffect(() => {
     if(status !== "ready") return;
     const gm = window.google.maps;
-    Object.values(markerMapRef.current).forEach(({marker, color, job, stopIndex}) => {
+    Object.values(markerMapRef.current).forEach(({marker, color, techColor, job, stopIndex}) => {
       const isJobHov  = hovJob  === job.id;
       const isTechHov = hovTech === job.tech;
       const highlighted = isJobHov || isTechHov;
@@ -2515,28 +2845,29 @@ function DispatchMap({jobs, allTechNames, onOpen}) {
       stops.forEach((job, i) => {
         const pos = {lat: job.coords.lat, lng: job.coords.lng};
         bounds.extend(pos);
+        const pinCol = jobPinColor(job, color);
 
         const marker = new gm.Marker({
           position: pos,
           map: gMapRef.current,
-          icon: makeIcon(color, job.ref, i + 1, false),
+          icon: makeIcon(pinCol, job.ref, i + 1, false),
           title: `${job.ref} — ${(job.address||"").split(",")[0]}`,
           zIndex: 10 + i,
         });
 
-        // Store for hover lookup
-        markerMapRef.current[job.id] = {marker, color, job, stopIndex: i};
+        // Store for hover lookup — store both pinCol and techColor
+        markerMapRef.current[job.id] = {marker, color: pinCol, techColor: color, job, stopIndex: i};
 
         marker.addListener("click", () => {
           infoWinRef.current.setContent(`
             <div style="font-family:'Inter',Arial,sans-serif;padding:4px;min-width:190px">
-              <div style="font-weight:800;font-size:13px;color:${color};margin-bottom:6px">${job.ref} · Stop ${i+1}</div>
+              <div style="font-weight:800;font-size:13px;color:${pinCol};margin-bottom:6px">${job.ref} · Stop ${i+1}</div>
               <div style="font-size:12px;color:#1e293b;font-weight:600;margin-bottom:3px">${(job.address||"").split(",")[0]}</div>
               <div style="font-size:11px;color:#64748b;margin-bottom:2px">🕐 ${job.scheduledTime||"TBD"} &nbsp;·&nbsp; ${job.durationHrs||1}hr</div>
               <div style="font-size:11px;color:#64748b;margin-bottom:2px">👷 ${job.tech}</div>
               <div style="font-size:11px;color:#64748b;margin-bottom:8px">📋 ${job.stage}</div>
               <button onclick="window.__fpOpen('${job.id}')"
-                style="background:${color};color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;width:100%">
+                style="background:${pinCol};color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;width:100%">
                 Open Job ›
               </button>
             </div>
@@ -2611,6 +2942,12 @@ function DispatchMap({jobs, allTechNames, onOpen}) {
       <div style={{width:200,flexShrink:0,display:"flex",flexDirection:"column",gap:8,maxHeight:520,overflowY:"auto"}}>
         <div style={{fontSize:10,fontWeight:800,color:"#64748b",textTransform:"uppercase",letterSpacing:1}}>Today's Routes</div>
 
+        {/* Show Zones toggle */}
+        <button onClick={()=>setShowZones(z=>!z)}
+          style={{background:showZones?"#0ea5e9":"#f1f5f9",color:showZones?"#fff":"#64748b",border:"none",borderRadius:7,padding:"6px 10px",fontSize:11,fontWeight:700,cursor:"pointer",textAlign:"left",fontFamily:"inherit",display:"flex",alignItems:"center",gap:6,transition:"all 0.15s"}}>
+          <span>🗺️</span> {showZones?"Zones ON":"Show Zones"}
+        </button>
+
         {techRoutes.map(({tech, color, stops}) => (
           <div key={tech}
             style={{background: hovTech===tech ? "#fff" : "#f8fafc", border:`2px solid ${hovTech===tech ? color : color+"33"}`, borderRadius:10, padding:"10px 11px", transition:"border-color 0.15s, background 0.15s", boxShadow: hovTech===tech ? `0 2px 12px ${color}44` : "none"}}
@@ -2620,18 +2957,32 @@ function DispatchMap({jobs, allTechNames, onOpen}) {
               <span style={{fontWeight:700,fontSize:12,color:"#0f172a",flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{tech.split(" ")[0]}</span>
               <span style={{background:color,color:"#fff",borderRadius:99,fontSize:10,fontWeight:800,padding:"1px 7px"}}>{stops.length}</span>
             </div>
-            {stops.map((j,i) => (
+            {stops.map((j,i) => {
+              const techStaff = fieldStaff.find(f=>f.name===tech);
+              const coords = j.coords;
+              const outOfZone = showZones && techStaff?.zone && coords && status==="ready"
+                ? (() => {
+                    try {
+                      const poly = new window.google.maps.Polygon({paths: techStaff.zone});
+                      return window.google.maps.geometry?.poly
+                        ? !window.google.maps.geometry.poly.containsLocation(new window.google.maps.LatLng(coords.lat,coords.lng), poly)
+                        : false;
+                    } catch { return false; }
+                  })()
+                : false;
+              return (
               <div key={j.id}
-                style={{display:"flex",gap:6,alignItems:"flex-start",padding:"5px 4px",borderTop:i>0?"1px solid #e2e8f0":"none",cursor:"pointer",borderRadius:6,background: hovJob===j.id ? color+"18" : "transparent",transition:"background 0.1s"}}
+                style={{display:"flex",gap:6,alignItems:"flex-start",padding:"5px 4px",borderTop:i>0?"1px solid #e2e8f0":"none",cursor:"pointer",borderRadius:6,background: outOfZone ? "#fff7ed" : hovJob===j.id ? color+"18" : "transparent",transition:"background 0.1s", border: outOfZone ? "1px solid #fed7aa" : "none"}}
                 onMouseEnter={()=>setHovJob(j.id)} onMouseLeave={()=>setHovJob(null)}
                 onClick={()=>onOpen(j)}>
                 <div style={{width:16,height:16,borderRadius:"50%",background:color,color:"#fff",fontSize:8,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginTop:1}}>{i+1}</div>
-                <div style={{minWidth:0}}>
+                <div style={{minWidth:0,flex:1}}>
                   <div style={{fontSize:11,fontWeight:600,color:"#0f172a",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{(j.address||"").split(",")[0]}</div>
                   <div style={{fontSize:9,color:"#94a3b8"}}>{j.scheduledTime||"TBD"} · {j.durationHrs||1}h · {j.ref}</div>
                 </div>
+                {outOfZone && <span title="Outside assigned zone" style={{fontSize:13,flexShrink:0}}>⚠️</span>}
               </div>
-            ))}
+            );})}
           </div>
         ))}
 
@@ -2643,6 +2994,19 @@ function DispatchMap({jobs, allTechNames, onOpen}) {
             <div key={t} style={{display:"flex",alignItems:"center",gap:7,marginBottom:4,fontSize:11,color:"#64748b"}}>
               <span style={{width:9,height:9,borderRadius:"50%",background:TECH_COLORS[i%TECH_COLORS.length],display:"inline-block",flexShrink:0}}/>
               {t}
+            </div>
+          ))}
+        </div>
+        <div style={{padding:"10px 11px",background:"#f8fafc",borderRadius:10,border:"1px solid #e2e8f0",flexShrink:0}}>
+          <div style={{fontSize:10,fontWeight:700,color:"#64748b",textTransform:"uppercase",letterSpacing:0.5,marginBottom:6}}>Pin Colours</div>
+          {[
+            {color:JOB_PIN_COMPLETE, label:"Completed / Invoiced"},
+            {color:JOB_PIN_VISITED,  label:"Visited, not complete"},
+            {color:"#94a3b8",        label:"Not yet visited"},
+          ].map(({color,label}) => (
+            <div key={label} style={{display:"flex",alignItems:"center",gap:7,marginBottom:5,fontSize:11,color:"#64748b"}}>
+              <span style={{width:9,height:9,borderRadius:"50%",background:color,display:"inline-block",flexShrink:0}}/>
+              {label}
             </div>
           ))}
         </div>
