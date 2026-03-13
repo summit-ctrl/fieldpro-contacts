@@ -2379,7 +2379,10 @@ function DispatchMap({jobs, allTechNames, onOpen}) {
   const markersRef   = useRef([]);
   const polylinesRef = useRef([]);
   const infoWinRef   = useRef(null);
-  const [status, setStatus] = useState("idle"); // idle | loading | ready | error | nokey
+  const markerMapRef = useRef({}); // jobId -> {marker, color, job, stopIndex}
+  const [status, setStatus] = useState("idle");
+  const [hovJob,  setHovJob]  = useState(null); // hovered job id
+  const [hovTech, setHovTech] = useState(null); // hovered tech name
 
   const openJobs = jobs.filter(j => j.status === "Open");
 
@@ -2434,6 +2437,47 @@ function DispatchMap({jobs, allTechNames, onOpen}) {
     return () => clearTimeout(t);
   }, [status, techRoutes.map(r => r.tech + r.stops.length).join(",")]);
 
+  // Build SVG marker icon — larger + glow ring when highlighted
+  function makeIcon(color, ref, stopNum, highlighted) {
+    const r = highlighted ? 22 : 18;
+    const size = highlighted ? 50 : 40;
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
+      ${highlighted ? `<circle cx="${size/2}" cy="${size/2}" r="${r+4}" fill="${color}" opacity="0.25"/>` : ""}
+      <circle cx="${size/2}" cy="${size/2}" r="${r}" fill="${color}" stroke="white" stroke-width="2.5"/>
+      <text x="${size/2}" y="${size/2-3}" text-anchor="middle" font-size="${highlighted?10:9}" fill="white" font-weight="900" font-family="Inter,Arial,sans-serif">${ref}</text>
+      <text x="${size/2}" y="${size/2+9}" text-anchor="middle" font-size="${highlighted?11:10}" fill="white" font-weight="700" font-family="Inter,Arial,sans-serif">${stopNum}</text>
+    </svg>`;
+    return {
+      url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`,
+      anchor: new window.google.maps.Point(size/2, size/2),
+    };
+  }
+
+  // Apply highlight to markers/polylines when hovJob or hovTech changes
+  useEffect(() => {
+    if(status !== "ready") return;
+    const gm = window.google.maps;
+    Object.values(markerMapRef.current).forEach(({marker, color, job, stopIndex}) => {
+      const isJobHov  = hovJob  === job.id;
+      const isTechHov = hovTech === job.tech;
+      const highlighted = isJobHov || isTechHov;
+      const faded = (hovJob && !isJobHov) || (hovTech && !isTechHov);
+      marker.setIcon(makeIcon(color, job.ref, stopIndex + 1, highlighted));
+      marker.setZIndex(highlighted ? 999 : 10 + stopIndex);
+      marker.setOpacity(faded ? 0.25 : 1);
+      if(isJobHov) marker.setAnimation(gm.Animation.BOUNCE);
+      else         marker.setAnimation(null);
+    });
+    // Dim/highlight polylines by tech
+    polylinesRef.current.forEach(line => {
+      const tech = line.__tech__;
+      if(!tech) return;
+      const isTechHov = hovTech === tech;
+      const faded = hovTech && !isTechHov;
+      line.setOptions({strokeOpacity: faded ? 0.1 : 0.9, strokeWeight: isTechHov ? 6 : 4});
+    });
+  }, [hovJob, hovTech, status]);
+
   function drawMarkers() {
     if(!gMapRef.current) return;
     const gm = window.google.maps;
@@ -2442,11 +2486,11 @@ function DispatchMap({jobs, allTechNames, onOpen}) {
     polylinesRef.current.forEach(p => p.setMap(null));
     markersRef.current = [];
     polylinesRef.current = [];
+    markerMapRef.current = {};
 
     const bounds = new gm.LatLngBounds();
 
     techRoutes.forEach(({tech, color, stops}) => {
-      // Polyline with directional arrows
       if(stops.length > 1) {
         const line = new gm.Polyline({
           path: stops.map(s => ({lat: s.coords.lat, lng: s.coords.lng})),
@@ -2464,6 +2508,7 @@ function DispatchMap({jobs, allTechNames, onOpen}) {
             offset: "50%", repeat: "100px",
           }],
         });
+        line.__tech__ = tech; // tag for hover
         polylinesRef.current.push(line);
       }
 
@@ -2471,20 +2516,16 @@ function DispatchMap({jobs, allTechNames, onOpen}) {
         const pos = {lat: job.coords.lat, lng: job.coords.lng};
         bounds.extend(pos);
 
-        const svg = encodeURIComponent(`
-          <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40">
-            <circle cx="20" cy="20" r="18" fill="${color}" stroke="white" stroke-width="2.5"/>
-            <text x="20" y="16" text-anchor="middle" font-size="9" fill="white" font-weight="900" font-family="Inter,Arial,sans-serif">${job.ref}</text>
-            <text x="20" y="27" text-anchor="middle" font-size="10" fill="white" font-weight="700" font-family="Inter,Arial,sans-serif">${i+1}</text>
-          </svg>`);
-
         const marker = new gm.Marker({
           position: pos,
           map: gMapRef.current,
-          icon: {url: `data:image/svg+xml;charset=UTF-8,${svg}`, anchor: new gm.Point(20, 20)},
+          icon: makeIcon(color, job.ref, i + 1, false),
           title: `${job.ref} — ${(job.address||"").split(",")[0]}`,
           zIndex: 10 + i,
         });
+
+        // Store for hover lookup
+        markerMapRef.current[job.id] = {marker, color, job, stopIndex: i};
 
         marker.addListener("click", () => {
           infoWinRef.current.setContent(`
@@ -2571,15 +2612,19 @@ function DispatchMap({jobs, allTechNames, onOpen}) {
         <div style={{fontSize:10,fontWeight:800,color:"#64748b",textTransform:"uppercase",letterSpacing:1}}>Today's Routes</div>
 
         {techRoutes.map(({tech, color, stops}) => (
-          <div key={tech} style={{background:"#f8fafc",border:`2px solid ${color}33`,borderRadius:10,padding:"10px 11px"}}>
+          <div key={tech}
+            style={{background: hovTech===tech ? "#fff" : "#f8fafc", border:`2px solid ${hovTech===tech ? color : color+"33"}`, borderRadius:10, padding:"10px 11px", transition:"border-color 0.15s, background 0.15s", boxShadow: hovTech===tech ? `0 2px 12px ${color}44` : "none"}}
+            onMouseEnter={()=>setHovTech(tech)} onMouseLeave={()=>setHovTech(null)}>
             <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:7}}>
               <div style={{width:10,height:10,borderRadius:"50%",background:color,flexShrink:0,boxShadow:`0 0 6px ${color}`}}/>
               <span style={{fontWeight:700,fontSize:12,color:"#0f172a",flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{tech.split(" ")[0]}</span>
               <span style={{background:color,color:"#fff",borderRadius:99,fontSize:10,fontWeight:800,padding:"1px 7px"}}>{stops.length}</span>
             </div>
             {stops.map((j,i) => (
-              <div key={j.id} onClick={()=>onOpen(j)}
-                style={{display:"flex",gap:6,alignItems:"flex-start",padding:"4px 0",borderTop:i>0?"1px solid #e2e8f0":"none",cursor:"pointer"}}>
+              <div key={j.id}
+                style={{display:"flex",gap:6,alignItems:"flex-start",padding:"5px 4px",borderTop:i>0?"1px solid #e2e8f0":"none",cursor:"pointer",borderRadius:6,background: hovJob===j.id ? color+"18" : "transparent",transition:"background 0.1s"}}
+                onMouseEnter={()=>setHovJob(j.id)} onMouseLeave={()=>setHovJob(null)}
+                onClick={()=>onOpen(j)}>
                 <div style={{width:16,height:16,borderRadius:"50%",background:color,color:"#fff",fontSize:8,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginTop:1}}>{i+1}</div>
                 <div style={{minWidth:0}}>
                   <div style={{fontSize:11,fontWeight:600,color:"#0f172a",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{(j.address||"").split(",")[0]}</div>
