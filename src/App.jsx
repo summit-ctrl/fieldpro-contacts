@@ -247,6 +247,35 @@ const SEED_PURCHASE_ORDERS = [
      {itemId:"in2",itemCode:"GRO-MIX1",itemName:"Grohe Eurosmart Mixer Tap",qtyOrdered:10,qtyReceived:0,unitCost:310},
    ],
    notes:"Sourced from eBay — awaiting confirmation",receivedDate:null},
+  // Historical received POs — gives avg lead time meaningful data
+  {id:"po4",ref:"PO-004",supplierId:"sup1",supplierName:"Reece Plumbing",date:"2026-02-01",status:"received",jobId:null,
+   lines:[
+     {itemId:"in1",itemCode:"RIN-HW25",itemName:"Rinnai 25L Hot Water System",qtyOrdered:3,qtyReceived:3,unitCost:1420},
+     {itemId:"in2",itemCode:"GRO-MIX1",itemName:"Grohe Eurosmart Mixer Tap",qtyOrdered:10,qtyReceived:10,unitCost:295},
+   ],
+   notes:"Monthly restock",receivedDate:"2026-02-04"},
+  {id:"po5",ref:"PO-005",supplierId:"sup1",supplierName:"Reece Plumbing",date:"2026-01-10",status:"received",jobId:null,
+   lines:[
+     {itemId:"in3",itemCode:"PVC-90EL",itemName:"PVC 90° Elbow 100mm",qtyOrdered:100,qtyReceived:100,unitCost:8.20},
+     {itemId:"in2",itemCode:"GRO-MIX1",itemName:"Grohe Eurosmart Mixer Tap",qtyOrdered:5,qtyReceived:5,unitCost:295},
+   ],
+   notes:"Bulk fittings order",receivedDate:"2026-01-13"},
+  {id:"po6",ref:"PO-006",supplierId:"sup2",supplierName:"Harvey Norman Commercial",date:"2026-01-20",status:"received",jobId:null,
+   lines:[
+     {itemId:"in5",itemCode:"LG-AC25",itemName:"LG 2.5kW Split System",qtyOrdered:2,qtyReceived:2,unitCost:780},
+   ],
+   notes:"Split system stock-up",receivedDate:"2026-01-27"},
+  {id:"po7",ref:"PO-007",supplierId:"sup3",supplierName:"Tradelink",date:"2026-02-15",status:"received",jobId:null,
+   lines:[
+     {itemId:"in4",itemCode:"SMK-AL9V",itemName:"Smoke Alarm 9V Hardwired",qtyOrdered:30,qtyReceived:30,unitCost:82},
+     {itemId:"in3",itemCode:"PVC-90EL",itemName:"PVC 90° Elbow 100mm",qtyOrdered:60,qtyReceived:60,unitCost:8.10},
+   ],
+   notes:"Safety compliance order",receivedDate:"2026-02-17"},
+  {id:"po8",ref:"PO-008",supplierId:"sup3",supplierName:"Tradelink",date:"2025-12-05",status:"received",jobId:null,
+   lines:[
+     {itemId:"in4",itemCode:"SMK-AL9V",itemName:"Smoke Alarm 9V Hardwired",qtyOrdered:20,qtyReceived:20,unitCost:80},
+   ],
+   notes:"End of year stock",receivedDate:"2025-12-07"},
 ];
 
 const SEED_MOVEMENTS = [
@@ -263,7 +292,7 @@ const SEED_BATCHES = [
   {id:"bt3",itemId:"in2",batchRef:"ADHOC-001",receivedDate:"2026-02-10",supplierId:"sup1",supplierName:"Reece Plumbing",unitCost:295,qtyOriginal:10,qtyRemaining:9,location:"warehouse",poId:null,invoiceRef:"INV-7711"},
 ];
 
-let _poNum = 3;
+let _poNum = 8;
 const nextPORef = () => `PO-${String(++_poNum).padStart(3,"0")}`;
 let _mvNum = 4;
 const nextMvId = () => `mv${++_mvNum}`;
@@ -303,6 +332,72 @@ const calcAvailability = (itemId, invItems, quotes=[], purchaseOrders=[]) => {
   const toOrder = Math.max(0, committed - onHand - onOrder);
 
   return {onHand, onOrder, committed, available, toOrder};
+};
+
+/* ─── LEAD TIME HELPER ───
+ * Returns per-supplier and per-item avg days from PO raised → received,
+ * based on all received POs in history.
+ *
+ * Returns:
+ *   bySupplier: { [supplierId]: { name, avg, min, max, count } }
+ *   byItem:     { [itemId]:     { name, avg, min, max, count, bySupplier: {...} } }
+ *   overall:    { avg, min, max, count }
+ */
+const calcLeadTimes = (purchaseOrders=[]) => {
+  const daysBetween = (a, b) => Math.round((new Date(b) - new Date(a)) / 86400000);
+
+  const bySupplier = {};
+  const byItem = {};
+  const overallDays = [];
+
+  purchaseOrders
+    .filter(po => po.status === "received" && po.date && po.receivedDate)
+    .forEach(po => {
+      const days = daysBetween(po.date, po.receivedDate);
+      if(days < 0) return; // data error guard
+
+      overallDays.push(days);
+
+      // Per supplier
+      if(!bySupplier[po.supplierId]) bySupplier[po.supplierId] = {name:po.supplierName, days:[]};
+      bySupplier[po.supplierId].days.push(days);
+
+      // Per item (each line in this PO)
+      po.lines.forEach(line => {
+        if(!byItem[line.itemId]) byItem[line.itemId] = {name:line.itemName, days:[], bySupplier:{}};
+        byItem[line.itemId].days.push(days);
+        if(!byItem[line.itemId].bySupplier[po.supplierId])
+          byItem[line.itemId].bySupplier[po.supplierId] = {name:po.supplierName, days:[]};
+        byItem[line.itemId].bySupplier[po.supplierId].days.push(days);
+      });
+    });
+
+  const summarise = days => ({
+    avg: days.length ? Math.round(days.reduce((s,d)=>s+d,0)/days.length) : null,
+    min: days.length ? Math.min(...days) : null,
+    max: days.length ? Math.max(...days) : null,
+    count: days.length,
+  });
+
+  const supplierOut = {};
+  Object.entries(bySupplier).forEach(([id,{name,days}]) => {
+    supplierOut[id] = {name, ...summarise(days)};
+  });
+
+  const itemOut = {};
+  Object.entries(byItem).forEach(([id,{name,days,bySupplier:bySup}]) => {
+    const supOut = {};
+    Object.entries(bySup).forEach(([sid,{name:sname,days:sddays}]) => {
+      supOut[sid] = {name:sname, ...summarise(sddays)};
+    });
+    itemOut[id] = {name, ...summarise(days), bySupplier:supOut};
+  });
+
+  return {
+    bySupplier: supplierOut,
+    byItem: itemOut,
+    overall: summarise(overallDays),
+  };
 };
 
 /* ─── SHARED UI ─── */
@@ -5846,6 +5941,37 @@ function ItemDetail({item, suppliers, fieldStaff, invItems, quotes=[], purchaseO
             </div>
           </Card>
 
+          {/* Lead time for this item */}
+          {(()=>{
+            const lt = calcLeadTimes(purchaseOrders).byItem[item.id];
+            if(!lt||lt.count===0) return null;
+            return (
+              <Card style={{marginBottom:12}}>
+                <SectionHead title="⏱ Avg Lead Time"/>
+                <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:1,background:C.border,borderRadius:8,overflow:"hidden",marginBottom:10}}>
+                  {[
+                    {label:"Average", value:lt.avg+"d", color:lt.avg<=3?C.green:lt.avg<=7?C.orange:C.red},
+                    {label:"Fastest", value:lt.min+"d", color:C.green},
+                    {label:"Slowest", value:lt.max+"d", color:C.orange},
+                  ].map(({label,value,color})=>(
+                    <div key={label} style={{background:C.card,padding:"10px 6px",textAlign:"center"}}>
+                      <div style={{fontSize:10,color:C.muted,fontWeight:700,textTransform:"uppercase",letterSpacing:0.4,marginBottom:3}}>{label}</div>
+                      <div style={{fontSize:22,fontWeight:900,color}}>{value}</div>
+                    </div>
+                  ))}
+                </div>
+                <div style={{fontSize:11,color:C.muted,marginBottom:6}}>Across {lt.count} received PO{lt.count!==1?"s":""}</div>
+                {/* Per-supplier breakdown */}
+                {Object.entries(lt.bySupplier).map(([sid,slt])=>(
+                  <div key={sid} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"5px 0",borderTop:`1px solid ${C.border}`}}>
+                    <span style={{fontSize:12,color:C.sub}}>{slt.name}</span>
+                    <span style={{fontSize:12,fontWeight:800,color:slt.avg<=3?C.green:slt.avg<=7?C.orange:C.red}}>{slt.avg}d avg ({slt.count} PO{slt.count!==1?"s":""})</span>
+                  </div>
+                ))}
+              </Card>
+            );
+          })()}
+
           {/* Stock by location */}
           <Card style={{marginBottom:12}}>
             <SectionHead title="📦 Stock by Location"/>
@@ -6110,7 +6236,8 @@ function InventoryTab({settings, companies, quotes=[]}) {
   };
 
   /* ── Tab sub-nav ── */
-  const tabs = [{id:"items",label:"📦 Items"},{id:"purchase-orders",label:"🛒 Purchase Orders"},{id:"movements",label:"📋 Movements"}];
+  const leadTimes = calcLeadTimes(purchaseOrders);
+  const tabs = [{id:"items",label:"📦 Items"},{id:"purchase-orders",label:"🛒 Purchase Orders"},{id:"movements",label:"📋 Movements"},{id:"suppliers",label:"🏭 Suppliers"}];
 
   if(selItem) return (
     <ItemDetail item={selItem} suppliers={invSuppliers} fieldStaff={fieldStaff||[]}
@@ -6255,6 +6382,7 @@ function InventoryTab({settings, companies, quotes=[]}) {
                   <div style={{fontSize:12,color:C.sub,marginTop:2}}>
                     {po.lines.length} line{po.lines.length!==1?"s":""} · Ordered {fmtDate(po.date)}
                     {po.receivedDate&&" · Received "+fmtDate(po.receivedDate)}
+                    {po.receivedDate&&po.date&&(()=>{const d=Math.round((new Date(po.receivedDate)-new Date(po.date))/86400000);return <span style={{marginLeft:6,background:d<=3?"#dcfce7":d<=7?"#ffedd5":"#fee2e2",color:d<=3?C.green:d<=7?C.orange:C.red,borderRadius:99,fontSize:10,fontWeight:800,padding:"1px 7px"}}>{d}d lead time</span>;})()}
                   </div>
                   <div style={{fontSize:12,color:C.muted,marginTop:4}}>{po.notes}</div>
                   <div style={{marginTop:8}}>
@@ -6311,6 +6439,143 @@ function InventoryTab({settings, companies, quotes=[]}) {
             );
           })}
           {stockMovements.length===0&&<div style={{textAlign:"center",padding:"40px 0",color:C.muted}}>No movements recorded</div>}
+        </div>
+      )}
+
+      {/* ── SUPPLIERS TAB ── */}
+      {invTab==="suppliers"&&(
+        <div>
+          {/* Overall summary */}
+          {leadTimes.overall.count>0&&(
+            <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10,marginBottom:18}}>
+              <StatCard label="Avg Lead Time" value={leadTimes.overall.avg+" days"} sub={`across ${leadTimes.overall.count} POs`} icon="📅" color={C.accent}/>
+              <StatCard label="Fastest" value={leadTimes.overall.min+" days"} sub="best received PO" icon="🚀" color={C.green}/>
+              <StatCard label="Slowest" value={leadTimes.overall.max+" days"} sub="worst received PO" icon="🐢" color={C.orange}/>
+            </div>
+          )}
+
+          {/* Per-supplier cards */}
+          <div style={{fontWeight:700,fontSize:14,color:C.text,marginBottom:12}}>Lead Time by Supplier</div>
+          {invSuppliers.map(sup=>{
+            const lt = leadTimes.bySupplier[sup.id];
+            const receivedPOs = purchaseOrders.filter(po=>po.supplierId===sup.id&&po.status==="received");
+            const openPOs = purchaseOrders.filter(po=>po.supplierId===sup.id&&(po.status==="sent"||po.status==="partial"));
+            return (
+              <div key={sup.id} style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:12,padding:16,marginBottom:12}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:12}}>
+                  <div>
+                    <div style={{fontWeight:800,fontSize:15,color:C.text}}>{sup.name}</div>
+                    <div style={{fontSize:12,color:C.muted,marginTop:2}}>{sup.contact||"—"} {sup.phone?"· "+sup.phone:""}</div>
+                  </div>
+                  <div style={{display:"flex",gap:8}}>
+                    <Badge label={`${receivedPOs.length} received`} color="green"/>
+                    {openPOs.length>0&&<Badge label={`${openPOs.length} open`} color="orange"/>}
+                  </div>
+                </div>
+
+                {/* Lead time bar */}
+                {lt&&lt.count>0 ? (
+                  <div>
+                    <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8,marginBottom:12}}>
+                      {[
+                        {label:"Avg Lead Time", value:lt.avg+" days", color:lt.avg<=3?C.green:lt.avg<=7?C.orange:C.red},
+                        {label:"Fastest",        value:lt.min+" days", color:C.green},
+                        {label:"Slowest",        value:lt.max+" days", color:C.orange},
+                        {label:"POs Measured",   value:lt.count,       color:C.accent},
+                      ].map(({label,value,color})=>(
+                        <div key={label} style={{background:C.raised,borderRadius:8,padding:"8px 10px",textAlign:"center"}}>
+                          <div style={{fontSize:10,color:C.muted,fontWeight:700,textTransform:"uppercase",letterSpacing:0.4,marginBottom:3}}>{label}</div>
+                          <div style={{fontSize:18,fontWeight:900,color}}>{value}</div>
+                        </div>
+                      ))}
+                    </div>
+                    {/* Visual bar — avg vs stated lead days */}
+                    <div style={{marginBottom:8}}>
+                      <div style={{display:"flex",justifyContent:"space-between",fontSize:11,color:C.muted,marginBottom:4}}>
+                        <span>Actual avg: <strong style={{color:C.text}}>{lt.avg}d</strong></span>
+                        <span>Stated lead time: <strong style={{color:C.text}}>{sup.leadDays}d</strong></span>
+                      </div>
+                      <div style={{background:C.raised,borderRadius:99,height:8,position:"relative",overflow:"hidden"}}>
+                        <div style={{
+                          position:"absolute",left:0,top:0,height:"100%",borderRadius:99,
+                          width:`${Math.min(100,(lt.avg/(Math.max(lt.avg,sup.leadDays)*1.2))*100)}%`,
+                          background:lt.avg<=sup.leadDays?C.green:C.orange,
+                          transition:"width 0.4s"
+                        }}/>
+                        {/* Marker for stated lead time */}
+                        <div style={{
+                          position:"absolute",top:0,height:"100%",width:2,
+                          background:C.accent,opacity:0.7,
+                          left:`${Math.min(98,(sup.leadDays/(Math.max(lt.avg,sup.leadDays)*1.2))*100)}%`
+                        }}/>
+                      </div>
+                      <div style={{fontSize:10,color:lt.avg<=sup.leadDays?C.green:C.orange,fontWeight:700,marginTop:4}}>
+                        {lt.avg<=sup.leadDays
+                          ? `✓ Delivering ${sup.leadDays-lt.avg}d faster than stated`
+                          : `⚠ Running ${lt.avg-sup.leadDays}d slower than stated`}
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{color:C.muted,fontSize:13,fontStyle:"italic"}}>No received POs yet — lead time not available</div>
+                )}
+
+                {/* Items ordered from this supplier */}
+                <div style={{borderTop:`1px solid ${C.border}`,paddingTop:10,marginTop:10}}>
+                  <div style={{fontSize:11,fontWeight:700,color:C.sub,textTransform:"uppercase",letterSpacing:0.4,marginBottom:6}}>Items &amp; Lead Times</div>
+                  <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+                    {invItems.filter(i=>i.supplierId===sup.id).map(item=>{
+                      const ilt = leadTimes.byItem[item.id]?.bySupplier?.[sup.id];
+                      return (
+                        <div key={item.id} style={{background:C.raised,border:`1px solid ${C.border}`,borderRadius:8,padding:"5px 10px",fontSize:12}}>
+                          <span style={{color:C.text,fontWeight:600}}>{item.name}</span>
+                          {ilt&&ilt.count>0
+                            ? <span style={{color:C.accent,fontWeight:800,marginLeft:8}}>{ilt.avg}d avg</span>
+                            : <span style={{color:C.muted,marginLeft:8}}>no data</span>
+                          }
+                        </div>
+                      );
+                    })}
+                    {invItems.filter(i=>i.supplierId===sup.id).length===0&&(
+                      <span style={{color:C.muted,fontSize:12}}>No items linked to this supplier</span>
+                    )}
+                  </div>
+                </div>
+
+                <div style={{marginTop:10,display:"flex",gap:12,fontSize:12,color:C.muted}}>
+                  {sup.terms&&<span>Terms: <strong style={{color:C.sub}}>{sup.terms}</strong></span>}
+                  {sup.abn&&<span>ABN: <strong style={{color:C.sub}}>{sup.abn}</strong></span>}
+                </div>
+              </div>
+            );
+          })}
+
+          {/* Per-item lead time table */}
+          <div style={{fontWeight:700,fontSize:14,color:C.text,margin:"20px 0 12px"}}>Lead Time by Item</div>
+          <div style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:12,overflow:"hidden"}}>
+            <div style={{display:"grid",gridTemplateColumns:"2fr repeat(4,1fr)",gap:0,background:C.raised,padding:"8px 14px",borderBottom:`1px solid ${C.border}`}}>
+              {["Item","Avg Days","Fastest","Slowest","POs"].map(h=>(
+                <div key={h} style={{fontSize:11,fontWeight:700,color:C.sub,textTransform:"uppercase",letterSpacing:0.4,textAlign:h==="Item"?"left":"center"}}>{h}</div>
+              ))}
+            </div>
+            {invItems.map((item,idx)=>{
+              const lt = leadTimes.byItem[item.id];
+              return (
+                <div key={item.id} style={{display:"grid",gridTemplateColumns:"2fr repeat(4,1fr)",gap:0,padding:"10px 14px",borderBottom:idx<invItems.length-1?`1px solid ${C.border}`:"none",alignItems:"center"}}>
+                  <div>
+                    <div style={{fontWeight:600,fontSize:13,color:C.text}}>{item.name}</div>
+                    <div style={{fontSize:10,color:C.muted,fontFamily:"monospace"}}>{item.code}</div>
+                  </div>
+                  <div style={{textAlign:"center",fontWeight:900,fontSize:16,color:lt?.avg!=null?(lt.avg<=3?C.green:lt.avg<=7?C.orange:C.red):C.muted}}>
+                    {lt?.avg!=null ? lt.avg+"d" : "—"}
+                  </div>
+                  <div style={{textAlign:"center",fontWeight:700,fontSize:14,color:C.green}}>{lt?.min!=null?lt.min+"d":"—"}</div>
+                  <div style={{textAlign:"center",fontWeight:700,fontSize:14,color:C.orange}}>{lt?.max!=null?lt.max+"d":"—"}</div>
+                  <div style={{textAlign:"center",fontSize:13,color:C.muted}}>{lt?.count||0}</div>
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
 
