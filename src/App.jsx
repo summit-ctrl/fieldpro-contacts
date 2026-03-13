@@ -2037,7 +2037,7 @@ function DispatchCard({job, techCol, onOpen, onStartDriving}) {
       <div style={{display:"flex",gap:8,flexWrap:"wrap",paddingTop:8,borderTop:`1px solid ${C.border}`,alignItems:"center"}}>
         {job.scheduledTime&&<span style={{fontSize:12,color:col,fontWeight:700}}>🕐 {job.scheduledTime}{job.durationHrs?` (${job.durationHrs}hr)`:""}</span>}
         <span style={{fontSize:12,color:C.sub}}>🏢 {job.companyName}</span>
-        <span style={{fontSize:12,color:C.sub}}>👥 {(job.tenants||[]).length} tenants</span>
+        <span style={{fontSize:12,color:C.sub}}>👥 {(job.tenants||[]).length} tenant{(job.tenants||[]).length!==1?"s":""}</span>
         {job.keyMethod&&<span style={{fontSize:12,color:C.sub}}>{keyLabel}</span>}
         <span style={{fontSize:11,color:C.muted,marginLeft:"auto"}}>Click to open ›</span>
       </div>
@@ -2046,122 +2046,147 @@ function DispatchCard({job, techCol, onOpen, onStartDriving}) {
 }
 
 /* ─── CALENDAR VIEW ──────────────────────────────────── */
-function DispatchCalendar({jobs, allTechNames, onOpen, onStartDriving}) {
-  const hours = [];
-  for(let h=7;h<=18;h++) hours.push(h);
-  const ROW_H = 64; // px per tech row
-  const LABEL_W = 110;
-  const PX_PER_MIN = 3.5; // px per minute — controls block width
+const calBlockBg = stage => {
+  if(stage==="Completed"||stage==="Invoiced") return "#22c55e";
+  if(stage==="In Progress") return "#f97316";
+  if(stage==="On Hold") return "#f59e0b";
+  if(stage==="Scheduled") return "#3b82f6";
+  return "#6366f1";
+};
 
-  // Jobs with scheduled time only
+function DispatchCalendar({jobs, allTechNames, onOpen}) {
+  const SLOT_W = 120;
+  const LABEL_W = 130;
+  const JOB_H = 52;
+  const BAND_PAD = 6;
+  const START_H = 7, END_H = 19;
+  const hours = [];
+  for(let h=START_H;h<END_H;h++) hours.push(h);
+  const totalMins = (END_H - START_H)*60;
+  const fmtHour = h => h===12?"12pm":h<12?`${h}am`:`${h-12}pm`;
+
+  const assignLanes = techJobs => {
+    const sorted = [...techJobs].sort((a,b)=>
+      (timeToMinutes(a.scheduledTime)||0)-(timeToMinutes(b.scheduledTime)||0));
+    const lanes = [];
+    const withLane = sorted.map(job=>{
+      const start = timeToMinutes(job.scheduledTime)||0;
+      const end = start+(job.durationHrs||1)*60;
+      let lane = lanes.findIndex(e=>e<=start);
+      if(lane===-1){lane=lanes.length;lanes.push(end);}
+      else lanes[lane]=end;
+      return {...job, _lane:lane};
+    });
+    const maxLane = withLane.length>0?Math.max(...withLane.map(j=>j._lane)):0;
+    return withLane.map(j=>({...j, _laneCount:maxLane+1}));
+  };
+
   const scheduled = jobs.filter(j=>j.scheduledTime);
   const unscheduled = jobs.filter(j=>!j.scheduledTime);
 
+  const techRows = allTechNames.map((tech,ti)=>{
+    const laned = assignLanes(scheduled.filter(j=>j.tech===tech));
+    const laneCount = laned.length>0?Math.max(...laned.map(j=>j._laneCount)):1;
+    return {tech, ti, laned, laneCount, bandH:BAND_PAD+laneCount*(JOB_H+4)+BAND_PAD, color:TECH_COLORS[ti%TECH_COLORS.length]};
+  });
+
   return(
-    <div>
-      {/* Unscheduled banner */}
+    <div style={{fontFamily:"'Inter','Segoe UI',sans-serif"}}>
       {unscheduled.length>0&&(
-        <div style={{background:"#fef9c3",border:"1px solid #fde047",borderRadius:10,padding:"10px 14px",marginBottom:14}}>
-          <div style={{fontWeight:700,fontSize:12,color:"#854d0e",marginBottom:6}}>⚠️ {unscheduled.length} job{unscheduled.length!==1?"s":""} not yet scheduled</div>
-          <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+        <div style={{background:"#fef9c3",border:"1px solid #fde047",borderRadius:10,padding:"10px 14px",marginBottom:12,display:"flex",gap:12,alignItems:"center",flexWrap:"wrap"}}>
+          <span style={{fontWeight:700,fontSize:12,color:"#854d0e",flexShrink:0}}>⚠️ {unscheduled.length} unscheduled</span>
+          <div style={{display:"flex",flexWrap:"wrap",gap:5}}>
             {unscheduled.map(j=>(
               <button key={j.id} onClick={()=>onOpen(j)}
-                style={{background:"#fff",border:"1px solid #fde047",borderRadius:7,padding:"4px 10px",fontSize:12,color:"#92400e",fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>
-                {j.ref} — {(j.address||"").split(",")[0]}
+                style={{background:"#fff",border:"1px solid #fde047",borderRadius:6,padding:"3px 9px",fontSize:11,color:"#92400e",fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>
+                {j.ref} · {(j.address||"").split(",")[0]}
               </button>
             ))}
           </div>
         </div>
       )}
-
-      {/* Calendar grid */}
-      <div style={{overflowX:"auto",borderRadius:12,border:`1px solid ${C.border}`,background:"#fff",boxShadow:"0 2px 8px rgba(0,0,0,0.06)"}}>
-        {/* Time header */}
-        <div style={{display:"flex",borderBottom:`2px solid ${C.border}`,position:"sticky",top:0,background:"#f8fafc",zIndex:5}}>
-          <div style={{width:LABEL_W,flexShrink:0,padding:"10px 14px",fontSize:11,fontWeight:700,color:C.sub,textTransform:"uppercase",letterSpacing:0.5}}>Staff</div>
-          <div style={{flex:1,position:"relative",minWidth:hours.length*60*PX_PER_MIN}}>
-            <div style={{display:"flex"}}>
-              {hours.map(h=>(
-                <div key={h} style={{width:60*PX_PER_MIN,flexShrink:0,padding:"10px 0 10px 6px",borderLeft:`1px solid ${C.border}`,fontSize:11,fontWeight:600,color:C.sub}}>
-                  {h===12?"12pm":h<12?`${h}am`:`${h-12}pm`}
-                </div>
-              ))}
-            </div>
+      <div style={{overflowX:"auto",background:"#fff",border:`1px solid ${C.border}`,borderRadius:12,boxShadow:"0 2px 12px rgba(0,0,0,0.07)"}}>
+        <div style={{minWidth:LABEL_W+hours.length*SLOT_W}}>
+          {/* Time header */}
+          <div style={{display:"flex",borderBottom:"2px solid #e2e8f0",position:"sticky",top:0,zIndex:10,background:"#f8fafc"}}>
+            <div style={{width:LABEL_W,flexShrink:0,padding:"10px 14px",fontSize:11,fontWeight:700,color:C.sub,textTransform:"uppercase",letterSpacing:0.6,borderRight:`1px solid ${C.border}`,display:"flex",alignItems:"center",position:"sticky",left:0,zIndex:11,background:"#f8fafc"}}>Staff</div>
+            {hours.map(h=>(
+              <div key={h} style={{width:SLOT_W,flexShrink:0,borderLeft:`1px solid ${C.border}`,padding:"10px 0 10px 6px",fontSize:11,fontWeight:600,color:C.sub}}>
+                {fmtHour(h)}
+              </div>
+            ))}
           </div>
-        </div>
-
-        {/* Tech rows */}
-        {allTechNames.map((tech,ti)=>{
-          const col = TECH_COLORS[ti%TECH_COLORS.length];
-          const techJobs = scheduled.filter(j=>j.tech===tech);
-          return(
-            <div key={tech} style={{display:"flex",borderBottom:`1px solid ${C.border}`,minHeight:ROW_H}}>
-              {/* Name cell */}
-              <div style={{width:LABEL_W,flexShrink:0,padding:"12px 10px",borderRight:`1px solid ${C.border}`,display:"flex",alignItems:"center",gap:8,background:"#fafafa"}}>
-                <div style={{width:28,height:28,borderRadius:"50%",background:col,color:"#fff",fontWeight:800,fontSize:11,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
-                  {tech.split(" ").map(w=>w[0]).join("").slice(0,2)}
+          {/* Tech rows */}
+          {techRows.map(({tech,ti,laned,laneCount,bandH,color},rowIdx)=>(
+            <div key={tech} style={{display:"flex",borderBottom:`1px solid ${C.border}`,background:rowIdx%2===0?"#fff":"#fafbfc"}}>
+              <div style={{width:LABEL_W,flexShrink:0,borderRight:`1px solid ${C.border}`,padding:"10px",display:"flex",alignItems:"flex-start",gap:8,background:rowIdx%2===0?"#fff":"#f8fafc",position:"sticky",left:0,zIndex:2}}>
+                <div style={{width:30,height:30,borderRadius:"50%",background:color,color:"#fff",fontWeight:800,fontSize:11,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginTop:2}}>
+                  {tech.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase()}
                 </div>
-                <div style={{minWidth:0}}>
-                  <div style={{fontSize:12,fontWeight:700,color:C.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{tech.split(" ")[0]}</div>
-                  <div style={{fontSize:10,color:C.muted,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{tech.split(" ").slice(1).join(" ")}</div>
+                <div style={{minWidth:0,flex:1}}>
+                  <div style={{fontSize:12,fontWeight:700,color:C.text,lineHeight:1.2}}>{tech.split(" ")[0]}</div>
+                  <div style={{fontSize:10,color:C.muted,marginTop:1}}>{tech.split(" ").slice(1).join(" ")}</div>
+                  <div style={{fontSize:10,color:color,fontWeight:600,marginTop:3}}>{laned.length} job{laned.length!==1?"s":""}</div>
                 </div>
               </div>
-
-              {/* Timeline */}
-              <div style={{flex:1,position:"relative",minWidth:hours.length*60*PX_PER_MIN,background:ti%2===0?"#fff":"#fafafa"}}>
-                {/* Hour grid lines */}
-                {hours.map(h=>(
-                  <div key={h} style={{position:"absolute",top:0,bottom:0,left:(h-7)*60*PX_PER_MIN,width:1,background:C.border}}/>
+              <div style={{flex:1,position:"relative",height:bandH,minWidth:hours.length*SLOT_W}}>
+                {hours.map((h,hi)=>(
+                  <div key={h} style={{position:"absolute",top:0,bottom:0,left:hi*SLOT_W,borderLeft:"1px solid #e2e8f0"}}/>
                 ))}
-                {/* 30-min lines */}
-                {hours.map(h=>(
-                  <div key={h+"h"} style={{position:"absolute",top:0,bottom:0,left:(h-7)*60*PX_PER_MIN+30*PX_PER_MIN,width:1,background:"#f1f5f9"}}/>
+                {hours.map((h,hi)=>(
+                  <div key={h+"d"} style={{position:"absolute",top:0,bottom:0,left:hi*SLOT_W+SLOT_W/2,borderLeft:"1px dashed #f1f5f9"}}/>
                 ))}
-
-                {/* Job blocks */}
-                {techJobs.map(job=>{
-                  const startMins = timeToMinutes(job.scheduledTime);
-                  const dur = (job.durationHrs||1)*60;
-                  const left = (startMins - CAL_START)*PX_PER_MIN;
-                  const width = dur*PX_PER_MIN - 3;
-                  const stCol = stageColor(job.stage);
+                {laned.map(job=>{
+                  const startMins = timeToMinutes(job.scheduledTime)||0;
+                  const durMins = (job.durationHrs||1)*60;
+                  const leftPct = ((startMins-START_H*60)/totalMins*100).toFixed(3)+"%";
+                  const widthPct = (durMins/totalMins*100).toFixed(3)+"%";
+                  const top = BAND_PAD+job._lane*(JOB_H+4);
+                  const bg = calBlockBg(job.stage);
+                  const isDone = job.stage==="Completed"||job.stage==="Invoiced";
+                  const suburb = (job.address||"").split(",").slice(-2,-1)[0]?.trim()||(job.address||"").split(",")[0];
                   return(
                     <div key={job.id} onClick={()=>onOpen(job)}
-                      title={`${job.ref} · ${job.address}\n${job.scheduledTime} (${job.durationHrs||1}hr)`}
-                      style={{position:"absolute",left,top:6,height:ROW_H-12,width,borderRadius:8,background:col,cursor:"pointer",padding:"5px 8px",overflow:"hidden",boxSizing:"border-box",boxShadow:"0 2px 6px rgba(0,0,0,0.15)",transition:"opacity 0.15s"}}
-                      onMouseEnter={e=>{e.currentTarget.style.opacity="0.85";e.currentTarget.style.zIndex=10;}}
-                      onMouseLeave={e=>{e.currentTarget.style.opacity="1";e.currentTarget.style.zIndex=1;}}>
-                      <div style={{fontSize:10,fontWeight:800,color:"rgba(255,255,255,0.9)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{job.scheduledTime} — {minutesToTime(startMins+dur)}</div>
-                      <div style={{fontSize:11,fontWeight:700,color:"#fff",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",marginTop:2}}>{job.ref} {(job.address||"").split(",")[0]}</div>
-                      {width>120&&<div style={{fontSize:10,color:"rgba(255,255,255,0.75)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",marginTop:1}}>{job.description}</div>}
+                      style={{position:"absolute",left:leftPct,width:`calc(${widthPct} - 3px)`,top,height:JOB_H,background:bg,borderRadius:5,cursor:"pointer",overflow:"hidden",boxSizing:"border-box",padding:"4px 7px",boxShadow:"0 1px 4px rgba(0,0,0,0.18)",transition:"filter 0.12s",display:"flex",flexDirection:"column",justifyContent:"flex-start",borderLeft:"3px solid rgba(0,0,0,0.18)"}}
+                      onMouseEnter={e=>{e.currentTarget.style.filter="brightness(1.1)";e.currentTarget.style.zIndex=5;}}
+                      onMouseLeave={e=>{e.currentTarget.style.filter="";e.currentTarget.style.zIndex=1;}}>
+                      <div style={{display:"flex",alignItems:"center",gap:3,marginBottom:1}}>
+                        {isDone&&<span style={{fontSize:9,color:"rgba(255,255,255,0.95)",fontWeight:900}}>✓</span>}
+                        <span style={{fontSize:10,fontWeight:700,color:"rgba(255,255,255,0.95)",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>
+                          {job.scheduledTime} — {minutesToTime(startMins+durMins)}
+                        </span>
+                      </div>
+                      <div style={{fontSize:11,fontWeight:700,color:"#fff",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",lineHeight:1.2}}>
+                        {job.companyName||job.ref}
+                      </div>
+                      <div style={{fontSize:10,color:"rgba(255,255,255,0.82)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",marginTop:1,textTransform:"uppercase",letterSpacing:0.4,fontWeight:600}}>
+                        {suburb}
+                      </div>
                     </div>
                   );
                 })}
-
-                {techJobs.length===0&&(
-                  <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center"}}>
-                    <span style={{fontSize:11,color:C.muted}}>No jobs scheduled</span>
+                {laned.length===0&&(
+                  <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",paddingLeft:12}}>
+                    <span style={{fontSize:11,color:"#cbd5e1",fontStyle:"italic"}}>No jobs scheduled</span>
                   </div>
                 )}
               </div>
             </div>
-          );
-        })}
-
-        {allTechNames.length===0&&(
-          <div style={{padding:"40px",textAlign:"center",color:C.muted}}>
-            <div style={{fontSize:32,marginBottom:8}}>📅</div>
-            <div style={{fontSize:14,fontWeight:600}}>No technicians assigned to open jobs</div>
-          </div>
-        )}
+          ))}
+          {allTechNames.length===0&&(
+            <div style={{padding:"60px 0",textAlign:"center",color:C.muted}}>
+              <div style={{fontSize:40,marginBottom:10}}>📅</div>
+              <div style={{fontSize:15,fontWeight:600}}>No technicians with open jobs</div>
+            </div>
+          )}
+        </div>
       </div>
-
-      {/* Legend */}
-      <div style={{display:"flex",gap:16,marginTop:12,flexWrap:"wrap"}}>
-        {allTechNames.map((t,i)=>(
-          <div key={t} style={{display:"flex",alignItems:"center",gap:6,fontSize:12,color:C.sub}}>
-            <span style={{width:12,height:12,borderRadius:3,background:TECH_COLORS[i%TECH_COLORS.length],display:"inline-block"}}/>
-            {t}
+      <div style={{display:"flex",gap:14,marginTop:10,flexWrap:"wrap",alignItems:"center"}}>
+        <span style={{fontSize:11,color:C.muted,fontWeight:600}}>Stage colours:</span>
+        {[["Scheduled","#3b82f6"],["In Progress","#f97316"],["On Hold","#f59e0b"],["Completed","#22c55e"],["New","#6366f1"]].map(([s,bg])=>(
+          <div key={s} style={{display:"flex",alignItems:"center",gap:5,fontSize:11,color:C.sub}}>
+            <span style={{width:10,height:10,borderRadius:2,background:bg,display:"inline-block"}}/>
+            {s}
           </div>
         ))}
       </div>
