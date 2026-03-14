@@ -6241,37 +6241,43 @@ function ItemDetail({item, suppliers, fieldStaff, invItems, quotes=[], purchaseO
           {/* Availability panel */}
           <Card style={{marginBottom:12}}>
             <SectionHead title="📊 Availability"/>
-            {/* Four-number breakdown */}
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:1,background:C.border,borderRadius:10,overflow:"hidden",marginBottom:12}}>
+
+            {/* Four stats — label above, big number below, single row */}
+            <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:0,marginBottom:20,paddingTop:8}}>
               {[
-                {label:"On Hand", value:av.onHand, color:av.onHand===0?C.red:av.onHand<=item.reorderPoint?C.orange:C.text, tip:"Physical stock across all locations"},
-                {label:"On Order", value:av.onOrder, color:av.onOrder>0?C.accent:C.muted, tip:"Open POs not yet received"},
-                {label:"Committed", value:av.committed, color:av.committed>0?"#7c3aed":C.muted, tip:"Qty on approved quotes"},
-                {label:"Available", value:av.available, color:av.available<0?C.red:av.available===0?C.orange:C.green, tip:"On Hand minus Committed"},
-              ].map(({label,value,color,tip})=>(
-                <div key={label} style={{background:C.card,padding:"12px 10px",textAlign:"center"}}>
-                  <div style={{fontSize:10,color:C.muted,fontWeight:700,textTransform:"uppercase",letterSpacing:0.5,marginBottom:4}}>{label}</div>
-                  <div style={{fontSize:32,fontWeight:900,color,lineHeight:1}}>{value}</div>
-                  <div style={{fontSize:10,color:C.muted,marginTop:4}}>{tip}</div>
+                {label:"On Hand",   value:av.onHand,    color:av.onHand===0?C.red:av.onHand<=item.reorderPoint?C.orange:"#1a1f2e"},
+                {label:"On Order",  value:av.onOrder,   color:av.onOrder>0?"#1a1f2e":C.muted},
+                {label:"Committed", value:av.committed,  color:av.committed>0?"#7c3aed":C.muted},
+                {label:"Available", value:av.available,  color:av.available<0?C.red:av.available===0?C.orange:C.green},
+              ].map(({label,value,color})=>(
+                <div key={label} style={{textAlign:"center",padding:"0 8px"}}>
+                  <div style={{fontSize:11,color:C.muted,fontWeight:700,textTransform:"uppercase",letterSpacing:0.6,marginBottom:8}}>{label}</div>
+                  <div style={{fontSize:36,fontWeight:900,color,lineHeight:1}}>{value}</div>
                 </div>
+              ))}
+            </div>
+
+            {/* Location pills — centered row */}
+            <div style={{display:"flex",flexWrap:"wrap",gap:8,justifyContent:"center",paddingTop:16,borderTop:`1px solid ${C.border}`}}>
+              {locs.filter(([,v])=>v>0).map(([loc,label])=>(
+                <span key={loc} style={{
+                  background:C.bg,border:`1px solid ${C.border}`,
+                  borderRadius:99,padding:"6px 14px",
+                  fontSize:13,fontWeight:600,color:C.sub,whiteSpace:"nowrap"}}>
+                  {label}: {item.qtyOnHand?.[loc]||0}
+                </span>
               ))}
             </div>
 
             {/* To Order alert */}
             {av.toOrder>0&&(
-              <div style={{background:"#ede9fe",border:"1px solid #c4b5fd",borderRadius:8,padding:"10px 12px",marginBottom:10}}>
+              <div style={{background:"#ede9fe",border:"1px solid #c4b5fd",borderRadius:8,padding:"10px 12px",marginTop:12}}>
                 <div style={{fontWeight:800,fontSize:13,color:"#5b21b6",marginBottom:2}}>🛒 Order {av.toOrder} more</div>
                 <div style={{fontSize:12,color:"#6d28d9"}}>
                   {av.committed} committed − {av.onHand} on hand − {av.onOrder} on order = {av.toOrder} shortfall
                 </div>
               </div>
             )}
-
-            {/* Formula explanation */}
-            <div style={{background:C.raised,borderRadius:8,padding:"8px 10px",fontSize:11,color:C.muted,lineHeight:1.6}}>
-              <strong style={{color:C.sub}}>Available</strong> = On Hand − Committed<br/>
-              <strong style={{color:C.sub}}>To Order</strong> = max(0, Committed − On Hand − On Order)
-            </div>
           </Card>
 
           {/* Lead time for this item */}
@@ -6304,17 +6310,6 @@ function ItemDetail({item, suppliers, fieldStaff, invItems, quotes=[], purchaseO
               </Card>
             );
           })()}
-
-          {/* Stock by location */}
-          <Card style={{marginBottom:12}}>
-            <SectionHead title="📦 Stock by Location"/>
-            {locs.map(([loc,label])=>(
-              <div key={loc} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"7px 0",borderTop:`1px solid ${C.border}`}}>
-                <span style={{fontSize:13,color:C.sub}}>{label}</span>
-                <span style={{fontWeight:800,fontSize:16,color:C.text}}>{item.qtyOnHand?.[loc]||0}</span>
-              </div>
-            ))}
-          </Card>
 
           {/* Committed quotes breakdown */}
           {committedQuotes.length>0&&(
@@ -6358,8 +6353,10 @@ function InventoryTab({settings, companies, quotes=[]}) {
   const [search, setSearch] = useState("");
   const [catFilter, setCatFilter] = useState("All");
   const [selItem, setSelItem] = useState(null);
-  const [modal, setModal] = useState(null); // "addItem"|"editItem"|"addPO"|"editPO"|"receive"|"transfer"|"collect"|"return"
+  const [modal, setModal] = useState(null);
   const [modalData, setModalData] = useState(null);
+  const [draftConflict, setDraftConflict] = useState(null); // {item, existingDraft} — prompt user
+  const [draftsOpen, setDraftsOpen] = useState(true); // collapsed state of draft section
 
   const jobs = allJobs ? allJobs(companies) : [];
   const openJobs = jobs.filter(j=>j.status==="Open");
@@ -6396,6 +6393,33 @@ function InventoryTab({settings, companies, quotes=[]}) {
   const savePO = po => {
     setPurchaseOrders(prev=> prev.find(p=>p.id===po.id) ? prev.map(p=>p.id===po.id?po:p) : [...prev,po]);
     setModal(null);
+  };
+
+  /* ── New PO from item — check for existing draft for same supplier ── */
+  const handleNewPO = item => {
+    const existingDraft = purchaseOrders.find(p=>
+      p.status==="draft" && p.supplierId===item.supplierId && p.supplierId
+    );
+    if(existingDraft) {
+      setDraftConflict({item, existingDraft});
+    } else {
+      setModalData({ref:nextPORef(),supplierId:item.supplierId||"",supplierName:"",
+        date:new Date().toISOString().slice(0,10),status:"draft",jobId:"",
+        lines:[{itemId:item.id,itemCode:item.code,itemName:item.name,
+          qtyOrdered:item.reorderQty||1,qtyReceived:0,unitCost:item.purchasePrice}],notes:""});
+      setModal("addPO");
+    }
+  };
+
+  /* ── Add item line to existing draft ── */
+  const addLineToDraft = (draft, item) => {
+    const existing = draft.lines.find(l=>l.itemId===item.id);
+    const updatedLines = existing
+      ? draft.lines.map(l=>l.itemId===item.id?{...l,qtyOrdered:l.qtyOrdered+(item.reorderQty||1)}:l)
+      : [...draft.lines,{itemId:item.id,itemCode:item.code,itemName:item.name,
+          qtyOrdered:item.reorderQty||1,qtyReceived:0,unitCost:item.purchasePrice}];
+    savePO({...draft,lines:updatedLines});
+    setDraftConflict(null);
   };
 
   /* ── Receive stock ── */
@@ -6576,7 +6600,7 @@ function InventoryTab({settings, companies, quotes=[]}) {
     <ItemDetail item={selItem} suppliers={invSuppliers} fieldStaff={fieldStaff||[]}
       invItems={invItems} quotes={quotes} purchaseOrders={purchaseOrders}
       onBack={()=>setSelItem(null)} onEdit={()=>setModal("editItem")}
-      onNewPO={item=>{setModalData({ref:nextPORef(),supplierId:item.supplierId||"",supplierName:"",date:new Date().toISOString().slice(0,10),status:"draft",jobId:"",lines:[{itemId:item.id,itemCode:item.code,itemName:item.name,qtyOrdered:item.reorderQty||1,qtyReceived:0,unitCost:item.purchasePrice}],notes:""});setModal("addPO");}}/>
+      onNewPO={handleNewPO}/>
   );
 
   return (
@@ -6730,11 +6754,114 @@ function InventoryTab({settings, companies, quotes=[]}) {
       {/* ── PURCHASE ORDERS TAB ── */}
       {invTab==="purchase-orders"&&(
         <div>
-          <div style={{display:"flex",justifyContent:"flex-end",marginBottom:14}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
+            <div/>
             <Btn label="+ New Purchase Order" onClick={()=>{setModalData(null);setModal("addPO");}}/>
           </div>
-          {purchaseOrders.length===0&&<div style={{textAlign:"center",padding:"40px 0",color:C.muted}}><div style={{fontSize:36,marginBottom:8}}>🛒</div>No purchase orders yet</div>}
-          {[...purchaseOrders].sort((a,b)=>b.date.localeCompare(a.date)).map(po=>(
+
+          {/* ── DRAFTS SECTION ── */}
+          {(()=>{
+            const drafts = purchaseOrders.filter(p=>p.status==="draft");
+            if(drafts.length===0) return null;
+            return (
+              <div style={{marginBottom:20}}>
+                <button onClick={()=>setDraftsOpen(o=>!o)}
+                  style={{display:"flex",alignItems:"center",gap:10,width:"100%",background:"none",border:"none",cursor:"pointer",fontFamily:"inherit",padding:0,marginBottom:10}}>
+                  <div style={{display:"flex",alignItems:"center",gap:8}}>
+                    <span style={{fontSize:16}}>📝</span>
+                    <span style={{fontWeight:800,fontSize:14,color:C.text}}>Drafts</span>
+                    <span style={{background:"#f59e0b",color:"#fff",borderRadius:99,fontSize:11,fontWeight:800,padding:"1px 8px"}}>{drafts.length}</span>
+                  </div>
+                  <span style={{fontSize:12,color:C.muted,marginLeft:"auto"}}>{draftsOpen?"▲ Collapse":"▼ Expand"}</span>
+                </button>
+
+                {draftsOpen&&(
+                  <div style={{display:"flex",flexDirection:"column",gap:10}}>
+                    {drafts.map(po=>{
+                      const sup = invSuppliers.find(s=>s.id===po.supplierId);
+                      const total = po.lines.reduce((s,l)=>s+l.qtyOrdered*l.unitCost,0);
+                      return (
+                        <div key={po.id} style={{background:"#fffbeb",border:"2px dashed #fbbf24",borderRadius:14,padding:"14px 16px"}}>
+                          <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:10}}>
+                            <div>
+                              <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:4}}>
+                                <span style={{color:C.accent,fontWeight:800,fontSize:13}}>{po.ref}</span>
+                                <span style={{background:"#fef3c7",color:"#92400e",borderRadius:99,fontSize:11,fontWeight:800,padding:"2px 9px"}}>Draft</span>
+                                {po.jobId&&<span style={{background:"#ede9fe",color:"#5b21b6",borderRadius:99,fontSize:11,fontWeight:700,padding:"2px 9px"}}>Job {po.jobId}</span>}
+                              </div>
+                              <div style={{fontWeight:700,fontSize:15,color:C.text}}>{sup?.name||po.supplierName||"No supplier set"}</div>
+                              <div style={{fontSize:12,color:C.sub,marginTop:2}}>{po.lines.length} line{po.lines.length!==1?"s":""} · Started {fmtDate(po.date)}</div>
+                              {po.notes&&<div style={{fontSize:12,color:C.muted,marginTop:3,fontStyle:"italic"}}>{po.notes}</div>}
+                            </div>
+                            <div style={{textAlign:"right",flexShrink:0,marginLeft:12}}>
+                              <div style={{fontWeight:900,fontSize:18,color:C.text}}>{fmtMoney(total)}</div>
+                            </div>
+                          </div>
+
+                          {/* Line items */}
+                          {po.lines.length>0&&(
+                            <div style={{background:"rgba(255,255,255,0.7)",borderRadius:9,padding:"8px 12px",marginBottom:10,border:"1px solid #fde68a"}}>
+                              {po.lines.map((l,i)=>(
+                                <div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"5px 0",borderBottom:i<po.lines.length-1?"1px solid #fef3c7":"none"}}>
+                                  <div>
+                                    <span style={{fontSize:13,fontWeight:600,color:C.text}}>{l.itemName}</span>
+                                    <span style={{fontSize:11,color:C.muted,marginLeft:6,fontFamily:"monospace"}}>({l.itemCode})</span>
+                                  </div>
+                                  <div style={{display:"flex",alignItems:"center",gap:12,flexShrink:0}}>
+                                    <span style={{fontSize:12,color:C.sub}}>×{l.qtyOrdered}</span>
+                                    <span style={{fontSize:12,fontWeight:700,color:C.text}}>{fmtMoney(l.qtyOrdered*l.unitCost)}</span>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+
+                          {po.lines.length===0&&(
+                            <div style={{textAlign:"center",padding:"12px 0",color:C.muted,fontSize:13,fontStyle:"italic"}}>No items yet — edit to add items</div>
+                          )}
+
+                          {/* Actions */}
+                          <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+                            <button onClick={()=>{setModalData(po);setModal("editPO");}}
+                              style={{background:"#fff",border:"1.5px solid #fbbf24",borderRadius:8,padding:"7px 14px",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",color:"#92400e"}}>
+                              ✏️ Edit Draft
+                            </button>
+                            <button onClick={()=>{
+                                const sent={...po,status:"sent"};
+                                savePO(sent);
+                              }}
+                              style={{background:"#0ea5e9",color:"#fff",border:"none",borderRadius:8,padding:"7px 14px",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
+                              📤 Send PO
+                            </button>
+                            <button onClick={()=>setPurchaseOrders(prev=>prev.filter(p=>p.id!==po.id))}
+                              style={{background:"none",border:"1.5px solid #fca5a5",borderRadius:8,padding:"7px 14px",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",color:C.red}}>
+                              🗑 Discard
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* Divider */}
+                <div style={{display:"flex",alignItems:"center",gap:12,marginTop:16,marginBottom:4}}>
+                  <div style={{flex:1,height:1,background:C.border}}/>
+                  <span style={{fontSize:11,color:C.muted,fontWeight:700,textTransform:"uppercase",letterSpacing:0.5}}>Active & Received</span>
+                  <div style={{flex:1,height:1,background:C.border}}/>
+                </div>
+              </div>
+            );
+          })()}
+
+          {/* ── ACTIVE + RECEIVED POs ── */}
+          {purchaseOrders.filter(p=>p.status!=="draft").length===0&&purchaseOrders.filter(p=>p.status==="draft").length===0&&(
+            <div style={{textAlign:"center",padding:"40px 0",color:C.muted}}><div style={{fontSize:36,marginBottom:8}}>🛒</div>No purchase orders yet</div>
+          )}
+          {purchaseOrders.filter(p=>p.status!=="draft").length===0&&purchaseOrders.some(p=>p.status==="draft")&&(
+            <div style={{textAlign:"center",padding:"20px 0",color:C.muted,fontSize:13}}>No sent or received POs yet</div>
+          )}
+          {[...purchaseOrders].filter(p=>p.status!=="draft").sort((a,b)=>b.date.localeCompare(a.date)).map(po=>(
             <RowCard key={po.id}>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
                 <div style={{flex:1,minWidth:0}}>
@@ -6772,6 +6899,62 @@ function InventoryTab({settings, companies, quotes=[]}) {
               </div>
             </RowCard>
           ))}
+
+          {/* ── DRAFT CONFLICT DIALOG ── */}
+          {draftConflict&&(()=>{
+            const {item,existingDraft}=draftConflict;
+            const sup=invSuppliers.find(s=>s.id===item.supplierId);
+            return (
+              <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.45)",zIndex:600,display:"flex",alignItems:"center",justifyContent:"center"}}
+                onClick={()=>setDraftConflict(null)}>
+                <div onClick={e=>e.stopPropagation()}
+                  style={{background:"#fff",borderRadius:16,padding:"28px 28px 24px",maxWidth:440,width:"90%",boxShadow:"0 20px 60px rgba(0,0,0,0.2)"}}>
+                  <div style={{fontSize:28,marginBottom:12,textAlign:"center"}}>🛒</div>
+                  <div style={{fontWeight:800,fontSize:17,color:C.text,marginBottom:8,textAlign:"center"}}>
+                    Draft PO exists for {sup?.name||"this supplier"}
+                  </div>
+                  <div style={{fontSize:13,color:C.sub,marginBottom:20,textAlign:"center",lineHeight:1.6}}>
+                    You have an open draft <strong style={{color:C.accent}}>{existingDraft.ref}</strong> with {existingDraft.lines.length} item{existingDraft.lines.length!==1?"s":""}.<br/>
+                    Add <strong>{item.name}</strong> to it, or start a new PO?
+                  </div>
+
+                  {/* Preview of existing draft lines */}
+                  <div style={{background:"#fffbeb",border:"1px solid #fde68a",borderRadius:10,padding:"10px 14px",marginBottom:20}}>
+                    {existingDraft.lines.map((l,i)=>(
+                      <div key={i} style={{fontSize:12,color:C.sub,padding:"3px 0"}}>
+                        • {l.itemName} × {l.qtyOrdered}
+                      </div>
+                    ))}
+                    <div style={{fontSize:12,color:"#92400e",fontWeight:700,marginTop:6,paddingTop:6,borderTop:"1px solid #fde68a"}}>
+                      + {item.name} × {item.reorderQty||1} (new)
+                    </div>
+                  </div>
+
+                  <div style={{display:"flex",flexDirection:"column",gap:10}}>
+                    <button onClick={()=>addLineToDraft(existingDraft,item)}
+                      style={{background:C.accent,color:"#fff",border:"none",borderRadius:10,padding:"12px",fontWeight:800,fontSize:14,cursor:"pointer",fontFamily:"inherit"}}>
+                      ➕ Add to draft {existingDraft.ref}
+                    </button>
+                    <button onClick={()=>{
+                        setDraftConflict(null);
+                        setModalData({ref:nextPORef(),supplierId:item.supplierId||"",supplierName:"",
+                          date:new Date().toISOString().slice(0,10),status:"draft",jobId:"",
+                          lines:[{itemId:item.id,itemCode:item.code,itemName:item.name,
+                            qtyOrdered:item.reorderQty||1,qtyReceived:0,unitCost:item.purchasePrice}],notes:""});
+                        setModal("addPO");
+                      }}
+                      style={{background:"none",border:`1.5px solid ${C.border}`,borderRadius:10,padding:"11px",fontWeight:700,fontSize:13,cursor:"pointer",fontFamily:"inherit",color:C.sub}}>
+                      📄 Create new PO instead
+                    </button>
+                    <button onClick={()=>setDraftConflict(null)}
+                      style={{background:"none",border:"none",fontSize:12,color:C.muted,cursor:"pointer",fontFamily:"inherit",padding:"4px"}}>
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
         </div>
       )}
 
