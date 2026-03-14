@@ -5309,12 +5309,21 @@ function POModal({po, items, suppliers, jobs, onSave, onClose}) {
   const [lineItemId, setLineItemId] = useState("");
   const [lineQty, setLineQty] = useState(1);
   const [lineCost, setLineCost] = useState("");
+  const [itemSearch, setItemSearch] = useState("");
+  const [itemCat, setItemCat] = useState("All");
+
+  const cats = ["All",...new Set(items.map(i=>i.category))];
+  const filteredItems = items.filter(i=>{
+    const mc = itemCat==="All"||i.category===itemCat;
+    const ms = !itemSearch||i.name.toLowerCase().includes(itemSearch.toLowerCase())||i.code.toLowerCase().includes(itemSearch.toLowerCase());
+    return mc&&ms;
+  });
 
   const addLine = () => {
     const item = items.find(i=>i.id===lineItemId);
     if(!item) return;
     setF(p=>({...p, lines:[...p.lines, {itemId:item.id,itemCode:item.code,itemName:item.name,qtyOrdered:Number(lineQty),qtyReceived:0,unitCost:Number(lineCost)||item.purchasePrice}]}));
-    setLineItemId(""); setLineQty(1); setLineCost("");
+    setLineItemId(""); setLineQty(1); setLineCost(""); setItemSearch("");
   };
   const removeLine = idx => setF(p=>({...p,lines:p.lines.filter((_,i)=>i!==idx)}));
   const total = f.lines.reduce((s,l)=>s+l.qtyOrdered*l.unitCost,0);
@@ -5367,26 +5376,41 @@ function POModal({po, items, suppliers, jobs, onSave, onClose}) {
           </div>
         )}
         {/* Add line row */}
-        <div style={{display:"flex",gap:8,alignItems:"flex-end",flexWrap:"wrap",padding:12,background:C.raised,borderRadius:10,border:`1px solid ${C.border}`}}>
-          <div style={{flex:2,minWidth:140}}>
-            <label style={{display:"block",color:C.sub,fontSize:11,fontWeight:700,marginBottom:4}}>ITEM</label>
-            <select value={lineItemId} onChange={e=>{ setLineItemId(e.target.value); const it=items.find(i=>i.id===e.target.value); if(it) setLineCost(it.purchasePrice); }}
-              style={{width:"100%",background:"#fff",border:`1px solid ${C.border}`,borderRadius:8,padding:"8px 10px",color:C.text,fontSize:13,fontFamily:"inherit"}}>
-              <option value="">— Select item —</option>
-              {items.map(i=><option key={i.id} value={i.id}>{i.name} ({i.code})</option>)}
+        <div style={{padding:12,background:C.raised,borderRadius:10,border:`1px solid ${C.border}`}}>
+          {/* Row 1: category filter + search */}
+          <div style={{display:"flex",gap:8,marginBottom:8,flexWrap:"wrap"}}>
+            <select value={itemCat} onChange={e=>{setItemCat(e.target.value);setLineItemId("");}}
+              style={{background:"#fff",border:`1px solid ${C.border}`,borderRadius:8,padding:"7px 10px",color:C.text,fontSize:12,fontFamily:"inherit",fontWeight:600}}>
+              {cats.map(c=><option key={c}>{c}</option>)}
             </select>
+            <input value={itemSearch} onChange={e=>{setItemSearch(e.target.value);setLineItemId("");}}
+              placeholder="Search items…"
+              style={{flex:1,minWidth:120,background:"#fff",border:`1px solid ${C.border}`,borderRadius:8,padding:"7px 10px",color:C.text,fontSize:13,fontFamily:"inherit"}}/>
           </div>
-          <div style={{width:70}}>
-            <label style={{display:"block",color:C.sub,fontSize:11,fontWeight:700,marginBottom:4}}>QTY</label>
-            <input type="number" value={lineQty} onChange={e=>setLineQty(e.target.value)} min={1}
-              style={{width:"100%",background:"#fff",border:`1px solid ${C.border}`,borderRadius:8,padding:"8px 10px",color:C.text,fontSize:13,fontFamily:"inherit"}}/>
+          {/* Row 2: item select + qty + cost + add */}
+          <div style={{display:"flex",gap:8,alignItems:"flex-end",flexWrap:"wrap"}}>
+            <div style={{flex:2,minWidth:140}}>
+              <label style={{display:"block",color:C.sub,fontSize:11,fontWeight:700,marginBottom:4}}>
+                ITEM {filteredItems.length<items.length&&<span style={{color:C.accent}}>({filteredItems.length} shown)</span>}
+              </label>
+              <select value={lineItemId} onChange={e=>{ setLineItemId(e.target.value); const it=items.find(i=>i.id===e.target.value); if(it) setLineCost(it.purchasePrice); }}
+                style={{width:"100%",background:"#fff",border:`1px solid ${C.border}`,borderRadius:8,padding:"8px 10px",color:C.text,fontSize:13,fontFamily:"inherit"}}>
+                <option value="">— Select item —</option>
+                {filteredItems.map(i=><option key={i.id} value={i.id}>{i.name} ({i.code})</option>)}
+              </select>
+            </div>
+            <div style={{width:70}}>
+              <label style={{display:"block",color:C.sub,fontSize:11,fontWeight:700,marginBottom:4}}>QTY</label>
+              <input type="number" value={lineQty} onChange={e=>setLineQty(e.target.value)} min={1}
+                style={{width:"100%",background:"#fff",border:`1px solid ${C.border}`,borderRadius:8,padding:"8px 10px",color:C.text,fontSize:13,fontFamily:"inherit"}}/>
+            </div>
+            <div style={{width:100}}>
+              <label style={{display:"block",color:C.sub,fontSize:11,fontWeight:700,marginBottom:4}}>UNIT COST</label>
+              <input type="number" value={lineCost} onChange={e=>setLineCost(e.target.value)}
+                style={{width:"100%",background:"#fff",border:`1px solid ${C.border}`,borderRadius:8,padding:"8px 10px",color:C.text,fontSize:13,fontFamily:"inherit"}}/>
+            </div>
+            <Btn label="+ Add" onClick={addLine} small/>
           </div>
-          <div style={{width:100}}>
-            <label style={{display:"block",color:C.sub,fontSize:11,fontWeight:700,marginBottom:4}}>UNIT COST</label>
-            <input type="number" value={lineCost} onChange={e=>setLineCost(e.target.value)}
-              style={{width:"100%",background:"#fff",border:`1px solid ${C.border}`,borderRadius:8,padding:"8px 10px",color:C.text,fontSize:13,fontFamily:"inherit"}}/>
-          </div>
-          <Btn label="+ Add" onClick={addLine} small/>
         </div>
       </div>
     </Modal>
@@ -6240,29 +6264,27 @@ function ItemDetail({item, suppliers, fieldStaff, invItems, quotes=[], purchaseO
         <div style={{flex:1,minWidth:220}}>
           {/* Availability panel */}
           <Card style={{marginBottom:12}}>
-            <SectionHead title="📊 Availability"/>
-
-            {/* Four stats — label above, big number below, single row */}
-            <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:0,marginBottom:20,paddingTop:8}}>
+            {/* Four stats — matches screenshot style */}
+            <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",textAlign:"center",padding:"20px 0 16px",gap:0}}>
               {[
-                {label:"On Hand",   value:av.onHand,    color:av.onHand===0?C.red:av.onHand<=item.reorderPoint?C.orange:"#1a1f2e"},
-                {label:"On Order",  value:av.onOrder,   color:av.onOrder>0?"#1a1f2e":C.muted},
-                {label:"Committed", value:av.committed,  color:av.committed>0?"#7c3aed":C.muted},
-                {label:"Available", value:av.available,  color:av.available<0?C.red:av.available===0?C.orange:C.green},
+                {label:"ON HAND",   value:av.onHand,    color:av.onHand===0?C.red:av.onHand<=item.reorderPoint?C.orange:"#1a1f2e"},
+                {label:"ON ORDER",  value:av.onOrder,   color:av.onOrder>0?"#1a1f2e":C.muted},
+                {label:"COMMITTED", value:av.committed,  color:av.committed>0?"#7c3aed":C.muted},
+                {label:"AVAILABLE", value:av.available,  color:av.available<0?C.red:av.available===0?C.orange:C.green},
               ].map(({label,value,color})=>(
-                <div key={label} style={{textAlign:"center",padding:"0 8px"}}>
-                  <div style={{fontSize:11,color:C.muted,fontWeight:700,textTransform:"uppercase",letterSpacing:0.6,marginBottom:8}}>{label}</div>
-                  <div style={{fontSize:36,fontWeight:900,color,lineHeight:1}}>{value}</div>
+                <div key={label} style={{padding:"0 4px",borderRight:label!=="AVAILABLE"?`1px solid ${C.border}`:"none"}}>
+                  <div style={{fontSize:11,fontWeight:700,color:C.muted,letterSpacing:0.8,marginBottom:10}}>{label}</div>
+                  <div style={{fontSize:40,fontWeight:900,color,lineHeight:1}}>{value}</div>
                 </div>
               ))}
             </div>
 
-            {/* Location pills — centered row */}
+            {/* Location pills — centred, rounded, matching screenshot */}
             <div style={{display:"flex",flexWrap:"wrap",gap:8,justifyContent:"center",paddingTop:16,borderTop:`1px solid ${C.border}`}}>
               {locs.filter(([,v])=>v>0).map(([loc,label])=>(
                 <span key={loc} style={{
                   background:C.bg,border:`1px solid ${C.border}`,
-                  borderRadius:99,padding:"6px 14px",
+                  borderRadius:99,padding:"7px 16px",
                   fontSize:13,fontWeight:600,color:C.sub,whiteSpace:"nowrap"}}>
                   {label}: {item.qtyOnHand?.[loc]||0}
                 </span>
@@ -6741,6 +6763,13 @@ function InventoryTab({settings, companies, quotes=[]}) {
                       </span>
                     ))}
                   </div>
+                  {/* PO button */}
+                  <button onClick={e=>{e.stopPropagation();handleNewPO(item);}}
+                    style={{background:C.accent,color:"#fff",border:"none",borderRadius:7,
+                      padding:"4px 12px",fontSize:11,fontWeight:700,cursor:"pointer",
+                      fontFamily:"inherit",whiteSpace:"nowrap",flexShrink:0}}>
+                    🛒 New PO
+                  </button>
                 </div>
 
               </div>
