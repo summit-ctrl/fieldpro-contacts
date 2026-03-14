@@ -4559,7 +4559,8 @@ function PdfViewer({file}) {
 ═══════════════════════════════════════════ */
 function JobDrawer({job, onClose, onUpdate, settings, companies, setCompanies, vendors, quotes=[], setQuotes}) {
   const [expanded, setExpanded] = useState(false);
-  const {jobStages, jobSubStages, fieldStaff, jobTypes, reportTemplates=DEFAULT_REPORT_TEMPLATES, emailTemplates=DEFAULT_EMAIL_TEMPLATES, fieldForms=DEFAULT_FIELD_FORMS} = settings;
+  const {jobStages, jobSubStages, fieldStaff, jobTypes, reportTemplates=DEFAULT_REPORT_TEMPLATES, emailTemplates=DEFAULT_EMAIL_TEMPLATES, fieldForms=DEFAULT_FIELD_FORMS, invItems=[], invSuppliers=[], purchaseOrders=[], setPurchaseOrders} = settings;
+  const [showPO, setShowPO] = useState(false);
   const [applianceTypes, setApplianceTypes] = useState(DEFAULT_APPLIANCE_TYPES);
   const [workPresets, setWorkPresets] = useState(DEFAULT_WORK_PRESETS);
   const [showAddTenant, setShowAddTenant] = useState(false);
@@ -4761,6 +4762,7 @@ function JobDrawer({job, onClose, onUpdate, settings, companies, setCompanies, v
             <div style={{display:"flex",gap:6,padding:"10px 0",flexWrap:"wrap"}}>
               {job.status==="Open"&&<Btn label="✓ Close Job" onClick={()=>updateJob({...job,status:"Closed",closedDate:new Date().toISOString().split("T")[0]})} color={C.orange} small/>}
               <Btn label="🔁 Recall" onClick={createRecall} color={C.purple} small outline/>
+              <Btn label="🛒 New PO" onClick={()=>setShowPO(true)} color={C.accent} small outline/>
             </div>
           </div>
 
@@ -4860,6 +4862,15 @@ function JobDrawer({job, onClose, onUpdate, settings, companies, setCompanies, v
           <FF label="Email" value={newTenant.email} onChange={v=>setNewTenant({...newTenant,email:v})} placeholder="john@email.com" type="email"/>
           <FF label="Phone" value={newTenant.phone} onChange={v=>setNewTenant({...newTenant,phone:v})} placeholder="0400 000 000"/>
         </Modal>
+      )}
+      {showPO&&(
+        <POModal
+          po={{ref:nextPORef(),supplierId:"",supplierName:"",date:new Date().toISOString().slice(0,10),status:"draft",jobId:job.ref,lines:[],notes:`Parts for job ${job.ref} – ${job.address}`}}
+          items={invItems} suppliers={invSuppliers}
+          jobs={allJobs(companies).filter(j=>j.status==="Open")}
+          onSave={po=>{if(setPurchaseOrders) setPurchaseOrders(prev=>prev.find(p=>p.id===po.id)?prev.map(p=>p.id===po.id?po:p):[...prev,po]);setShowPO(false);}}
+          onClose={()=>setShowPO(false)}
+        />
       )}
     </>
   );
@@ -6159,7 +6170,7 @@ function ReturnModal({items, batches, fieldStaff, jobs, onSave, onClose}) {
 }
 
 /* ── Item Detail View ── */
-function ItemDetail({item, suppliers, fieldStaff, invItems, quotes=[], purchaseOrders=[], onBack, onEdit}) {
+function ItemDetail({item, suppliers, fieldStaff, invItems, quotes=[], purchaseOrders=[], onBack, onEdit, onNewPO}) {
   const sup = suppliers.find(s=>s.id===item.supplierId);
   const totalQty = Object.values(item.qtyOnHand||{}).reduce((s,v)=>s+(v||0),0);
   const stockStatus = totalQty===0?"red":totalQty<=item.reorderPoint?"orange":"green";
@@ -6190,8 +6201,9 @@ function ItemDetail({item, suppliers, fieldStaff, invItems, quotes=[], purchaseO
             <Field label="Markup" value={item.markup+"%"}/>
             <Field label="Reorder Point" value={item.reorderPoint}/>
             <Field label="Reorder Qty" value={item.reorderQty}/>
-            <div style={{marginTop:12}}>
+            <div style={{marginTop:12,display:"flex",gap:8,flexWrap:"wrap"}}>
               <Btn label="✏️ Edit Item" onClick={onEdit} small outline/>
+              {onNewPO&&<Btn label="🛒 New PO" onClick={()=>onNewPO(item)} color={C.accent} small/>}
             </div>
           </Card>
 
@@ -6563,7 +6575,8 @@ function InventoryTab({settings, companies, quotes=[]}) {
   if(selItem) return (
     <ItemDetail item={selItem} suppliers={invSuppliers} fieldStaff={fieldStaff||[]}
       invItems={invItems} quotes={quotes} purchaseOrders={purchaseOrders}
-      onBack={()=>setSelItem(null)} onEdit={()=>setModal("editItem")}/>
+      onBack={()=>setSelItem(null)} onEdit={()=>setModal("editItem")}
+      onNewPO={item=>{setModalData({ref:nextPORef(),supplierId:item.supplierId||"",supplierName:"",date:new Date().toISOString().slice(0,10),status:"draft",jobId:"",lines:[{itemId:item.id,itemCode:item.code,itemName:item.name,qtyOrdered:item.reorderQty||1,qtyReceived:0,unitCost:item.purchasePrice}],notes:""});setModal("addPO");}}/>
   );
 
   return (
@@ -6575,6 +6588,7 @@ function InventoryTab({settings, companies, quotes=[]}) {
           <p style={{color:C.sub,fontSize:12,marginTop:2}}>{invItems.length} items · {fmtMoney(totalValue)} stock value</p>
         </div>
         <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+          <Btn label="🛒 New PO" onClick={()=>{setModalData(null);setModal("addPO");}} color={C.accent} small/>
           <Btn label="📥 Receive Stock" onClick={()=>setModal("adhocReceive")} color={C.accent} small/>
           <Btn label="📦 Collect" onClick={()=>setModal("collect")} color={C.green} small/>
           <Btn label="↔ Transfer" onClick={()=>setModal("transfer")} color={C.purple} small/>
