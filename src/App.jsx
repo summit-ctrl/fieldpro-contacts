@@ -6619,10 +6619,28 @@ function InventoryTab({settings, companies, quotes=[]}) {
   const tabs = [{id:"items",label:"📦 Items"},{id:"purchase-orders",label:"🛒 Purchase Orders"},{id:"movements",label:"📋 Movements"},{id:"suppliers",label:"🏭 Suppliers"}];
 
   if(selItem) return (
-    <ItemDetail item={selItem} suppliers={invSuppliers} fieldStaff={fieldStaff||[]}
-      invItems={invItems} quotes={quotes} purchaseOrders={purchaseOrders}
-      onBack={()=>setSelItem(null)} onEdit={()=>setModal("editItem")}
-      onNewPO={handleNewPO}/>
+    <>
+      <ItemDetail item={selItem} suppliers={invSuppliers} fieldStaff={fieldStaff||[]}
+        invItems={invItems} quotes={quotes} purchaseOrders={purchaseOrders}
+        onBack={()=>setSelItem(null)} onEdit={()=>setModal("editItem")}
+        onNewPO={handleNewPO}/>
+      {(modal==="addItem"||modal==="editItem")&&(
+        <ItemModal item={modal==="editItem"?selItem:null} suppliers={invSuppliers} onSave={saveItem} onClose={()=>setModal(null)}/>
+      )}
+      {(modal==="addPO"||modal==="editPO")&&(
+        <POModal po={modalData||undefined} items={invItems} suppliers={invSuppliers} jobs={openJobs} onSave={savePO} onClose={()=>setModal(null)}/>
+      )}
+      {draftConflict&&(
+        <Modal title="Add to Existing Draft PO?" onClose={()=>setDraftConflict(null)}
+          onSave={()=>{
+            const updated={...draftConflict.existingDraft,lines:[...draftConflict.existingDraft.lines,{itemId:draftConflict.item.id,itemCode:draftConflict.item.code,itemName:draftConflict.item.name,qtyOrdered:draftConflict.item.reorderQty||1,qtyReceived:0,unitCost:draftConflict.item.purchasePrice}]};
+            savePO(updated);setDraftConflict(null);
+          }}>
+          <p style={{fontSize:13,color:C.sub,marginBottom:12}}>There's already a draft PO for this supplier (<strong>{draftConflict.existingDraft.ref}</strong>). Add to that PO or create a new one?</p>
+          <Btn label="Create New PO Instead" onClick={()=>{setModalData({ref:nextPORef(),supplierId:draftConflict.item.supplierId||"",supplierName:"",date:new Date().toISOString().slice(0,10),status:"draft",jobId:"",lines:[{itemId:draftConflict.item.id,itemCode:draftConflict.item.code,itemName:draftConflict.item.name,qtyOrdered:draftConflict.item.reorderQty||1,qtyReceived:0,unitCost:draftConflict.item.purchasePrice}],notes:""});setModal("addPO");setDraftConflict(null);}} outline small/>
+        </Modal>
+      )}
+    </>
   );
 
   return (
