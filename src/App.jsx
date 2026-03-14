@@ -6640,60 +6640,90 @@ function InventoryTab({settings, companies, quotes=[]}) {
           <div style={{display:"flex",gap:8,marginBottom:14,overflowX:"auto",paddingBottom:4}}>
             {cats.map(c=><Pill key={c} label={c} active={catFilter===c} onClick={()=>setCatFilter(c)}/>)}
           </div>
+          <div style={{background:"#fff",border:`1px solid ${C.border}`,borderRadius:12,overflow:"hidden"}}>
           {filtered.map(item=>{
             const av = avail(item);
+            const tq = totalQty(item);
+            const isOut = tq===0;
+            const isLow = !isOut && tq<=item.reorderPoint;
+            const accentLine = isOut?C.red:isLow?C.orange:C.green;
+            const stockLabel = isOut?"Out of Stock":isLow?"Low Stock":"In Stock";
+            const stockCol   = isOut?"red":isLow?"orange":"green";
+            const locs = Object.entries(item.qtyOnHand||{}).filter(([,v])=>v>0);
             return (
-            <RowCard key={item.id} onClick={()=>setSelItem(item)}>
-              <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
-                <div style={{flex:1,minWidth:0,marginRight:12}}>
-                  <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap",marginBottom:4}}>
-                    <span style={{color:C.accent,fontWeight:800,fontSize:11,fontFamily:"monospace"}}>{item.code}</span>
-                    <Badge label={item.category} color="blue"/>
-                    <Badge label={totalQty(item)===0?"Out of Stock":totalQty(item)<=item.reorderPoint?"Low Stock":"In Stock"} color={stockStatus(item)}/>
-                    {av.toOrder>0&&<Badge label={`Order ${av.toOrder} more`} color="purple"/>}
+              <div key={item.id} onClick={()=>setSelItem(item)}
+                style={{background:"#fff",borderBottom:`1px solid ${C.border}`,borderLeft:`3px solid ${accentLine}`,
+                  padding:"14px 16px 0 16px",cursor:"pointer",transition:"background 0.1s"}}
+                onMouseEnter={e=>e.currentTarget.style.background="#f8fafc"}
+                onMouseLeave={e=>e.currentTarget.style.background="#fff"}>
+
+                {/* Top row: name + available */}
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:4}}>
+                  <div style={{flex:1,minWidth:0,marginRight:16}}>
+                    <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:3,flexWrap:"wrap"}}>
+                      <span style={{fontWeight:800,fontSize:14,color:C.text}}>{item.name}</span>
+                      <Badge label={stockLabel} color={stockCol}/>
+                      {av.toOrder>0&&<Badge label={`Order ${av.toOrder}`} color="purple"/>}
+                    </div>
+                    <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+                      <span style={{color:C.accent,fontSize:11,fontWeight:700,fontFamily:"monospace",background:`${C.accent}10`,padding:"1px 6px",borderRadius:4}}>{item.code}</span>
+                      <span style={{color:C.muted,fontSize:11}}>·</span>
+                      <span style={{color:C.sub,fontSize:11,fontWeight:600}}>{item.category}</span>
+                      <span style={{color:C.muted,fontSize:11}}>·</span>
+                      <span style={{color:C.muted,fontSize:12,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:300}}>{item.description}</span>
+                    </div>
                   </div>
-                  <div style={{color:C.text,fontWeight:700,fontSize:14}}>{item.name}</div>
-                  <div style={{color:C.muted,fontSize:12,marginTop:2}}>{item.description}</div>
-                  <div style={{display:"flex",gap:12,marginTop:6,fontSize:12,color:C.sub,flexWrap:"wrap"}}>
-                    <span>Cost: {fmtMoney(item.purchasePrice)}</span>
-                    <span>Sell: {fmtMoney(item.sellPrice)}</span>
-                    <span>Markup: {item.markup}%</span>
+                  {/* Available — hero number */}
+                  <div style={{textAlign:"center",flexShrink:0,minWidth:64}}>
+                    <div style={{fontSize:28,fontWeight:900,lineHeight:1,color:av.available<=0?C.red:av.available<=item.reorderPoint?C.orange:C.green}}>{av.available}</div>
+                    <div style={{fontSize:10,fontWeight:700,color:C.muted,textTransform:"uppercase",letterSpacing:0.5,marginTop:2}}>Available</div>
                   </div>
                 </div>
-                {/* Availability breakdown */}
-                <div style={{flexShrink:0,display:"grid",gridTemplateColumns:"1fr 1fr",gap:"4px 16px",textAlign:"right",minWidth:160}}>
-                  <div>
-                    <div style={{fontSize:11,color:C.muted,fontWeight:600,textTransform:"uppercase",letterSpacing:0.3}}>On Hand</div>
-                    <div style={{fontSize:20,fontWeight:900,color:av.onHand===0?C.red:av.onHand<=item.reorderPoint?C.orange:C.text}}>{av.onHand}</div>
+
+                {/* Pricing row */}
+                <div style={{display:"flex",gap:12,fontSize:12,color:C.sub,marginBottom:10,flexWrap:"wrap"}}>
+                  <span>Cost <strong style={{color:C.text}}>{fmtMoney(item.purchasePrice)}</strong></span>
+                  <span style={{color:C.border}}>·</span>
+                  <span>Sell <strong style={{color:C.text}}>{fmtMoney(item.sellPrice)}</strong></span>
+                  <span style={{color:C.border}}>·</span>
+                  <span>Markup <strong style={{color:C.text}}>{item.markup}%</strong></span>
+                </div>
+
+                {/* Stats + locations bar */}
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",
+                  borderTop:`1px solid ${C.border}`,margin:"0 -16px",padding:"8px 16px",
+                  background:C.bg,flexWrap:"wrap",gap:8}}>
+                  {/* Stock stats */}
+                  <div style={{display:"flex",gap:16}}>
+                    {[
+                      {label:"On Hand",  val:av.onHand,   color:isOut?C.red:isLow?C.orange:C.text},
+                      {label:"On Order", val:av.onOrder,  color:av.onOrder>0?C.accent:C.muted},
+                      {label:"Committed",val:av.committed,color:av.committed>0?"#7c3aed":C.muted},
+                    ].map(s=>(
+                      <div key={s.label} style={{display:"flex",alignItems:"baseline",gap:4}}>
+                        <span style={{fontSize:15,fontWeight:800,color:s.color}}>{s.val}</span>
+                        <span style={{fontSize:10,color:C.muted,fontWeight:600,textTransform:"uppercase",letterSpacing:0.3}}>{s.label}</span>
+                      </div>
+                    ))}
                   </div>
-                  <div>
-                    <div style={{fontSize:11,color:C.muted,fontWeight:600,textTransform:"uppercase",letterSpacing:0.3}}>On Order</div>
-                    <div style={{fontSize:20,fontWeight:900,color:av.onOrder>0?C.accent:C.muted}}>{av.onOrder}</div>
-                  </div>
-                  <div>
-                    <div style={{fontSize:11,color:C.muted,fontWeight:600,textTransform:"uppercase",letterSpacing:0.3}}>Committed</div>
-                    <div style={{fontSize:20,fontWeight:900,color:av.committed>0?"#7c3aed":C.muted}}>{av.committed}</div>
-                  </div>
-                  <div>
-                    <div style={{fontSize:11,color:C.muted,fontWeight:600,textTransform:"uppercase",letterSpacing:0.3}}>Available</div>
-                    <div style={{fontSize:20,fontWeight:900,color:av.available<0?C.red:av.available===0?C.orange:C.green}}>{av.available}</div>
-                  </div>
-                  {av.toOrder>0&&(
-                    <div style={{gridColumn:"1/-1",background:"#ede9fe",borderRadius:6,padding:"3px 8px",marginTop:2}}>
-                      <span style={{fontSize:11,color:"#5b21b6",fontWeight:800}}>🛒 Order {av.toOrder} to cover demand</span>
-                    </div>
-                  )}
-                  <div style={{gridColumn:"1/-1",display:"flex",gap:4,marginTop:4,justifyContent:"flex-end",flexWrap:"wrap"}}>
-                    {Object.entries(item.qtyOnHand||{}).filter(([,v])=>v>0).map(([loc,v])=>(
-                      <span key={loc} style={{background:C.raised,border:`1px solid ${C.border}`,borderRadius:6,padding:"2px 7px",fontSize:10,fontWeight:700,color:C.sub}}>{locName(loc)}: {v}</span>
+                  {/* Location pills */}
+                  <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
+                    {locs.map(([loc,v])=>(
+                      <span key={loc} style={{
+                        background:loc==="warehouse"?"#dbeafe":"#dcfce7",
+                        color:loc==="warehouse"?"#1d4ed8":"#15803d",
+                        borderRadius:99,padding:"2px 9px",fontSize:11,fontWeight:700,whiteSpace:"nowrap"}}>
+                        {loc==="warehouse"?"🏠 Wh":("🚐 "+(fieldStaff?.find(f=>"van_"+f.id===loc)?.name?.split(" ")[0]||loc.slice(4)))}: {v}
+                      </span>
                     ))}
                   </div>
                 </div>
+
               </div>
-            </RowCard>
             );
           })}
           {filtered.length===0&&<div style={{textAlign:"center",padding:"40px 0",color:C.muted}}><div style={{fontSize:36,marginBottom:8}}>📦</div>No items found</div>}
+          </div>{/* end card container */}
         </div>
       )}
 
@@ -6922,7 +6952,7 @@ function InventoryTab({settings, companies, quotes=[]}) {
         <ItemModal item={modal==="editItem"?selItem:null} suppliers={invSuppliers} onSave={saveItem} onClose={()=>setModal(null)}/>
       )}
       {(modal==="addPO"||modal==="editPO")&&(
-        <POModal po={modal==="editPO"?modalData:null} items={invItems} suppliers={invSuppliers} jobs={openJobs} onSave={savePO} onClose={()=>setModal(null)}/>
+        <POModal po={modalData||undefined} items={invItems} suppliers={invSuppliers} jobs={openJobs} onSave={savePO} onClose={()=>setModal(null)}/>
       )}
       {modal==="receive"&&modalData&&(
         <ReceiveModal po={modalData} onSave={lines=>receiveStock(modalData,lines)} onClose={()=>setModal(null)}/>
