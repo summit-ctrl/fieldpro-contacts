@@ -1,4 +1,9 @@
 import { useState, useEffect, useRef, Component } from "react";
+import {
+  DEFAULT_FIELD_STAFF, SEED_USERS, SEED_COMPANIES, SEED_VENDORS,
+  SEED_QUOTES, SEED_INVOICES, SEED_SUPPLIERS, SEED_INV_ITEMS,
+  SEED_PURCHASE_ORDERS, SEED_MOVEMENTS, SEED_BATCHES,
+} from "./seed.js";
 
 class ErrorBoundary extends Component {
   constructor(props) { super(props); this.state = {error:null}; }
@@ -63,256 +68,19 @@ const DEFAULT_REPORT_TEMPLATES = [
   }
 ];
 const DEFAULT_JOB_SUBSTAGES = ["Waiting on tenant","Parts ordered","Awaiting approval","Pending inspection","Follow-up required","On hold – weather","Subcontractor booked","Materials delivered"];
-const DEFAULT_FIELD_STAFF = [
-  {id:"fs1",name:"Jake Rivera",role:"Lead Technician",phone:"0411 100 200",email:"jake@fieldpro.com",trades:["Plumbing","HVAC"],status:"Active",zone:null},
-  {id:"fs2",name:"Tom Yuen",role:"Electrician",phone:"0411 200 300",email:"tom@fieldpro.com",trades:["Electrical"],status:"Active",zone:null},
-  {id:"fs3",name:"Maria Flores",role:"HVAC Specialist",phone:"0411 300 400",email:"maria@fieldpro.com",trades:["HVAC"],status:"Active",zone:null},
-  {id:"fs4",name:"Anita Shaw",role:"Plumber",phone:"0411 400 500",email:"anita@fieldpro.com",trades:["Plumbing"],status:"Active",zone:null},
-];
 
-/* ─── USERS & ROLES ─── */
-const SEED_USERS = [
-  {id:"u1", name:"James Dunlop", initials:"JD", role:"topboss", email:"james@fieldpro.com", active:true,
-   permissions:{dispatch:true,history:true,customers:true,quotes:true,invoices:true,inventory:true,reports:true,settings:true,techView:true,userMgmt:true}},
-  {id:"u2", name:"Admin User",   initials:"AU", role:"admin",   email:"admin@fieldpro.com",  active:true,
-   permissions:{dispatch:true,history:true,customers:true,quotes:true,invoices:true,inventory:true,reports:true,settings:false,techView:true,userMgmt:false}},
-  {id:"u3", name:"Jake Rivera",  initials:"JR", role:"tech",    email:"jake@fieldpro.com",   active:true, staffId:"fs1",
-   permissions:{dispatch:false,history:false,customers:false,quotes:false,invoices:false,inventory:false,reports:false,settings:false,techView:true,userMgmt:false}},
-  {id:"u4", name:"Tom Yuen",     initials:"TY", role:"tech",    email:"tom@fieldpro.com",    active:true, staffId:"fs2",
-   permissions:{dispatch:false,history:false,customers:false,quotes:false,invoices:false,inventory:false,reports:false,settings:false,techView:true,userMgmt:false}},
-];
 const ROLE_LABELS = {topboss:"Top Boss",admin:"Admin",tech:"Technician"};
 const ROLE_COLORS = {topboss:"#7c3aed",admin:"#2563eb",tech:"#16a34a"};
 
-const daysDiff = d => Math.floor((new Date() - new Date(d)) / 86400000);
-const jobStatus = job => { if (job.status==="Open") return "Open"; return daysDiff(job.closedDate)<=30?"Recently Closed":"Old"; };
-const statusColor = s => s==="Open"?"blue":s==="Recently Closed"?"orange":"gray";
-const fmtDate = d => d ? new Date(d).toLocaleDateString("en-AU",{day:"2-digit",month:"short",year:"numeric"}) : "—";
-const fmtMoney = n => "$"+Number(n||0).toLocaleString("en-AU",{minimumFractionDigits:2,maximumFractionDigits:2});
-const fileSizeFmt = b => b > 1048576 ? `${(b/1048576).toFixed(1)} MB` : `${Math.round(b/1024)} KB`;
-const fmtTs = ts => { const d = new Date(ts); return d.toLocaleDateString("en-AU",{day:"2-digit",month:"short",year:"numeric"}) + " " + d.toLocaleTimeString("en-AU",{hour:"2-digit",minute:"2-digit"}); };
-let _id=3000; const uid=()=>`id-${++_id}`;
-// Global auto-incrementing job number — starts after seed data (1006)
-let _jobNum=1006; const nextJobRef=()=>`${++_jobNum}`;
-const appIcon = t=>({"Oven":"🍳","Dishwasher":"🍽️","Cooktop – Gas":"🔥","Cooktop – Electric":"⚡","Upright Cooker":"🍲","Washing Machine":"🫧","Dryer":"💨","Fridge":"🧊","Microwave":"📡"}[t]||"🔧");
-const workIcon = d=>{const l=d.toLowerCase();if(l.includes("gas"))return"⛽";if(l.includes("power point")||l.includes("circuit")||l.includes("cable"))return"⚡";if(l.includes("cabinet")||l.includes("benchtop"))return"🪚";if(l.includes("alarm"))return"🔔";if(l.includes("water"))return"💧";return"🔧";};
-const stageColor = s => {
-  const m={"New":"gray","Scheduled":"blue","In Progress":"orange","On Hold":"yellow","Completed":"green","Invoiced":"purple"};
-  return m[s]||"gray";
-};
-
-/* ─── SEED DATA ─── */
-const SEED_COMPANIES = [
-  {id:"c1",name:"Ray White Group",abn:"42 000 001 478",phone:"(02) 9299 0000",email:"accounts@raywhite.com",website:"raywhite.com",status:"Active",
-    branches:[
-      {id:"b1",name:"Ray White Parramatta",address:"10 Darcy St, Parramatta NSW 2150",phone:"(02) 9633 3300",email:"parramatta@raywhite.com",
-        billing:{name:"Karen Lim",email:"klim@raywhite.com",phone:"(02) 9633 3301"},
-        agents:[
-          {id:"a1",name:"James Okafor",email:"jokafor@raywhite.com",phone:"0412 111 222",properties:12,
-            jobs:[
-              {id:"j1",ref:"1001",type:"Plumbing",address:"22 Oak St, Parramatta NSW",scheduledTime:"08:00",durationHrs:1.5,lat:-33.8138,lng:150.9985,description:"Leaking tap – kitchen & bathroom",tech:"Jake Rivera",keyMethod:"other",keyNotes:"Lockbox code 4421",createdDate:"2026-03-01",status:"Open",stage:"In Progress",subStage:"Waiting on tenant",closedDate:null,tenants:[{id:"t1",name:"Wei & Fang Liu",email:"wliu@gmail.com",phone:"0400 111 333"}],appliances:[{id:"ap1",appType:"Dishwasher",brand:"Bosch",model:"SMS46KI01A",serial:"BSH2024-001",condition:"Leaking from door seal"}],additionalWorks:[{id:"aw1",description:"Add power point",custom:false,notes:"Behind dishwasher cavity"}]},
-              {id:"j2",ref:"1002",type:"Electrical",address:"7/15 Church St, Parramatta NSW",description:"Power point replacement x3",tech:"Tom Yuen",keyMethod:"office",keyNotes:"Ask for Maria at reception",createdDate:"2026-02-10",status:"Closed",stage:"Invoiced",subStage:"",closedDate:"2026-02-20",tenants:[{id:"t2",name:"Priya Menon",email:"pmenon@hotmail.com",phone:"0400 222 444"}],appliances:[],additionalWorks:[{id:"aw2",description:"Replace cables",custom:false,notes:"3x double GPO"},{id:"aw3",description:"Update circuit breaker",custom:false,notes:""}]},
-              {id:"j3",ref:"1003",type:"HVAC",address:"22 Oak St, Parramatta NSW",description:"AC unit not cooling – full service",tech:"Maria Flores",keyMethod:"tenant",keyNotes:"Call 30 mins prior",createdDate:"2025-11-15",status:"Closed",stage:"Completed",subStage:"Follow-up required",closedDate:"2025-11-20",tenants:[{id:"t1",name:"Wei & Fang Liu",email:"wliu@gmail.com",phone:"0400 111 333"}],appliances:[{id:"ap2",appType:"Cooktop – Gas",brand:"Smeg",model:"SR264GH",serial:"SMG2022-887",condition:"One burner igniter faulty"}],additionalWorks:[]},
-              {id:"j11",ref:"1011",type:"Plumbing",address:"4 Pennant Hills Rd, Carlingford NSW",scheduledTime:"10:00",durationHrs:1.5,lat:-33.7810,lng:151.0460,description:"Blocked drain – bathroom",tech:"Jake Rivera",keyMethod:"tenant",keyNotes:"Text before arrival",createdDate:"2026-03-10",status:"Open",stage:"Scheduled",subStage:"",closedDate:null,tenants:[{id:"t11",name:"Lily Tran",email:"ltran@gmail.com",phone:"0400 010 011"}],appliances:[],additionalWorks:[]},
-              {id:"j12",ref:"1012",type:"Plumbing",address:"18 Victoria Rd, Rydalmere NSW",scheduledTime:"12:00",durationHrs:2,lat:-33.8085,lng:151.0155,description:"Hot water system flush & service",tech:"Jake Rivera",keyMethod:"office",keyNotes:"",createdDate:"2026-03-10",status:"Open",stage:"Scheduled",subStage:"",closedDate:null,tenants:[{id:"t12",name:"Omar Sheikh",email:"osheikh@gmail.com",phone:"0400 010 012"}],appliances:[],additionalWorks:[]},
-              {id:"j13",ref:"1013",type:"Plumbing",address:"55 Marsden St, Parramatta NSW",scheduledTime:"14:30",durationHrs:1,lat:-33.8195,lng:151.0065,description:"Leaking toilet cistern",tech:"Jake Rivera",keyMethod:"tenant",keyNotes:"",createdDate:"2026-03-10",status:"Open",stage:"New",subStage:"",closedDate:null,tenants:[{id:"t13",name:"Sophie Grant",email:"sgrant@gmail.com",phone:"0400 010 013"}],appliances:[],additionalWorks:[]},
-            ]},
-          {id:"a2",name:"Sofia Reyes",email:"sreyes@raywhite.com",phone:"0413 333 444",properties:8,
-            jobs:[
-              {id:"j4",ref:"1004",type:"Plumbing",address:"3 Rose Ave, Parramatta NSW",scheduledTime:"11:00",durationHrs:2,lat:-33.8158,lng:151.0048,description:"Hot water system replacement",tech:"Anita Shaw",keyMethod:"office",keyNotes:"",createdDate:"2026-03-05",status:"Open",stage:"Scheduled",subStage:"",closedDate:null,tenants:[{id:"t3",name:"Ahmed & Sara Hassan",email:"ahassan@gmail.com",phone:"0400 333 555"}],appliances:[],additionalWorks:[{id:"aw4",description:"Close off gas (gas shutdown)",custom:false,notes:"Old HWS – gas line to be capped"}]},
-              {id:"j21",ref:"1021",type:"Electrical",address:"88 Merrylands Rd, Merrylands NSW",scheduledTime:"08:30",durationHrs:1.5,lat:-33.8380,lng:150.9880,description:"Switchboard upgrade",tech:"Anita Shaw",keyMethod:"tenant",keyNotes:"Ring doorbell",createdDate:"2026-03-10",status:"Open",stage:"Scheduled",subStage:"",closedDate:null,tenants:[{id:"t21",name:"Ben Nguyen",email:"bnguyen@gmail.com",phone:"0400 020 021"}],appliances:[],additionalWorks:[]},
-              {id:"j22",ref:"1022",type:"HVAC",address:"14 Woodville Rd, Guildford NSW",scheduledTime:"13:00",durationHrs:2,lat:-33.8510,lng:150.9800,description:"Ducted AC – not heating",tech:"Anita Shaw",keyMethod:"tenant",keyNotes:"",createdDate:"2026-03-10",status:"Open",stage:"In Progress",subStage:"",closedDate:null,tenants:[{id:"t22",name:"Michelle Park",email:"mpark@gmail.com",phone:"0400 020 022"}],appliances:[{id:"ap22",appType:"Oven",brand:"Westinghouse",model:"WVE636S",serial:"WV23-444",condition:"Fan not working"}],additionalWorks:[]},
-              {id:"j23",ref:"1023",type:"Plumbing",address:"6 Railway Pde, Auburn NSW",scheduledTime:"15:30",durationHrs:1,lat:-33.8510,lng:151.0355,description:"Burst pipe under sink",tech:"Anita Shaw",keyMethod:"other",keyNotes:"Key with neighbour",createdDate:"2026-03-10",status:"Open",stage:"New",subStage:"",closedDate:null,tenants:[{id:"t23",name:"David Chow",email:"dchow@gmail.com",phone:"0400 020 023"}],appliances:[],additionalWorks:[]},
-            ]},
-        ]},
-      {id:"b2",name:"Ray White Blacktown",address:"1 Flushcombe Rd, Blacktown NSW 2148",phone:"(02) 9622 4400",email:"blacktown@raywhite.com",billing:{name:"Tom Nguyen",email:"tnguyen@raywhite.com",phone:"(02) 9622 4401"},
-        agents:[{id:"a3",name:"Mia Chang",email:"mchang@raywhite.com",phone:"0414 555 666",properties:15,
-          jobs:[
-            {id:"j5",ref:"1005",type:"Electrical",address:"12 Main St, Blacktown NSW",scheduledTime:"08:00",durationHrs:1.5,lat:-33.7690,lng:150.9054,description:"Smoke alarm replacement x4",tech:"Tom Yuen",keyMethod:"tenant",keyNotes:"Tenant works from home",createdDate:"2026-03-09",status:"Open",stage:"New",subStage:"",closedDate:null,tenants:[{id:"t4",name:"Carlos Fernandez",email:"cfernandez@gmail.com",phone:"0400 444 666"}],appliances:[],additionalWorks:[{id:"aw5",description:"Smoke alarm replacement",custom:false,notes:"4x units throughout"}]},
-            {id:"j31",ref:"1031",type:"Electrical",address:"23 Seven Hills Rd, Seven Hills NSW",scheduledTime:"10:00",durationHrs:1,lat:-33.7745,lng:150.9360,description:"Ceiling fan installation x2",tech:"Tom Yuen",keyMethod:"tenant",keyNotes:"",createdDate:"2026-03-10",status:"Open",stage:"Scheduled",subStage:"",closedDate:null,tenants:[{id:"t31",name:"Aaron Li",email:"ali@gmail.com",phone:"0400 030 031"}],appliances:[],additionalWorks:[]},
-            {id:"j32",ref:"1032",type:"Electrical",address:"9 Windsor Rd, Baulkham Hills NSW",scheduledTime:"11:30",durationHrs:1.5,lat:-33.7590,lng:150.9800,description:"Safety switch – no power to kitchen",tech:"Tom Yuen",keyMethod:"office",keyNotes:"",createdDate:"2026-03-10",status:"Open",stage:"In Progress",subStage:"",closedDate:null,tenants:[{id:"t32",name:"Grace Kim",email:"gkim@gmail.com",phone:"0400 030 032"}],appliances:[],additionalWorks:[]},
-            {id:"j33",ref:"1033",type:"Electrical",address:"101 Castle Hill Rd, Castle Hill NSW",scheduledTime:"13:30",durationHrs:2,lat:-33.7300,lng:151.0000,description:"Full rewire – older property",tech:"Tom Yuen",keyMethod:"tenant",keyNotes:"Old wiring – quote on site",createdDate:"2026-03-10",status:"Open",stage:"Scheduled",subStage:"",closedDate:null,tenants:[{id:"t33",name:"Nick Ryan",email:"nryan@gmail.com",phone:"0400 030 033"}],appliances:[],additionalWorks:[]},
-          ]}]},
-    ]},
-  {id:"c2",name:"LJ Hooker Corporate",abn:"31 000 007 922",phone:"(02) 8244 4444",email:"accounts@ljhooker.com.au",website:"ljhooker.com.au",status:"Active",
-    branches:[
-      {id:"b3",name:"LJ Hooker Penrith",address:"345 High St, Penrith NSW 2750",phone:"(02) 4732 1100",email:"penrith@ljhooker.com.au",billing:{name:"Rachel Park",email:"rpark@ljhooker.com.au",phone:"(02) 4732 1101"},
-        agents:[{id:"a4",name:"David Tran",email:"dtran@ljhooker.com.au",phone:"0415 777 888",properties:10,
-          jobs:[
-            {id:"j6",ref:"1006",type:"HVAC",address:"88 Woodriff St, Penrith NSW",scheduledTime:"08:00",durationHrs:2,lat:-33.7510,lng:150.6942,description:"Split system install – bedroom",tech:"Maria Flores",keyMethod:"tenant",keyNotes:"Call Maya on 0400 555 777",createdDate:"2026-03-08",status:"Open",stage:"On Hold",subStage:"Parts ordered",closedDate:null,tenants:[{id:"t5",name:"Maya & Luke Patel",email:"mpatel@gmail.com",phone:"0400 555 777"}],appliances:[{id:"ap4",appType:"Washing Machine",brand:"Samsung",model:"WW80T504DAW",serial:"SAM2023-441",condition:"Not spinning"}],additionalWorks:[]},
-            {id:"j41",ref:"1041",type:"HVAC",address:"15 Great Western Hwy, Kingswood NSW",scheduledTime:"10:30",durationHrs:1.5,lat:-33.7630,lng:150.7240,description:"Split system filter clean & service",tech:"Maria Flores",keyMethod:"tenant",keyNotes:"",createdDate:"2026-03-10",status:"Open",stage:"Scheduled",subStage:"",closedDate:null,tenants:[{id:"t41",name:"Jess Murphy",email:"jmurphy@gmail.com",phone:"0400 040 041"}],appliances:[],additionalWorks:[]},
-            {id:"j42",ref:"1042",type:"Plumbing",address:"44 Mulgoa Rd, Jamisontown NSW",scheduledTime:"12:30",durationHrs:2,lat:-33.7670,lng:150.6750,description:"Bathroom renovation – rough-in",tech:"Maria Flores",keyMethod:"other",keyNotes:"Site contact: Bob 0412 500 600",createdDate:"2026-03-10",status:"Open",stage:"In Progress",subStage:"",closedDate:null,tenants:[{id:"t42",name:"Bob Walsh",email:"bwalsh@gmail.com",phone:"0412 500 600"}],appliances:[],additionalWorks:[]},
-          ]}]},
-      {id:"b4",name:"LJ Hooker Campbelltown",address:"200 Queen St, Campbelltown NSW 2560",phone:"(02) 4625 1100",email:"campbelltown@ljhooker.com.au",billing:{name:"Alex Greer",email:"agreer@ljhooker.com.au",phone:"(02) 4625 1101"},
-        agents:[{id:"a5",name:"Rachel Moore",email:"rmoore@ljhooker.com.au",phone:"0416 100 200",properties:8,
-          jobs:[
-            {id:"j43",ref:"1043",type:"HVAC",address:"5 Narellan Rd, Campbelltown NSW",scheduledTime:"15:30",durationHrs:1.5,lat:-34.0651,lng:150.8141,description:"Ducted heating – annual service",tech:"Maria Flores",keyMethod:"tenant",keyNotes:"Early start OK",createdDate:"2026-03-10",status:"Open",stage:"Scheduled",subStage:"",closedDate:null,tenants:[{id:"t43",name:"Sam Lowe",email:"slowe@gmail.com",phone:"0400 040 043"}],appliances:[],additionalWorks:[]},
-          ]}]},
-    ]},
-];
-
-const SEED_VENDORS = [
-  {id:"v1",name:"The Good Guys",abn:"28 006 937 123",phone:"1300 942 765",email:"trade@thegoodguys.com.au",website:"thegoodguys.com.au",rank:1,status:"Active",contacts:[{name:"Brad Hollis",role:"Trade Account Manager",phone:"0411 200 300",email:"bhollis@tgg.com.au"},{name:"Kim Rees",role:"Accounts Payable",phone:"0411 200 301",email:"krees@tgg.com.au"}],catalogue:[{sku:"BSH-DW60",name:"Bosch 60cm Dishwasher Serie 6",price:1199,unit:"each"},{sku:"FIS-AC35",name:"Fisher & Paykel 3.5kW Split System",price:899,unit:"each"},{sku:"RIN-HW25",name:"Rinnai 25L Hot Water System",price:1450,unit:"each"}],history:[{date:"2026-03-01",ref:"PO-4401",item:"Bosch 60cm Dishwasher x2",amount:2398,status:"Paid"},{date:"2026-02-14",ref:"PO-4388",item:"Rinnai Hot Water x1",amount:1450,status:"Paid"},{date:"2026-03-08",ref:"PO-4412",item:"Fisher & Paykel Split x3",amount:2697,status:"Owing"}]},
-  {id:"v2",name:"Harvey Norman Commercial",abn:"54 003 237 545",phone:"1300 464 278",email:"commercial@harveynorman.com.au",website:"harveynorman.com.au",rank:2,status:"Active",contacts:[{name:"Paul Sims",role:"Commercial Sales",phone:"0422 100 200",email:"psims@hn.com.au"}],catalogue:[{sku:"BSH-DW60",name:"Bosch 60cm Dishwasher Serie 6",price:1249,unit:"each"},{sku:"LG-AC25",name:"LG 2.5kW Reverse Cycle Split",price:799,unit:"each"}],history:[{date:"2026-02-20",ref:"PO-4395",item:"LG Split System x2",amount:1598,status:"Paid"},{date:"2026-03-05",ref:"PO-4408",item:"Bosch Dishwasher x1",amount:1249,status:"Owing"}]},
-  {id:"v3",name:"Reece Plumbing Supplies",abn:"19 004 089 444",phone:"13 12 00",email:"trade@reece.com.au",website:"reece.com.au",rank:1,status:"Active",contacts:[{name:"Steve March",role:"Trade Account",phone:"0433 300 400",email:"smarch@reece.com.au"}],catalogue:[{sku:"GRO-MIX1",name:"Grohe Eurosmart Mixer Tap",price:320,unit:"each"},{sku:"CAE-HW50",name:"Caroma 50L Storage HWS",price:1100,unit:"each"},{sku:"PVC-90EL",name:"PVC 90° Elbow 100mm",price:8.50,unit:"each"}],history:[{date:"2026-03-03",ref:"PO-4405",item:"Grohe Mixer x5",amount:1600,status:"Paid"}]},
-];
-
 const allJobs = (companies) => (companies||SEED_COMPANIES).flatMap(co=>co.branches.flatMap(b=>b.agents.flatMap(a=>(a.jobs||[]).map(j=>({...j,agentName:a.name,branchName:b.name,companyName:co.name})))));
 
-const SEED_QUOTES = [
-  {id:"q1",ref:"QUO-001",jobRef:"1004",client:"Ray White Parramatta",contact:"Karen Lim",date:"2026-03-01",expiry:"2026-03-31",status:"Sent",total:2850,items:[
-    {desc:"Replace kitchen mixer tap",qty:1,unit:"each",rate:320,amount:320,itemId:"in2"},
-    {desc:"Labour – tap replacement",qty:2,unit:"hr",rate:120,amount:240},
-    {desc:"Rinnai 25L Hot Water System",qty:1,unit:"each",rate:1450,amount:1450,itemId:"in1"},
-    {desc:"Labour – HWS install",qty:7,unit:"hr",rate:120,amount:840},
-  ]},
-  {id:"q2",ref:"QUO-002",jobRef:"1021",client:"LJ Hooker Penrith",contact:"Rachel Park",date:"2026-03-05",expiry:"2026-04-05",status:"Draft",total:1560,items:[
-    {desc:"Split system supply & install",qty:1,unit:"each",rate:899,amount:899,itemId:"in5"},
-    {desc:"Labour – HVAC install",qty:4,unit:"hr",rate:120,amount:480},
-    {desc:"Electrical connection",qty:1,unit:"each",rate:181,amount:181},
-  ]},
-  {id:"q3",ref:"QUO-003",jobRef:null,client:"Ray White Blacktown",contact:"Tom Nguyen",date:"2026-02-20",expiry:"2026-03-20",status:"Accepted",total:980,items:[
-    {desc:"Smoke alarm x4 supply",qty:4,unit:"each",rate:85,amount:340,itemId:"in4"},
-    {desc:"Labour – installation",qty:4,unit:"hr",rate:120,amount:480},
-    {desc:"Compliance certificate",qty:1,unit:"each",rate:160,amount:160},
-  ]},
-];
-let _quoNum = 3;
-const nextQuoRef = () => `QUO-${String(++_quoNum).padStart(3,"0")}`;
-const SEED_INVOICES = [
-  {id:"i1",ref:"INV-0041",client:"Ray White Parramatta",contact:"Karen Lim",jobRef:"1002",date:"2026-02-21",due:"2026-03-21",status:"Paid",paidDate:"2026-03-10",total:1380,items:[{desc:"Power point replacement x3",qty:3,unit:"each",rate:220,amount:660},{desc:"Labour – electrical",qty:3,unit:"hr",rate:120,amount:360},{desc:"Cable replacement",qty:1,unit:"each",rate:360,amount:360}]},
-  {id:"i2",ref:"INV-0042",client:"Ray White Parramatta",contact:"Karen Lim",jobRef:"1003",date:"2026-03-01",due:"2026-03-31",status:"Overdue",paidDate:null,total:2240,items:[{desc:"HVAC full service – split system",qty:1,unit:"each",rate:480,amount:480},{desc:"Gas cooktop service",qty:1,unit:"each",rate:320,amount:320},{desc:"Labour – HVAC",qty:6,unit:"hr",rate:120,amount:720},{desc:"Parts & consumables",qty:1,unit:"each",rate:720,amount:720}]},
-  {id:"i3",ref:"INV-0043",client:"LJ Hooker Penrith",contact:"Rachel Park",jobRef:"1006",date:"2026-03-09",due:"2026-04-09",status:"Sent",paidDate:null,total:1379,items:[{desc:"Samsung washing machine service",qty:1,unit:"each",rate:299,amount:299},{desc:"Split system supply",qty:1,unit:"each",rate:899,amount:899},{desc:"Labour",qty:1.5,unit:"hr",rate:120,amount:181}]},
-];
-/* ─── INVENTORY SEED DATA ─── */
-const SEED_SUPPLIERS = [
-  {id:"sup1",name:"Reece Plumbing",contact:"sales@reece.com.au",phone:"1300 555 000",terms:"Net 30",leadDays:3,abn:"12 345 678 901"},
-  {id:"sup2",name:"Harvey Norman Commercial",contact:"commercial@harveynorman.com.au",phone:"1300 464 278",terms:"Net 14",leadDays:5,abn:"98 765 432 100"},
-  {id:"sup3",name:"Tradelink",contact:"orders@tradelink.com.au",phone:"13 23 53",terms:"Net 30",leadDays:2,abn:"55 123 456 789"},
-  {id:"sup4",name:"Online / Ad Hoc",contact:"",phone:"",terms:"Prepay",leadDays:7,abn:""},
-];
-
-const SEED_INV_ITEMS = [
-  {id:"in1",code:"RIN-HW25",barcode:"9312345001001",name:"Rinnai 25L Hot Water System",description:"Rinnai B26 continuous flow gas HWS 25L/min",category:"Hot Water",supplierId:"sup1",supplierCode:"RIN-B26",
-   purchasePrice:1450,sellPrice:2100,markup:44.8,
-   clientMarkups:[{clientId:"",markupPct:10}],
-   qtyOnHand:{warehouse:3,van_fs1:0,van_fs2:0,van_fs3:0,van_fs4:1},
-   reorderPoint:2,reorderQty:5,
-   priceHistory:[{date:"2025-09-01",price:1380,supplierId:"sup1",note:"Last price"},{date:"2026-01-15",price:1450,supplierId:"sup1",note:"Price increase"}],
-   status:"active"},
-  {id:"in2",code:"GRO-MIX1",barcode:"9312345002002",name:"Grohe Eurosmart Mixer Tap",description:"Grohe Eurosmart single-lever basin mixer chrome",category:"Tapware",supplierId:"sup1",supplierCode:"GRO-33265",
-   purchasePrice:320,sellPrice:520,markup:62.5,
-   clientMarkups:[],
-   qtyOnHand:{warehouse:8,van_fs1:2,van_fs2:0,van_fs3:0,van_fs4:0},
-   reorderPoint:5,reorderQty:10,
-   priceHistory:[{date:"2025-08-01",price:295,supplierId:"sup1",note:""},{date:"2026-02-01",price:320,supplierId:"sup1",note:"Supplier price review"}],
-   status:"active"},
-  {id:"in3",code:"PVC-90EL",barcode:"9312345003003",name:"PVC 90° Elbow 100mm",description:"PVC pressure 90 degree elbow 100mm BSP",category:"Fittings",supplierId:"sup3",supplierCode:"PVC-9010",
-   purchasePrice:8.50,sellPrice:18,markup:111.8,
-   clientMarkups:[],
-   qtyOnHand:{warehouse:45,van_fs1:12,van_fs2:0,van_fs3:0,van_fs4:8},
-   reorderPoint:20,reorderQty:50,
-   priceHistory:[{date:"2026-01-01",price:8.50,supplierId:"sup3",note:""}],
-   status:"active"},
-  {id:"in4",code:"SMK-AL9V",barcode:"9312345004004",name:"Smoke Alarm 9V Hardwired",description:"240V hardwired smoke alarm with 9V battery backup",category:"Electrical",supplierId:"sup2",supplierCode:"SMK-HW9",
-   purchasePrice:85,sellPrice:145,markup:70.6,
-   clientMarkups:[{clientId:"c1",markupPct:12}],
-   qtyOnHand:{warehouse:12,van_fs1:0,van_fs2:4,van_fs3:0,van_fs4:0},
-   reorderPoint:10,reorderQty:20,
-   priceHistory:[{date:"2025-11-01",price:79,supplierId:"sup2",note:""},{date:"2026-01-10",price:85,supplierId:"sup2",note:"Supplier increase"}],
-   status:"active"},
-  {id:"in5",code:"LG-AC25",barcode:"9312345005005",name:"LG 2.5kW Split System",description:"LG Artcool 2.5kW reverse cycle inverter split",category:"HVAC",supplierId:"sup2",supplierCode:"LG-S09ET",
-   purchasePrice:799,sellPrice:1350,markup:69,
-   clientMarkups:[],
-   qtyOnHand:{warehouse:0,van_fs1:0,van_fs2:0,van_fs3:1,van_fs4:0},
-   reorderPoint:1,reorderQty:3,
-   priceHistory:[{date:"2025-10-01",price:749,supplierId:"sup2",note:""},{date:"2026-02-15",price:799,supplierId:"sup2",note:"Model year update"}],
-   status:"active"},
-  {id:"in6",code:"CAE-HW50",barcode:"9312345006006",name:"Caroma 50L Storage HWS",description:"Caroma 50L electric storage hot water system",category:"Hot Water",supplierId:"sup1",supplierCode:"CAE-HW50E",
-   purchasePrice:1100,sellPrice:1750,markup:59,
-   clientMarkups:[],
-   qtyOnHand:{warehouse:2,van_fs1:0,van_fs2:0,van_fs3:0,van_fs4:0},
-   reorderPoint:2,reorderQty:4,
-   priceHistory:[{date:"2026-01-01",price:1100,supplierId:"sup1",note:""}],
-   status:"active"},
-  {id:"in7",code:"FLX-HOSE",barcode:"9312345007007",name:"Flexible Hose 300mm",description:"Stainless braided flexible hose 300mm 15mm",category:"Fittings",supplierId:"sup3",supplierCode:"FLX-300",
-   purchasePrice:12,sellPrice:28,markup:133,
-   clientMarkups:[],
-   qtyOnHand:{warehouse:60,van_fs1:10,van_fs2:10,van_fs3:5,van_fs4:10},
-   reorderPoint:30,reorderQty:100,
-   priceHistory:[{date:"2026-01-01",price:12,supplierId:"sup3",note:""}],
-   status:"active"},
-];
-
-const SEED_PURCHASE_ORDERS = [
-  {id:"po1",ref:"PO-001",supplierId:"sup1",supplierName:"Reece Plumbing",date:"2026-03-01",status:"received",jobId:"1005",
-   lines:[
-     {itemId:"in1",itemCode:"RIN-HW25",itemName:"Rinnai 25L Hot Water System",qtyOrdered:5,qtyReceived:5,unitCost:1450},
-     {itemId:"in3",itemCode:"PVC-90EL",itemName:"PVC 90° Elbow 100mm",qtyOrdered:50,qtyReceived:50,unitCost:8.50},
-   ],
-   notes:"Standard restock order",receivedDate:"2026-03-05"},
-  {id:"po2",ref:"PO-002",supplierId:"sup2",supplierName:"Harvey Norman Commercial",date:"2026-03-10",status:"sent",jobId:"1006",
-   lines:[
-     {itemId:"in5",itemCode:"LG-AC25",itemName:"LG 2.5kW Split System",qtyOrdered:3,qtyReceived:0,unitCost:799},
-     {itemId:"in4",itemCode:"SMK-AL9V",itemName:"Smoke Alarm 9V Hardwired",qtyOrdered:20,qtyReceived:0,unitCost:85},
-   ],
-   notes:"Urgent — job waiting on LG units",receivedDate:null},
-  {id:"po3",ref:"PO-003",supplierId:"sup4",supplierName:"Online / Ad Hoc",date:"2026-03-12",status:"draft",jobId:null,
-   lines:[
-     {itemId:"in2",itemCode:"GRO-MIX1",itemName:"Grohe Eurosmart Mixer Tap",qtyOrdered:10,qtyReceived:0,unitCost:310},
-   ],
-   notes:"Sourced from eBay — awaiting confirmation",receivedDate:null},
-  // Historical received POs — gives avg lead time meaningful data
-  {id:"po4",ref:"PO-004",supplierId:"sup1",supplierName:"Reece Plumbing",date:"2026-02-01",status:"received",jobId:null,
-   lines:[
-     {itemId:"in1",itemCode:"RIN-HW25",itemName:"Rinnai 25L Hot Water System",qtyOrdered:3,qtyReceived:3,unitCost:1420},
-     {itemId:"in2",itemCode:"GRO-MIX1",itemName:"Grohe Eurosmart Mixer Tap",qtyOrdered:10,qtyReceived:10,unitCost:295},
-   ],
-   notes:"Monthly restock",receivedDate:"2026-02-04"},
-  {id:"po5",ref:"PO-005",supplierId:"sup1",supplierName:"Reece Plumbing",date:"2026-01-10",status:"received",jobId:null,
-   lines:[
-     {itemId:"in3",itemCode:"PVC-90EL",itemName:"PVC 90° Elbow 100mm",qtyOrdered:100,qtyReceived:100,unitCost:8.20},
-     {itemId:"in2",itemCode:"GRO-MIX1",itemName:"Grohe Eurosmart Mixer Tap",qtyOrdered:5,qtyReceived:5,unitCost:295},
-   ],
-   notes:"Bulk fittings order",receivedDate:"2026-01-13"},
-  {id:"po6",ref:"PO-006",supplierId:"sup2",supplierName:"Harvey Norman Commercial",date:"2026-01-20",status:"received",jobId:null,
-   lines:[
-     {itemId:"in5",itemCode:"LG-AC25",itemName:"LG 2.5kW Split System",qtyOrdered:2,qtyReceived:2,unitCost:780},
-   ],
-   notes:"Split system stock-up",receivedDate:"2026-01-27"},
-  {id:"po7",ref:"PO-007",supplierId:"sup3",supplierName:"Tradelink",date:"2026-02-15",status:"received",jobId:null,
-   lines:[
-     {itemId:"in4",itemCode:"SMK-AL9V",itemName:"Smoke Alarm 9V Hardwired",qtyOrdered:30,qtyReceived:30,unitCost:82},
-     {itemId:"in3",itemCode:"PVC-90EL",itemName:"PVC 90° Elbow 100mm",qtyOrdered:60,qtyReceived:60,unitCost:8.10},
-   ],
-   notes:"Safety compliance order",receivedDate:"2026-02-17"},
-  {id:"po8",ref:"PO-008",supplierId:"sup3",supplierName:"Tradelink",date:"2025-12-05",status:"received",jobId:null,
-   lines:[
-     {itemId:"in4",itemCode:"SMK-AL9V",itemName:"Smoke Alarm 9V Hardwired",qtyOrdered:20,qtyReceived:20,unitCost:80},
-   ],
-   notes:"End of year stock",receivedDate:"2025-12-07"},
-];
-
-const SEED_MOVEMENTS = [
-  {id:"mv1",type:"receive",itemId:"in1",qty:5,fromLocation:null,toLocation:"warehouse",jobId:null,techId:null,poId:"po1",batchId:"bt1",date:"2026-03-05",note:"PO-001 received"},
-  {id:"mv2",type:"collect",itemId:"in1",qty:1,fromLocation:"warehouse",toLocation:"van_fs4",jobId:"1006",techId:"fs4",poId:null,batchId:"bt1",date:"2026-03-06",note:"Anita collected for job 1006"},
-  {id:"mv3",type:"transfer",itemId:"in3",qty:12,fromLocation:"warehouse",toLocation:"van_fs1",jobId:null,techId:"fs1",poId:null,batchId:"bt2",date:"2026-03-07",note:"Van restock for Jake"},
-  {id:"mv4",type:"return",itemId:"in2",qty:1,fromLocation:"van_fs1",toLocation:"warehouse",jobId:"1001",techId:"fs1",poId:null,batchId:"bt3",date:"2026-03-08",note:"Unused part returned"},
-];
-
-/* Batches — one per receive line per location */
-const SEED_BATCHES = [
-  {id:"bt1",itemId:"in1",batchRef:"PO-001-1",receivedDate:"2026-03-05",supplierId:"sup1",supplierName:"Reece Plumbing",unitCost:1450,qtyOriginal:5,qtyRemaining:4,location:"warehouse",poId:"po1",invoiceRef:""},
-  {id:"bt2",itemId:"in3",batchRef:"PO-001-2",receivedDate:"2026-03-05",supplierId:"sup1",supplierName:"Reece Plumbing",unitCost:8.50,qtyOriginal:50,qtyRemaining:50,location:"warehouse",poId:"po1",invoiceRef:""},
-  {id:"bt3",itemId:"in2",batchRef:"ADHOC-001",receivedDate:"2026-02-10",supplierId:"sup1",supplierName:"Reece Plumbing",unitCost:295,qtyOriginal:10,qtyRemaining:9,location:"warehouse",poId:null,invoiceRef:"INV-7711"},
-];
-
-let _poNum = 8;
-const nextPORef = () => `PO-${String(++_poNum).padStart(3,"0")}`;
-let _mvNum = 4;
-const nextMvId = () => `mv${++_mvNum}`;
-let _btNum = 3;
-const nextBtId = () => `bt${++_btNum}`;
+/* ─── COUNTERS (start after seed data) ─── */
+let _id=20000; const uid=()=>`id-${++_id}`;
+let _jobNum=1300; const nextJobRef=()=>`${++_jobNum}`;
+let _quoNum=5;    const nextQuoRef=()=>`QUO-${String(++_quoNum).padStart(3,"0")}`;
+let _poNum=8;     const nextPORef=()=>`PO-${String(++_poNum).padStart(3,"0")}`;
+let _mvNum=10;    const nextMvId=()=>`mv${++_mvNum}`;
+let _btNum=10;    const nextBtId=()=>`bt${++_btNum}`;
 
 /* ─── INVENTORY AVAILABILITY HELPER ───
  * onHand      = total physical stock across all locations
