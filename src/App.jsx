@@ -2618,33 +2618,131 @@ function DispatchTab({settings, companies, setCompanies, vendors, fieldMode, set
 }
 
 function DispatchCard({job, techCol, onOpen, onStartDriving}) {
+  const [hovered, setHovered] = useState(false);
+  const [cardPos, setCardPos] = useState(null);
   const keyLabel = job.keyMethod==="tenant"?"🧑 Tenant":job.keyMethod==="office"?"🏢 Office":"🔑 Other";
   const col = techCol||C.accent;
+
+  const handleMouseEnter = e => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    setCardPos(rect);
+    setHovered(true);
+  };
+  const handleMouseLeave = () => setHovered(false);
+
+  // Preview panel positioning — right of viewport, vertically centered on card
+  const previewTop = cardPos ? Math.min(
+    Math.max(cardPos.top - 40, 80),
+    window.innerHeight - 320
+  ) : 200;
+
   return(
-    <div onClick={onOpen} style={{background:"#fff",border:`1px solid ${C.border}`,borderRadius:12,padding:"14px 16px",marginBottom:10,boxShadow:"0 1px 3px rgba(0,0,0,0.04)",cursor:"pointer",transition:"box-shadow 0.15s",borderLeft:`4px solid ${col}`}}
-      onMouseEnter={e=>e.currentTarget.style.boxShadow="0 4px 12px rgba(0,0,0,0.1)"}
-      onMouseLeave={e=>e.currentTarget.style.boxShadow="0 1px 3px rgba(0,0,0,0.04)"}>
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}}>
-        <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
-          <span style={{color:col,fontWeight:800,fontSize:13}}>{job.ref}</span>
-          <Badge label={job.type} color={job.type==="HVAC"?"blue":job.type==="Plumbing"?"purple":"orange"}/>
-          {job.stage&&<Badge label={job.stage} color={stageColor(job.stage)}/>}
+    <>
+      <div onClick={onOpen}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+        style={{background:"#fff",border:`1px solid ${C.border}`,borderRadius:12,
+          padding:"14px 16px",marginBottom:10,
+          boxShadow:hovered?"0 4px 16px rgba(0,0,0,0.1)":"0 1px 3px rgba(0,0,0,0.04)",
+          cursor:"pointer",transition:"box-shadow 0.15s",
+          borderLeft:`4px solid ${col}`,
+          maxWidth:680}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}}>
+          <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
+            <span style={{color:col,fontWeight:800,fontSize:13}}>{job.ref}</span>
+            <Badge label={job.type} color={job.type==="HVAC"?"blue":job.type==="Plumbing"?"purple":"orange"}/>
+            {job.stage&&<Badge label={job.stage} color={stageColor(job.stage)}/>}
+          </div>
+          <button onClick={e=>{e.stopPropagation();onStartDriving(job);}}
+            style={{background:col,color:"#fff",border:"none",borderRadius:8,padding:"6px 14px",fontSize:12,fontWeight:800,cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap",marginLeft:8,flexShrink:0}}>
+            🚗 Start
+          </button>
         </div>
-        <button onClick={e=>{e.stopPropagation();onStartDriving(job);}}
-          style={{background:col,color:"#fff",border:"none",borderRadius:8,padding:"6px 14px",fontSize:12,fontWeight:800,cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap",marginLeft:8,flexShrink:0}}>
-          🚗 Start
-        </button>
+        <div style={{color:C.text,fontWeight:700,fontSize:14,marginBottom:2}}>{job.address}</div>
+        <div style={{color:C.sub,fontSize:12,marginBottom:8}}>{job.description}</div>
+        <div style={{display:"flex",gap:8,flexWrap:"wrap",paddingTop:8,borderTop:`1px solid ${C.border}`,alignItems:"center"}}>
+          {job.scheduledTime&&<span style={{fontSize:12,color:col,fontWeight:700}}>🕐 {job.scheduledTime}{job.durationHrs?` (${job.durationHrs}hr)`:""}</span>}
+          <span style={{fontSize:12,color:C.sub}}>🏢 {job.companyName}</span>
+          <span style={{fontSize:12,color:C.sub}}>👥 {(job.tenants||[]).length} tenant{(job.tenants||[]).length!==1?"s":""}</span>
+          {job.keyMethod&&<span style={{fontSize:12,color:C.sub}}>{keyLabel}</span>}
+          <span style={{fontSize:11,color:C.muted,marginLeft:"auto"}}>Click to open ›</span>
+        </div>
       </div>
-      <div style={{color:C.text,fontWeight:700,fontSize:14,marginBottom:2}}>{job.address}</div>
-      <div style={{color:C.sub,fontSize:12,marginBottom:8}}>{job.description}</div>
-      <div style={{display:"flex",gap:8,flexWrap:"wrap",paddingTop:8,borderTop:`1px solid ${C.border}`,alignItems:"center"}}>
-        {job.scheduledTime&&<span style={{fontSize:12,color:col,fontWeight:700}}>🕐 {job.scheduledTime}{job.durationHrs?` (${job.durationHrs}hr)`:""}</span>}
-        <span style={{fontSize:12,color:C.sub}}>🏢 {job.companyName}</span>
-        <span style={{fontSize:12,color:C.sub}}>👥 {(job.tenants||[]).length} tenant{(job.tenants||[]).length!==1?"s":""}</span>
-        {job.keyMethod&&<span style={{fontSize:12,color:C.sub}}>{keyLabel}</span>}
-        <span style={{fontSize:11,color:C.muted,marginLeft:"auto"}}>Click to open ›</span>
-      </div>
-    </div>
+
+      {/* Hover preview panel — fixed to right of viewport */}
+      {hovered&&cardPos&&(
+        <div onMouseEnter={()=>setHovered(true)} onMouseLeave={()=>setHovered(false)}
+          style={{position:"fixed",right:24,top:previewTop,width:280,
+            background:"#fff",borderRadius:14,
+            boxShadow:"0 8px 32px rgba(0,0,0,0.14)",
+            border:`1px solid ${C.border}`,
+            zIndex:999,overflow:"hidden",
+            animation:"fadeSlideIn 0.15s ease"}}>
+          <style>{`@keyframes fadeSlideIn{from{opacity:0;transform:translateX(8px)}to{opacity:1;transform:translateX(0)}}`}</style>
+
+          {/* Colour bar */}
+          <div style={{height:4,background:col}}/>
+
+          <div style={{padding:"14px 16px"}}>
+            {/* Header */}
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:12}}>
+              <div>
+                <span style={{color:col,fontWeight:800,fontSize:13}}>{job.ref}</span>
+                <div style={{color:C.text,fontWeight:800,fontSize:15,marginTop:2,lineHeight:1.3}}>{job.address}</div>
+              </div>
+              <Badge label={job.stage||"New"} color={stageColor(job.stage||"New")}/>
+            </div>
+
+            {/* Meta rows */}
+            <div style={{display:"flex",flexDirection:"column",gap:7,fontSize:12}}>
+              {job.description&&(
+                <div style={{color:C.sub,lineHeight:1.4,paddingBottom:8,borderBottom:`1px solid ${C.border}`}}>{job.description}</div>
+              )}
+              {job.scheduledTime&&(
+                <div style={{display:"flex",alignItems:"center",gap:8}}>
+                  <span style={{fontSize:14}}>🕐</span>
+                  <span style={{color:col,fontWeight:700}}>{job.scheduledTime}</span>
+                  {job.durationHrs&&<span style={{color:C.muted}}>({job.durationHrs}hr)</span>}
+                </div>
+              )}
+              <div style={{display:"flex",alignItems:"center",gap:8}}>
+                <span style={{fontSize:14}}>👷</span>
+                <span style={{color:C.text,fontWeight:600}}>{job.tech||"Unassigned"}</span>
+              </div>
+              <div style={{display:"flex",alignItems:"center",gap:8}}>
+                <span style={{fontSize:14}}>🏢</span>
+                <span style={{color:C.sub}}>{job.companyName}</span>
+              </div>
+              {(job.tenants||[]).length>0&&(
+                <div style={{display:"flex",alignItems:"center",gap:8}}>
+                  <span style={{fontSize:14}}>👥</span>
+                  <span style={{color:C.sub}}>{(job.tenants||[]).map(t=>t.name).join(", ")}</span>
+                </div>
+              )}
+              {job.keyMethod&&(
+                <div style={{display:"flex",alignItems:"center",gap:8}}>
+                  <span style={{fontSize:14}}>{keyLabel.split(" ")[0]}</span>
+                  <span style={{color:C.sub}}>{keyLabel.slice(2)} access</span>
+                </div>
+              )}
+              {job.keyNotes&&(
+                <div style={{background:C.bg,borderRadius:8,padding:"7px 10px",fontSize:11,color:C.sub,fontStyle:"italic"}}>
+                  {job.keyNotes}
+                </div>
+              )}
+            </div>
+
+            {/* CTA */}
+            <button onClick={e=>{e.stopPropagation();onOpen();}}
+              style={{width:"100%",marginTop:14,padding:"9px",background:`${col}12`,
+                color:col,border:`1.5px solid ${col}30`,borderRadius:9,
+                fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
+              Open Job →
+            </button>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 
@@ -4947,6 +5045,133 @@ function JobDrawer({job, onClose, onUpdate, settings, companies, setCompanies, v
   );
 }
 
+function HistoryJobRow({job, js, onOpen}) {
+  const [hovered, setHovered] = useState(false);
+  const [cardPos, setCardPos] = useState(null);
+
+  const handleMouseEnter = e => { setCardPos(e.currentTarget.getBoundingClientRect()); setHovered(true); };
+  const handleMouseLeave = () => setHovered(false);
+
+  const previewTop = cardPos ? Math.min(Math.max(cardPos.top - 30, 80), window.innerHeight - 380) : 200;
+
+  const diary = job.diary || [];
+  const visits = job.visits || [];
+  const works = job.additionalWorks || [];
+  const lastEntry = diary[0];
+  const daysOpen = job.closedDate && job.createdDate
+    ? Math.round((new Date(job.closedDate) - new Date(job.createdDate)) / 86400000)
+    : null;
+
+  return (
+    <>
+      <div onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave} onClick={onOpen}
+        style={{background:"#fff",borderBottom:`1px solid ${C.border}`,padding:"14px 20px",
+          cursor:"pointer",transition:"background 0.1s",
+          background:hovered?"#f8fafc":"#fff"}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
+          <div style={{flex:1,minWidth:0,marginRight:10}}>
+            <div style={{display:"flex",gap:6,alignItems:"center",flexWrap:"wrap"}}>
+              <span style={{color:C.accent,fontWeight:800,fontSize:13}}>{job.ref}</span>
+              <Badge label={job.type} color={job.type==="HVAC"?"blue":job.type==="Plumbing"?"purple":"orange"}/>
+              <Badge label={js} color={statusColor(js)}/>
+              {job.stage&&<Badge label={job.stage} color={stageColor(job.stage)}/>}
+              {job.subStage&&<Badge label={job.subStage} color="purple"/>}
+            </div>
+            <div style={{color:C.text,fontSize:13,fontWeight:600,marginTop:4}}>{job.address}</div>
+            <div style={{color:C.sub,fontSize:12,marginTop:2}}>{job.description}</div>
+            <div style={{display:"flex",gap:10,marginTop:6,fontSize:12,color:C.sub,flexWrap:"wrap"}}>
+              <span>👷 {job.tech||"Unassigned"}</span>
+              <span>🏢 {job.companyName}</span>
+              <span>👤 {job.agentName}</span>
+              {job.closedDate&&<span>📅 Closed {fmtDate(job.closedDate)}</span>}
+              {job.tenants&&job.tenants.length>0&&<span>👥 {job.tenants.length} tenant{job.tenants.length!==1?"s":""}</span>}
+            </div>
+          </div>
+          <span style={{color:C.muted,fontSize:16,flexShrink:0}}>›</span>
+        </div>
+      </div>
+
+      {hovered&&cardPos&&(
+        <div onMouseEnter={()=>setHovered(true)} onMouseLeave={()=>setHovered(false)}
+          style={{position:"fixed",right:24,top:previewTop,width:300,
+            background:"#fff",borderRadius:14,
+            boxShadow:"0 8px 32px rgba(0,0,0,0.14)",
+            border:`1px solid ${C.border}`,zIndex:999,overflow:"hidden",
+            animation:"fadeSlideIn 0.15s ease"}}>
+
+          {/* Status bar */}
+          <div style={{height:4,background:js==="Open"?"#3b82f6":js==="Recently Closed"?C.green:C.muted}}/>
+
+          <div style={{padding:"14px 16px"}}>
+            {/* Header */}
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:10}}>
+              <div>
+                <span style={{color:C.accent,fontWeight:800,fontSize:12}}>{job.ref}</span>
+                <div style={{color:C.text,fontWeight:800,fontSize:14,marginTop:2,lineHeight:1.3}}>{job.address}</div>
+              </div>
+              <Badge label={js} color={statusColor(js)}/>
+            </div>
+
+            {/* Key stats row */}
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:6,marginBottom:12}}>
+              {[
+                {label:"Diary", value:diary.length, icon:"📒"},
+                {label:"Visits", value:visits.length, icon:"🔧"},
+                {label:"Works", value:works.length, icon:"⚙️"},
+              ].map(s=>(
+                <div key={s.label} style={{background:C.bg,borderRadius:8,padding:"8px",textAlign:"center",border:`1px solid ${C.border}`}}>
+                  <div style={{fontSize:16,marginBottom:2}}>{s.icon}</div>
+                  <div style={{fontSize:16,fontWeight:800,color:C.text}}>{s.value}</div>
+                  <div style={{fontSize:10,color:C.muted,textTransform:"uppercase",letterSpacing:0.4}}>{s.label}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* Details */}
+            <div style={{display:"flex",flexDirection:"column",gap:6,fontSize:12}}>
+              <div style={{display:"flex",gap:8,alignItems:"center"}}>
+                <span style={{fontSize:13}}>👷</span>
+                <span style={{color:C.text,fontWeight:600}}>{job.tech||"Unassigned"}</span>
+              </div>
+              <div style={{display:"flex",gap:8,alignItems:"center"}}>
+                <span style={{fontSize:13}}>🏢</span>
+                <span style={{color:C.sub}}>{job.companyName}{job.agentName?` · ${job.agentName}`:""}</span>
+              </div>
+              {daysOpen!==null&&(
+                <div style={{display:"flex",gap:8,alignItems:"center"}}>
+                  <span style={{fontSize:13}}>⏱️</span>
+                  <span style={{color:C.sub}}>Open for <strong style={{color:C.text}}>{daysOpen} day{daysOpen!==1?"s":""}</strong></span>
+                </div>
+              )}
+              {job.tenants&&job.tenants.length>0&&(
+                <div style={{display:"flex",gap:8,alignItems:"center"}}>
+                  <span style={{fontSize:13}}>👥</span>
+                  <span style={{color:C.sub}}>{job.tenants.map(t=>t.name).join(", ")}</span>
+                </div>
+              )}
+              {lastEntry&&(
+                <div style={{marginTop:4,background:C.bg,borderRadius:8,padding:"8px 10px",border:`1px solid ${C.border}`}}>
+                  <div style={{fontSize:10,color:C.muted,fontWeight:700,textTransform:"uppercase",letterSpacing:0.4,marginBottom:3}}>Last diary entry</div>
+                  <div style={{color:C.text,fontSize:12,fontWeight:600}}>{lastEntry.subject||lastEntry.type}</div>
+                  {lastEntry.notes&&<div style={{color:C.sub,fontSize:11,marginTop:2,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{lastEntry.notes}</div>}
+                  <div style={{color:C.muted,fontSize:10,marginTop:3}}>{fmtTs(lastEntry.ts)}</div>
+                </div>
+              )}
+            </div>
+
+            <button onClick={e=>{e.stopPropagation();onOpen();}}
+              style={{width:"100%",marginTop:12,padding:"9px",background:`${C.accent}12`,
+                color:C.accent,border:`1.5px solid ${C.accent}30`,borderRadius:9,
+                fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
+              Open Job →
+            </button>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
 /* ═══════════════════════════════════════════
    JOB HISTORY
 ═══════════════════════════════════════════ */
@@ -5024,29 +5249,7 @@ function HistoryTab({settings, companies, setCompanies, vendors, quotes=[], setQ
     </div>
     {filtered.map(job=>{
       const js=jobStatus(job);
-      return(<RowCard key={job.id} onClick={()=>setDrawerJob(job)}>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
-          <div style={{flex:1,minWidth:0,marginRight:10}}>
-            <div style={{display:"flex",gap:6,alignItems:"center",flexWrap:"wrap"}}>
-              <span style={{color:C.accent,fontWeight:800,fontSize:13}}>{job.ref}</span>
-              <Badge label={job.type} color={job.type==="HVAC"?"blue":job.type==="Plumbing"?"purple":"orange"}/>
-              <Badge label={js} color={statusColor(js)}/>
-              {job.stage&&<Badge label={job.stage} color={stageColor(job.stage)}/>}
-              {job.subStage&&<Badge label={job.subStage} color="purple"/>}
-            </div>
-            <div style={{color:C.text,fontSize:13,fontWeight:600,marginTop:4}}>{job.address}</div>
-            <div style={{color:C.sub,fontSize:12,marginTop:2}}>{job.description}</div>
-            <div style={{display:"flex",gap:10,marginTop:6,fontSize:12,color:C.sub,flexWrap:"wrap"}}>
-              <span>👷 {job.tech||"Unassigned"}</span>
-              <span>🏢 {job.companyName}</span>
-              <span>👤 {job.agentName}</span>
-              {job.closedDate&&<span>📅 Closed {fmtDate(job.closedDate)}</span>}
-              {job.tenants&&job.tenants.length>0&&<span>👥 {job.tenants.length} tenant{job.tenants.length!==1?"s":""}</span>}
-            </div>
-          </div>
-          <span style={{color:C.muted,fontSize:16,flexShrink:0}}>›</span>
-        </div>
-      </RowCard>);
+      return <HistoryJobRow key={job.id} job={job} js={js} onOpen={()=>setDrawerJob(job)}/>;
     })}
     {filtered.length===0&&<div style={{textAlign:"center",padding:"40px 0",color:C.muted}}><div style={{fontSize:32,marginBottom:8}}>📂</div><div style={{fontSize:14,fontWeight:600}}>No jobs found</div></div>}
 
