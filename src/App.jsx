@@ -15,9 +15,9 @@ class ErrorBoundary extends Component {
   }
 }
 
-const C = {
+let C = {
   bg:"#f4f6f9", card:"#ffffff", raised:"#f8fafc",
-  border:"#e2e8f0", sidebar:"#1e293b", accent:"#0ea5e9", orange:"#f97316",
+  border:"#e2e8f0", sidebar:"#ffffff", accent:"#0ea5e9", orange:"#f97316",
   green:"#16a34a", red:"#dc2626", purple:"#7c3aed", yellow:"#d97706",
   text:"#0f172a", sub:"#64748b", muted:"#94a3b8",
 };
@@ -6909,6 +6909,10 @@ function App() {
   const [vendors,setVendors]=useState(SEED_VENDORS);
   const [quotes,setQuotes]=useState(SEED_QUOTES);
   const [fieldMode,setFieldMode]=useState(null); // job being worked on in field
+  const [accentColor,setAccentColor]=useState(()=>localStorage.getItem("fp_accent")||"#0ea5e9");
+  const [showColorPicker,setShowColorPicker]=useState(false);
+  C.accent = accentColor;
+  const setAccent = col => { setAccentColor(col); localStorage.setItem("fp_accent",col); };
   useEffect(()=>{const h=()=>setIsMobile(window.innerWidth<768);window.addEventListener("resize",h);return()=>window.removeEventListener("resize",h);},[]);
 
   const handleFieldJobUpdate = updatedJob => {
@@ -6925,39 +6929,87 @@ function App() {
 
       {/* DESKTOP SIDEBAR */}
       {!isMobile&&(
-        <div style={{width:230,background:C.sidebar,display:"flex",flexDirection:"column",flexShrink:0,minHeight:"100vh",position:"sticky",top:0,height:"100vh",overflowY:"auto"}}>
-          <div style={{padding:"20px 16px 18px",borderBottom:"1px solid #334155",flexShrink:0}}>
+        <div style={{width:240,background:"#fff",display:"flex",flexDirection:"column",flexShrink:0,minHeight:"100vh",position:"sticky",top:0,height:"100vh",overflowY:"auto",borderRight:`1px solid ${C.border}`}}>
+
+          {/* Logo */}
+          <div style={{padding:"20px 16px 14px",flexShrink:0}}>
             <div style={{display:"flex",alignItems:"center",gap:10}}>
-              <div style={{width:34,height:34,borderRadius:9,background:C.accent,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18}}>🔥</div>
-              <div><div style={{color:"#fff",fontWeight:800,fontSize:15}}>FieldPro</div><div style={{color:"#64748b",fontSize:10,letterSpacing:0.5}}>FIELD SERVICE CRM</div></div>
+              <div style={{width:36,height:36,borderRadius:10,background:accentColor,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,flexShrink:0}}>🔥</div>
+              <div>
+                <div style={{color:C.text,fontWeight:800,fontSize:15,letterSpacing:-0.3}}>FieldPro</div>
+                <div style={{color:C.muted,fontSize:10,letterSpacing:0.6,textTransform:"uppercase"}}>Field Service CRM</div>
+              </div>
             </div>
           </div>
-          <div style={{padding:"12px 8px",flex:1}}>
+
+          {/* Nav groups */}
+          <div style={{padding:"4px 10px",flex:1}}>
             {NAV_GROUPS.map(g=>(
-              <div key={g.group} style={{marginBottom:6}}>
-                <div style={{color:"#475569",fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:1,padding:"8px 10px 4px"}}>{g.group}</div>
-                {g.items.map(n=>(
-                  <button key={n.id} onClick={()=>setTab(n.id)}
-                    style={{display:"flex",alignItems:"center",gap:9,width:"100%",padding:"9px 10px",borderRadius:8,border:"none",background:tab===n.id?"#334155":"transparent",color:tab===n.id?"#fff":"#94a3b8",fontWeight:tab===n.id?700:500,fontSize:13,cursor:"pointer",fontFamily:"inherit",textAlign:"left",marginBottom:1}}>
-                    <span style={{fontSize:15}}>{n.icon}</span>{n.label}
-                  </button>
-                ))}
+              <div key={g.group} style={{marginBottom:4}}>
+                <div style={{color:C.muted,fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:1,padding:"10px 8px 4px"}}>{g.group}</div>
+                {g.items.map(n=>{
+                  const active=tab===n.id;
+                  return(
+                    <button key={n.id} onClick={()=>setTab(n.id)}
+                      style={{display:"flex",alignItems:"center",gap:9,width:"100%",padding:"9px 10px",borderRadius:9,border:"none",
+                        background:active?`${accentColor}18`:"transparent",
+                        color:active?accentColor:C.sub,
+                        fontWeight:active?700:500,fontSize:13,cursor:"pointer",fontFamily:"inherit",textAlign:"left",marginBottom:2,transition:"background 0.1s,color 0.1s"}}>
+                      <span style={{fontSize:15,flexShrink:0}}>{n.icon}</span>
+                      <span style={{flex:1}}>{n.label}</span>
+                      {active&&<span style={{width:6,height:6,borderRadius:"50%",background:accentColor,flexShrink:0}}/>}
+                    </button>
+                  );
+                })}
               </div>
             ))}
           </div>
-          {/* Settings at bottom */}
-          <div style={{padding:"8px 8px 0",borderTop:"1px solid #334155"}}>
-            <button onClick={()=>setTab("settings")}
-              style={{display:"flex",alignItems:"center",gap:9,width:"100%",padding:"9px 10px",borderRadius:8,border:"none",background:tab==="settings"?"#334155":"transparent",color:tab==="settings"?"#fff":"#94a3b8",fontWeight:tab==="settings"?700:500,fontSize:13,cursor:"pointer",fontFamily:"inherit",textAlign:"left",marginBottom:8}}>
-              <span style={{fontSize:15}}>⚙️</span>Settings
-            </button>
+
+          {/* Settings */}
+          <div style={{padding:"8px 10px 0",borderTop:`1px solid ${C.border}`}}>
+            {(()=>{const active=tab==="settings";return(
+              <button onClick={()=>setTab("settings")}
+                style={{display:"flex",alignItems:"center",gap:9,width:"100%",padding:"9px 10px",borderRadius:9,border:"none",
+                  background:active?`${accentColor}18`:"transparent",
+                  color:active?accentColor:C.sub,
+                  fontWeight:active?700:500,fontSize:13,cursor:"pointer",fontFamily:"inherit",textAlign:"left",marginBottom:4}}>
+                <span style={{fontSize:15}}>⚙️</span><span style={{flex:1}}>Settings</span>
+                {active&&<span style={{width:6,height:6,borderRadius:"50%",background:accentColor}}/>}
+              </button>
+            );})()}
           </div>
-          <div style={{padding:"12px 10px",flexShrink:0}}>
-            <div style={{background:"#334155",borderRadius:10,padding:"10px 12px",display:"flex",gap:10,alignItems:"center"}}>
-              <div style={{width:28,height:28,borderRadius:"50%",background:C.accent,display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontWeight:800,fontSize:11}}>AD</div>
-              <div><div style={{color:"#fff",fontSize:12,fontWeight:700}}>Admin User</div><div style={{color:"#64748b",fontSize:11}}>Manager</div></div>
+
+          {/* Colour picker panel */}
+          {showColorPicker&&(
+            <div style={{margin:"0 10px 6px",background:C.raised,borderRadius:12,padding:"12px",border:`1px solid ${C.border}`}}>
+              <div style={{fontSize:10,color:C.muted,fontWeight:700,textTransform:"uppercase",letterSpacing:0.5,marginBottom:10}}>Theme Colour</div>
+              <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:6,marginBottom:10}}>
+                {["#0ea5e9","#ef4444","#7c3aed","#16a34a","#f97316","#0d9488","#db2777","#4f46e5","#d97706","#64748b"].map(col=>(
+                  <button key={col} onClick={()=>setAccent(col)}
+                    style={{width:"100%",aspectRatio:"1",borderRadius:7,border:accentColor===col?`2.5px solid ${C.text}`:"2.5px solid transparent",
+                      background:col,cursor:"pointer",transition:"transform 0.1s",transform:accentColor===col?"scale(1.15)":"scale(1)"}}>
+                  </button>
+                ))}
+              </div>
+              <input type="color" value={accentColor} onChange={e=>setAccent(e.target.value)}
+                style={{width:"100%",height:30,borderRadius:7,border:`1px solid ${C.border}`,cursor:"pointer",padding:"2px 4px",background:"#fff"}}/>
+            </div>
+          )}
+
+          {/* User card */}
+          <div style={{padding:"6px 10px 14px"}}>
+            <div style={{background:C.raised,borderRadius:11,padding:"10px 12px",display:"flex",gap:10,alignItems:"center",border:`1px solid ${C.border}`}}>
+              <div style={{width:30,height:30,borderRadius:"50%",background:accentColor,display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontWeight:800,fontSize:11,flexShrink:0}}>AD</div>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{color:C.text,fontSize:12,fontWeight:700}}>Admin User</div>
+                <div style={{color:C.muted,fontSize:11}}>Manager</div>
+              </div>
+              <button onClick={()=>setShowColorPicker(p=>!p)} title="Change theme colour"
+                style={{background:"none",border:"none",cursor:"pointer",fontSize:16,padding:"2px 4px",borderRadius:6,
+                  color:showColorPicker?accentColor:C.muted,transition:"color 0.15s"}}>🎨</button>
             </div>
           </div>
+
         </div>
       )}
 
