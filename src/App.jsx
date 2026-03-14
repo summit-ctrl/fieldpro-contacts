@@ -16,10 +16,10 @@ class ErrorBoundary extends Component {
 }
 
 let C = {
-  bg:"#f4f6f9", card:"#ffffff", raised:"#f8fafc",
-  border:"#e2e8f0", sidebar:"#ffffff", accent:"#0ea5e9", orange:"#f97316",
+  bg:"#f8f9fa", card:"#ffffff", raised:"#f8fafc",
+  border:"#e9ecef", sidebar:"#ffffff", accent:"#e3291c", orange:"#f97316",
   green:"#16a34a", red:"#dc2626", purple:"#7c3aed", yellow:"#d97706",
-  text:"#0f172a", sub:"#64748b", muted:"#94a3b8",
+  text:"#1a1f2e", sub:"#64748b", muted:"#9ca3af",
 };
 
 /* ─── DEFAULTS ─── */
@@ -407,11 +407,21 @@ const Badge = ({label,color}) => {const map={green:{bg:"#dcfce7",text:"#15803d"}
 const Avatar = ({name,size=36,bg="#dbeafe",fg="#1d4ed8"}) => {const i=name.split(" ").map(w=>w[0]).slice(0,2).join("").toUpperCase();return <div style={{width:size,height:size,borderRadius:"50%",background:bg,color:fg,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:800,fontSize:size*0.33,flexShrink:0}}>{i}</div>;};
 const Field = ({label,value}) => (<div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",padding:"10px 0",borderBottom:`1px solid ${C.border}`,gap:12}}><span style={{color:C.sub,fontSize:12,fontWeight:600,textTransform:"uppercase",letterSpacing:0.5,flexShrink:0}}>{label}</span><span style={{color:C.text,fontSize:13,fontWeight:600,textAlign:"right"}}>{value}</span></div>);
 const Card = ({children,style={}}) => (<div style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:12,padding:16,boxShadow:"0 1px 3px rgba(0,0,0,0.04)",...style}}>{children}</div>);
+const RowList = ({children,style={}}) => (<div style={{background:"#fff",border:`1px solid ${C.border}`,borderRadius:12,overflow:"hidden",...style}}>{children}</div>);
 const SectionHead = ({title,count,action}) => (<div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}><div style={{display:"flex",alignItems:"center",gap:8}}><span style={{color:C.text,fontWeight:700,fontSize:14}}>{title}</span>{count!==undefined&&<span style={{background:C.raised,border:`1px solid ${C.border}`,color:C.sub,borderRadius:99,padding:"1px 8px",fontSize:11,fontWeight:700}}>{count}</span>}</div>{action&&<button onClick={action.fn} style={{background:action.color||C.accent,color:"#fff",border:"none",borderRadius:7,padding:"6px 14px",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{action.label}</button>}</div>);
+const PageHeader = ({title,sub,action}) => (
+  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:24,paddingBottom:0}}>
+    <div>
+      <h1 style={{fontSize:22,fontWeight:800,color:C.text,letterSpacing:-0.5,margin:0}}>{title}</h1>
+      {sub&&<p style={{color:C.sub,fontSize:13,marginTop:3}}>{sub}</p>}
+    </div>
+    {action&&<div>{action}</div>}
+  </div>
+);
 const Breadcrumb = ({items}) => (<div style={{display:"flex",gap:6,alignItems:"center",marginBottom:16,flexWrap:"wrap"}}>{items.map((item,i)=>(<span key={i} style={{display:"flex",gap:6,alignItems:"center"}}>{i<items.length-1?<button onClick={item.fn} style={{background:"none",border:"none",color:C.accent,cursor:"pointer",fontSize:13,fontWeight:600,fontFamily:"inherit",padding:0}}>{item.label}</button>:<span style={{color:C.text,fontSize:13,fontWeight:700}}>{item.label}</span>}{i<items.length-1&&<span style={{color:C.muted,fontSize:12}}>›</span>}</span>))}</div>);
-const Pill = ({label,active,onClick}) => (<button onClick={onClick} style={{padding:"6px 14px",borderRadius:99,border:`1px solid ${active?C.accent:C.border}`,background:active?C.accent:"#fff",color:active?"#fff":C.sub,fontWeight:600,fontSize:12,cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>{label}</button>);
+const Pill = ({label,active,onClick}) => (<button onClick={onClick} style={{padding:"6px 16px",borderRadius:99,border:`1.5px solid ${active?C.accent:C.border}`,background:active?C.accent:"#fff",color:active?"#fff":C.sub,fontWeight:600,fontSize:12,cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap",transition:"all 0.15s"}}>{label}</button>);
 const Btn = ({label,onClick,color=C.accent,small=false,outline=false}) => (<button onClick={onClick} style={{background:outline?"transparent":color,color:outline?color:"#fff",border:outline?`1.5px solid ${color}`:"none",borderRadius:8,padding:small?"6px 12px":"8px 16px",fontWeight:700,fontSize:small?12:13,cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>{label}</button>);
-const RowCard = ({onClick,children,style={}}) => (<div onClick={onClick} onMouseEnter={onClick?e=>e.currentTarget.style.borderColor=C.accent:null} onMouseLeave={onClick?e=>e.currentTarget.style.borderColor=C.border:null} style={{background:"#fff",border:`1px solid ${C.border}`,borderRadius:12,padding:"14px 16px",cursor:onClick?"pointer":"default",boxShadow:"0 1px 3px rgba(0,0,0,0.04)",marginBottom:10,...style}}>{children}</div>);
+const RowCard = ({onClick,children,style={}}) => (<div onClick={onClick} style={{background:"#fff",borderBottom:`1px solid ${C.border}`,padding:"16px 20px",cursor:onClick?"pointer":"default",transition:"background 0.1s",...style}} onMouseEnter={onClick?e=>e.currentTarget.style.background="#f8fafc":null} onMouseLeave={onClick?e=>e.currentTarget.style.background="#fff":null}>{children}</div>);
 const Modal = ({title,onClose,onSave,children,wide=false,noFooter=false}) => (<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.45)",zIndex:1000,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}><div style={{background:"#fff",borderRadius:16,width:"100%",maxWidth:wide?680:480,maxHeight:"90vh",overflowY:"auto",boxShadow:"0 20px 60px rgba(0,0,0,0.2)"}}><div style={{padding:"18px 20px",borderBottom:`1px solid ${C.border}`,display:"flex",justifyContent:"space-between",alignItems:"center",position:"sticky",top:0,background:"#fff",zIndex:1}}><span style={{fontWeight:800,fontSize:16,color:C.text}}>{title}</span><button onClick={onClose} style={{background:"none",border:"none",fontSize:22,cursor:"pointer",color:C.muted,lineHeight:1}}>×</button></div><div style={{padding:20}}>{children}</div>{!noFooter&&<div style={{padding:"14px 20px",borderTop:`1px solid ${C.border}`,display:"flex",gap:10,justifyContent:"flex-end",position:"sticky",bottom:0,background:"#fff"}}><button onClick={onClose} style={{background:C.raised,border:`1px solid ${C.border}`,color:C.sub,borderRadius:8,padding:"8px 16px",fontWeight:600,fontSize:13,cursor:"pointer",fontFamily:"inherit"}}>Cancel</button><Btn label="Save" onClick={onSave}/></div>}</div></div>);
 const FF = ({label,value,onChange,type="text",placeholder="",required=false}) => (<div style={{marginBottom:14}}><label style={{display:"block",color:C.sub,fontSize:12,fontWeight:600,textTransform:"uppercase",letterSpacing:0.5,marginBottom:5}}>{label}{required&&<span style={{color:C.red}}> *</span>}</label>{type==="textarea"?<textarea value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder} rows={3} style={{width:"100%",background:C.raised,border:`1px solid ${C.border}`,borderRadius:8,padding:"9px 12px",color:C.text,fontSize:13,fontFamily:"inherit",resize:"vertical",boxSizing:"border-box"}}/>:<input type={type} value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder} style={{width:"100%",background:C.raised,border:`1px solid ${C.border}`,borderRadius:8,padding:"9px 12px",color:C.text,fontSize:13,fontFamily:"inherit",boxSizing:"border-box"}}/>}</div>);
 const StatCard = ({label,value,sub,color=C.accent,icon}) => (<div style={{background:"#fff",border:`1px solid ${C.border}`,borderRadius:12,padding:"16px 18px"}}><div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}><div><div style={{color:C.sub,fontSize:12,fontWeight:600,textTransform:"uppercase",letterSpacing:0.5}}>{label}</div><div style={{color,fontSize:26,fontWeight:900,marginTop:4}}>{value}</div>{sub&&<div style={{color:C.muted,fontSize:12,marginTop:2}}>{sub}</div>}</div><span style={{fontSize:28}}>{icon}</span></div></div>);
@@ -6873,23 +6883,46 @@ function ReportsTab({companies}) {
 /* ═══════════════════════════════════════════
    NAV + ROOT
 ═══════════════════════════════════════════ */
+/* ─── NAV ICONS (inline SVG paths, Lucide-style) ─── */
+const NAV_ICONS = {
+  customers: "M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 7a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75",
+  vendors:   "M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0zM12 7v6M9 10h6",
+  dispatch:  "M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 1 4 0M9 12h6M9 16h4",
+  history:   "M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2zM12 6v6l4 2",
+  quotes:    "M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M16 13H8M16 17H8M10 9H8",
+  invoices:  "M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2zM9 7h6M9 11h6M9 15h4",
+  inventory: "M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16zM3.27 6.96L12 12.01l8.73-5.05M12 22.08V12",
+  products:  "M11 4a7 7 0 1 0 0 14A7 7 0 0 0 11 4zM21 21l-4.35-4.35",
+  reports:   "M18 20V10M12 20V4M6 20v-6",
+  settings:  "M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z",
+};
+const NavIcon = ({id, size=18, color="currentColor"}) => {
+  const d = NAV_ICONS[id];
+  if(!d) return <span style={{width:size,height:size,display:"inline-block"}}/>;
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0}}>
+      {d.split("M").filter(Boolean).map((seg,i)=><path key={i} d={"M"+seg}/>)}
+    </svg>
+  );
+};
+
 const NAV_GROUPS = [
   {group:"Contacts", items:[
-    {id:"customers",icon:"🏢",label:"Companies & Tenants"},
-    {id:"vendors",icon:"📦",label:"Vendors & Suppliers"},
+    {id:"customers",label:"Companies"},
+    {id:"vendors",label:"Vendors"},
   ]},
   {group:"Operations", items:[
-    {id:"dispatch",icon:"📋",label:"Dispatch Board"},
-    {id:"history",icon:"📂",label:"Job History"},
+    {id:"dispatch",label:"Dispatch Board"},
+    {id:"history",label:"Job History"},
   ]},
   {group:"Finance", items:[
-    {id:"quotes",icon:"📝",label:"Quotes"},
-    {id:"invoices",icon:"🧾",label:"Invoices"},
-    {id:"inventory",icon:"📦",label:"Inventory"},
-    {id:"products",icon:"🔍",label:"Product Comparison"},
+    {id:"quotes",label:"Quotes"},
+    {id:"invoices",label:"Invoices"},
+    {id:"inventory",label:"Inventory"},
+    {id:"products",label:"Products"},
   ]},
   {group:"Reports", items:[
-    {id:"reports",icon:"📊",label:"Reports"},
+    {id:"reports",label:"Reports"},
   ]},
 ];
 const ALL_NAV = NAV_GROUPS.flatMap(g=>g.items);
@@ -6909,7 +6942,7 @@ function App() {
   const [vendors,setVendors]=useState(SEED_VENDORS);
   const [quotes,setQuotes]=useState(SEED_QUOTES);
   const [fieldMode,setFieldMode]=useState(null); // job being worked on in field
-  const [accentColor,setAccentColor]=useState(()=>localStorage.getItem("fp_accent")||"#0ea5e9");
+  const [accentColor,setAccentColor]=useState(()=>localStorage.getItem("fp_accent")||"#e3291c");
   const [showColorPicker,setShowColorPicker]=useState(false);
   C.accent = accentColor;
   const setAccent = col => { setAccentColor(col); localStorage.setItem("fp_accent",col); };
@@ -6932,32 +6965,35 @@ function App() {
         <div style={{width:240,background:"#fff",display:"flex",flexDirection:"column",flexShrink:0,minHeight:"100vh",position:"sticky",top:0,height:"100vh",overflowY:"auto",borderRight:`1px solid ${C.border}`}}>
 
           {/* Logo */}
-          <div style={{padding:"20px 16px 14px",flexShrink:0}}>
+          <div style={{padding:"20px 20px 16px",flexShrink:0,borderBottom:`1px solid ${C.border}`}}>
             <div style={{display:"flex",alignItems:"center",gap:10}}>
-              <div style={{width:36,height:36,borderRadius:10,background:accentColor,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,flexShrink:0}}>🔥</div>
+              <div style={{width:38,height:38,borderRadius:12,background:accentColor,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,boxShadow:`0 2px 8px ${accentColor}44`}}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+                </svg>
+              </div>
               <div>
                 <div style={{color:C.text,fontWeight:800,fontSize:15,letterSpacing:-0.3}}>FieldPro</div>
-                <div style={{color:C.muted,fontSize:10,letterSpacing:0.6,textTransform:"uppercase"}}>Field Service CRM</div>
+                <div style={{color:C.muted,fontSize:10,letterSpacing:0.5,textTransform:"uppercase"}}>Service CRM</div>
               </div>
             </div>
           </div>
 
           {/* Nav groups */}
-          <div style={{padding:"4px 10px",flex:1}}>
+          <div style={{padding:"12px 12px",flex:1,overflowY:"auto"}}>
             {NAV_GROUPS.map(g=>(
-              <div key={g.group} style={{marginBottom:4}}>
-                <div style={{color:C.muted,fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:1,padding:"10px 8px 4px"}}>{g.group}</div>
+              <div key={g.group} style={{marginBottom:2}}>
+                <div style={{color:C.muted,fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:1,padding:"10px 8px 6px"}}>{g.group}</div>
                 {g.items.map(n=>{
                   const active=tab===n.id;
                   return(
                     <button key={n.id} onClick={()=>setTab(n.id)}
-                      style={{display:"flex",alignItems:"center",gap:9,width:"100%",padding:"9px 10px",borderRadius:9,border:"none",
-                        background:active?`${accentColor}18`:"transparent",
-                        color:active?accentColor:C.sub,
-                        fontWeight:active?700:500,fontSize:13,cursor:"pointer",fontFamily:"inherit",textAlign:"left",marginBottom:2,transition:"background 0.1s,color 0.1s"}}>
-                      <span style={{fontSize:15,flexShrink:0}}>{n.icon}</span>
+                      style={{display:"flex",alignItems:"center",gap:10,width:"100%",padding:"9px 12px",borderRadius:10,border:"none",
+                        background:active?"#fdeeec":"transparent",
+                        color:active?accentColor:"#64748b",
+                        fontWeight:active?700:500,fontSize:13,cursor:"pointer",fontFamily:"inherit",textAlign:"left",marginBottom:2,transition:"all 0.15s"}}>
+                      <NavIcon id={n.id} size={17} color={active?accentColor:"#94a3b8"}/>
                       <span style={{flex:1}}>{n.label}</span>
-                      {active&&<span style={{width:6,height:6,borderRadius:"50%",background:accentColor,flexShrink:0}}/>}
                     </button>
                   );
                 })}
@@ -6966,25 +7002,25 @@ function App() {
           </div>
 
           {/* Settings */}
-          <div style={{padding:"8px 10px 0",borderTop:`1px solid ${C.border}`}}>
+          <div style={{padding:"8px 12px 0",borderTop:`1px solid ${C.border}`}}>
             {(()=>{const active=tab==="settings";return(
               <button onClick={()=>setTab("settings")}
-                style={{display:"flex",alignItems:"center",gap:9,width:"100%",padding:"9px 10px",borderRadius:9,border:"none",
-                  background:active?`${accentColor}18`:"transparent",
-                  color:active?accentColor:C.sub,
-                  fontWeight:active?700:500,fontSize:13,cursor:"pointer",fontFamily:"inherit",textAlign:"left",marginBottom:4}}>
-                <span style={{fontSize:15}}>⚙️</span><span style={{flex:1}}>Settings</span>
-                {active&&<span style={{width:6,height:6,borderRadius:"50%",background:accentColor}}/>}
+                style={{display:"flex",alignItems:"center",gap:10,width:"100%",padding:"9px 12px",borderRadius:10,border:"none",
+                  background:active?"#fdeeec":"transparent",
+                  color:active?accentColor:"#64748b",
+                  fontWeight:active?700:500,fontSize:13,cursor:"pointer",fontFamily:"inherit",textAlign:"left",marginBottom:4,transition:"all 0.15s"}}>
+                <NavIcon id="settings" size={17} color={active?accentColor:"#94a3b8"}/>
+                <span style={{flex:1}}>Settings</span>
               </button>
             );})()}
           </div>
 
           {/* Colour picker panel */}
           {showColorPicker&&(
-            <div style={{margin:"0 10px 6px",background:C.raised,borderRadius:12,padding:"12px",border:`1px solid ${C.border}`}}>
+            <div style={{margin:"0 12px 8px",background:C.bg,borderRadius:12,padding:"12px",border:`1px solid ${C.border}`}}>
               <div style={{fontSize:10,color:C.muted,fontWeight:700,textTransform:"uppercase",letterSpacing:0.5,marginBottom:10}}>Theme Colour</div>
               <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:6,marginBottom:10}}>
-                {["#0ea5e9","#ef4444","#7c3aed","#16a34a","#f97316","#0d9488","#db2777","#4f46e5","#d97706","#64748b"].map(col=>(
+                {["#e3291c","#0ea5e9","#7c3aed","#16a34a","#f97316","#0d9488","#db2777","#4f46e5","#d97706","#64748b"].map(col=>(
                   <button key={col} onClick={()=>setAccent(col)}
                     style={{width:"100%",aspectRatio:"1",borderRadius:7,border:accentColor===col?`2.5px solid ${C.text}`:"2.5px solid transparent",
                       background:col,cursor:"pointer",transition:"transform 0.1s",transform:accentColor===col?"scale(1.15)":"scale(1)"}}>
@@ -6997,16 +7033,16 @@ function App() {
           )}
 
           {/* User card */}
-          <div style={{padding:"6px 10px 14px"}}>
-            <div style={{background:C.raised,borderRadius:11,padding:"10px 12px",display:"flex",gap:10,alignItems:"center",border:`1px solid ${C.border}`}}>
-              <div style={{width:30,height:30,borderRadius:"50%",background:accentColor,display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontWeight:800,fontSize:11,flexShrink:0}}>AD</div>
+          <div style={{padding:"8px 12px 16px"}}>
+            <div style={{background:C.bg,borderRadius:11,padding:"10px 12px",display:"flex",gap:10,alignItems:"center",border:`1px solid ${C.border}`}}>
+              <div style={{width:32,height:32,borderRadius:"50%",background:accentColor,display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontWeight:800,fontSize:12,flexShrink:0}}>JD</div>
               <div style={{flex:1,minWidth:0}}>
                 <div style={{color:C.text,fontSize:12,fontWeight:700}}>Admin User</div>
                 <div style={{color:C.muted,fontSize:11}}>Manager</div>
               </div>
               <button onClick={()=>setShowColorPicker(p=>!p)} title="Change theme colour"
-                style={{background:"none",border:"none",cursor:"pointer",fontSize:16,padding:"2px 4px",borderRadius:6,
-                  color:showColorPicker?accentColor:C.muted,transition:"color 0.15s"}}>🎨</button>
+                style={{background:"none",border:"none",cursor:"pointer",fontSize:15,padding:"2px",borderRadius:6,
+                  opacity:showColorPicker?1:0.5,transition:"opacity 0.15s"}}>🎨</button>
             </div>
           </div>
 
@@ -7014,12 +7050,52 @@ function App() {
       )}
 
       {/* MAIN CONTENT */}
-      <div style={{flex:1,overflowY:"auto",padding:isMobile?"16px 14px 80px":"28px 32px",maxWidth:"100%"}}>
+      <div style={{flex:1,display:"flex",flexDirection:"column",minWidth:0,overflowY:"auto"}}>
+
+        {/* TOP HEADER BAR */}
+        {!isMobile&&(
+          <div style={{background:"#fff",borderBottom:`1px solid ${C.border}`,padding:"0 32px",height:64,display:"flex",alignItems:"center",justifyContent:"space-between",flexShrink:0,position:"sticky",top:0,zIndex:50}}>
+            <div>
+              <div style={{fontWeight:800,fontSize:20,color:C.text,letterSpacing:-0.5}}>
+                {[...NAV_GROUPS.flatMap(g=>g.items),{id:"settings",label:"Settings"}].find(n=>n.id===tab)?.label||"FieldPro"}
+              </div>
+              <div style={{fontSize:12,color:C.muted,marginTop:1}}>
+                {tab==="dispatch"?"Dispatch Board — manage today's jobs":
+                 tab==="history"?"All jobs across your client base":
+                 tab==="customers"?"Client companies and tenant records":
+                 tab==="quotes"?"Quotes and estimates":
+                 tab==="invoices"?"Invoicing and payments":
+                 tab==="inventory"?"Stock, parts and inventory":
+                 tab==="reports"?"Business overview and analytics":
+                 tab==="settings"?"Configure FieldPro to your workflow":
+                 "FieldPro Field Service CRM"}
+              </div>
+            </div>
+            <div style={{display:"flex",alignItems:"center",gap:12}}>
+              <div style={{display:"flex",alignItems:"center",gap:8,background:C.bg,border:`1px solid ${C.border}`,borderRadius:10,padding:"8px 14px",width:220}}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={C.muted} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+                <span style={{color:C.muted,fontSize:13}}>Search jobs, clients…</span>
+              </div>
+              <div style={{position:"relative"}}>
+                <div style={{width:36,height:36,borderRadius:10,background:C.bg,border:`1px solid ${C.border}`,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer"}}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={C.sub} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+                </div>
+                <span style={{position:"absolute",top:-3,right:-3,width:8,height:8,borderRadius:"50%",background:accentColor,border:"2px solid #fff"}}/>
+              </div>
+              <div style={{width:36,height:36,borderRadius:"50%",background:accentColor,display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontWeight:800,fontSize:13,cursor:"pointer",flexShrink:0}}>JD</div>
+            </div>
+          </div>
+        )}
+
+        {/* PAGE CONTENT */}
+        <div style={{flex:1,padding:isMobile?"16px 14px 80px":"28px 32px",maxWidth:"100%"}}>
         {isMobile&&(
           <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:16}}>
-            <div style={{width:28,height:28,borderRadius:7,background:C.accent,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14}}>🔥</div>
+            <div style={{width:28,height:28,borderRadius:7,background:accentColor,display:"flex",alignItems:"center",justifyContent:"center"}}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+            </div>
             <div style={{color:C.text,fontWeight:800,fontSize:15}}>FieldPro</div>
-            <div style={{color:C.sub,fontSize:12}}>/ {[...ALL_NAV,{id:"settings",label:"Settings"}].find(n=>n.id===tab)?.label}</div>
+            <div style={{color:C.sub,fontSize:12}}>/ {[...NAV_GROUPS.flatMap(g=>g.items),{id:"settings",label:"Settings"}].find(n=>n.id===tab)?.label}</div>
           </div>
         )}
         {tab==="customers"&&<CustomersTab settings={settings} companies={companies} setCompanies={setCompanies}/>}
@@ -7032,7 +7108,8 @@ function App() {
         {tab==="inventory"&&<InventoryTab settings={settings} companies={companies} setCompanies={setCompanies} quotes={quotes}/>}
         {tab==="reports"&&<ReportsTab companies={companies}/>}
         {tab==="settings"&&<SettingsTab settings={settings}/>}
-      </div>
+        </div>{/* end page content */}
+      </div>{/* end main flex column */}
 
       {/* MOBILE BOTTOM NAV */}
       {isMobile&&(
