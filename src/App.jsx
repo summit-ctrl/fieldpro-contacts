@@ -70,7 +70,20 @@ const DEFAULT_FIELD_STAFF = [
   {id:"fs4",name:"Anita Shaw",role:"Plumber",phone:"0411 400 500",email:"anita@fieldpro.com",trades:["Plumbing"],status:"Active",zone:null},
 ];
 
-/* ─── HELPERS ─── */
+/* ─── USERS & ROLES ─── */
+const SEED_USERS = [
+  {id:"u1", name:"James Dunlop", initials:"JD", role:"topboss", email:"james@fieldpro.com", active:true,
+   permissions:{dispatch:true,history:true,customers:true,quotes:true,invoices:true,inventory:true,reports:true,settings:true,techView:true,userMgmt:true}},
+  {id:"u2", name:"Admin User",   initials:"AU", role:"admin",   email:"admin@fieldpro.com",  active:true,
+   permissions:{dispatch:true,history:true,customers:true,quotes:true,invoices:true,inventory:true,reports:true,settings:false,techView:true,userMgmt:false}},
+  {id:"u3", name:"Jake Rivera",  initials:"JR", role:"tech",    email:"jake@fieldpro.com",   active:true, staffId:"fs1",
+   permissions:{dispatch:false,history:false,customers:false,quotes:false,invoices:false,inventory:false,reports:false,settings:false,techView:true,userMgmt:false}},
+  {id:"u4", name:"Tom Yuen",     initials:"TY", role:"tech",    email:"tom@fieldpro.com",    active:true, staffId:"fs2",
+   permissions:{dispatch:false,history:false,customers:false,quotes:false,invoices:false,inventory:false,reports:false,settings:false,techView:true,userMgmt:false}},
+];
+const ROLE_LABELS = {topboss:"Top Boss",admin:"Admin",tech:"Technician"};
+const ROLE_COLORS = {topboss:"#7c3aed",admin:"#2563eb",tech:"#16a34a"};
+
 const daysDiff = d => Math.floor((new Date() - new Date(d)) / 86400000);
 const jobStatus = job => { if (job.status==="Open") return "Open"; return daysDiff(job.closedDate)<=30?"Recently Closed":"Old"; };
 const statusColor = s => s==="Open"?"blue":s==="Recently Closed"?"orange":"gray";
@@ -2669,75 +2682,99 @@ function DispatchCard({job, techCol, onOpen, onStartDriving}) {
         </div>
       </div>
 
-      {/* Hover preview panel — fixed to right of viewport */}
+      {/* Hover preview panel — fills right column */}
       {hovered&&cardPos&&(
         <div onMouseEnter={()=>setHovered(true)} onMouseLeave={()=>setHovered(false)}
-          style={{position:"fixed",right:24,top:previewTop,width:280,
+          style={{position:"fixed",left:972,right:16,top:82,bottom:16,
             background:"#fff",borderRadius:14,
             boxShadow:"0 8px 32px rgba(0,0,0,0.14)",
             border:`1px solid ${C.border}`,
-            zIndex:999,overflow:"hidden",
+            zIndex:999,overflow:"hidden",display:"flex",flexDirection:"column",
             animation:"fadeSlideIn 0.15s ease"}}>
           <style>{`@keyframes fadeSlideIn{from{opacity:0;transform:translateX(8px)}to{opacity:1;transform:translateX(0)}}`}</style>
 
           {/* Colour bar */}
-          <div style={{height:4,background:col}}/>
+          <div style={{height:5,background:col,flexShrink:0}}/>
 
-          <div style={{padding:"14px 16px"}}>
+          <div style={{flex:1,overflowY:"auto",padding:"20px 24px",display:"flex",flexDirection:"column",gap:0}}>
             {/* Header */}
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:12}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:16,paddingBottom:16,borderBottom:`1px solid ${C.border}`}}>
               <div>
-                <span style={{color:col,fontWeight:800,fontSize:13}}>{job.ref}</span>
-                <div style={{color:C.text,fontWeight:800,fontSize:15,marginTop:2,lineHeight:1.3}}>{job.address}</div>
+                <span style={{color:col,fontWeight:800,fontSize:13,letterSpacing:0.3}}>{job.ref}</span>
+                <div style={{color:C.text,fontWeight:800,fontSize:20,marginTop:4,lineHeight:1.3}}>{job.address}</div>
+                {job.description&&<div style={{color:C.sub,fontSize:13,marginTop:6,lineHeight:1.5}}>{job.description}</div>}
               </div>
               <Badge label={job.stage||"New"} color={stageColor(job.stage||"New")}/>
             </div>
 
-            {/* Meta rows */}
-            <div style={{display:"flex",flexDirection:"column",gap:7,fontSize:12}}>
-              {job.description&&(
-                <div style={{color:C.sub,lineHeight:1.4,paddingBottom:8,borderBottom:`1px solid ${C.border}`}}>{job.description}</div>
-              )}
-              {job.scheduledTime&&(
-                <div style={{display:"flex",alignItems:"center",gap:8}}>
-                  <span style={{fontSize:14}}>🕐</span>
-                  <span style={{color:col,fontWeight:700}}>{job.scheduledTime}</span>
-                  {job.durationHrs&&<span style={{color:C.muted}}>({job.durationHrs}hr)</span>}
+            {/* Key details grid */}
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:20}}>
+              {[
+                {icon:"🕐",label:"Scheduled",value:job.scheduledTime?(job.scheduledTime+(job.durationHrs?` (${job.durationHrs}hr)`:"")):"Not scheduled",accent:!!job.scheduledTime},
+                {icon:"👷",label:"Technician",value:job.tech||"Unassigned"},
+                {icon:"🏢",label:"Company",value:job.companyName||"—"},
+                {icon:"🔑",label:"Key Access",value:job.keyMethod?keyLabel:"Not set"},
+              ].map(item=>(
+                <div key={item.label} style={{background:C.bg,borderRadius:10,padding:"12px 14px",border:`1px solid ${C.border}`}}>
+                  <div style={{fontSize:10,color:C.muted,fontWeight:700,textTransform:"uppercase",letterSpacing:0.5,marginBottom:6}}>{item.icon} {item.label}</div>
+                  <div style={{color:item.accent?col:C.text,fontWeight:700,fontSize:13}}>{item.value}</div>
                 </div>
-              )}
-              <div style={{display:"flex",alignItems:"center",gap:8}}>
-                <span style={{fontSize:14}}>👷</span>
-                <span style={{color:C.text,fontWeight:600}}>{job.tech||"Unassigned"}</span>
-              </div>
-              <div style={{display:"flex",alignItems:"center",gap:8}}>
-                <span style={{fontSize:14}}>🏢</span>
-                <span style={{color:C.sub}}>{job.companyName}</span>
-              </div>
-              {(job.tenants||[]).length>0&&(
-                <div style={{display:"flex",alignItems:"center",gap:8}}>
-                  <span style={{fontSize:14}}>👥</span>
-                  <span style={{color:C.sub}}>{(job.tenants||[]).map(t=>t.name).join(", ")}</span>
-                </div>
-              )}
-              {job.keyMethod&&(
-                <div style={{display:"flex",alignItems:"center",gap:8}}>
-                  <span style={{fontSize:14}}>{keyLabel.split(" ")[0]}</span>
-                  <span style={{color:C.sub}}>{keyLabel.slice(2)} access</span>
-                </div>
-              )}
-              {job.keyNotes&&(
-                <div style={{background:C.bg,borderRadius:8,padding:"7px 10px",fontSize:11,color:C.sub,fontStyle:"italic"}}>
-                  {job.keyNotes}
-                </div>
-              )}
+              ))}
             </div>
 
-            {/* CTA */}
+            {/* Tenants */}
+            {(job.tenants||[]).length>0&&(
+              <div style={{marginBottom:20}}>
+                <div style={{fontSize:11,color:C.muted,fontWeight:700,textTransform:"uppercase",letterSpacing:0.5,marginBottom:10}}>👥 Tenants</div>
+                <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                  {(job.tenants||[]).map(t=>(
+                    <div key={t.id} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px",background:"#fff",border:`1px solid ${C.border}`,borderRadius:10}}>
+                      <div style={{width:32,height:32,borderRadius:"50%",background:"#dcfce7",display:"flex",alignItems:"center",justifyContent:"center",color:"#15803d",fontWeight:800,fontSize:11,flexShrink:0}}>
+                        {t.name.split(" ").map(w=>w[0]).join("").slice(0,2)}
+                      </div>
+                      <div>
+                        <div style={{fontWeight:700,fontSize:13,color:C.text}}>{t.name}</div>
+                        {t.phone&&<div style={{fontSize:11,color:C.sub,marginTop:1}}>{t.phone}</div>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Key notes */}
+            {job.keyNotes&&(
+              <div style={{background:"#fefce8",border:"1px solid #fde047",borderRadius:10,padding:"12px 14px",marginBottom:20}}>
+                <div style={{fontSize:10,color:"#854d0e",fontWeight:700,textTransform:"uppercase",letterSpacing:0.5,marginBottom:4}}>🔑 Access Notes</div>
+                <div style={{fontSize:13,color:"#713f12",lineHeight:1.5}}>{job.keyNotes}</div>
+              </div>
+            )}
+
+            {/* Appliances */}
+            {(job.appliances||[]).length>0&&(
+              <div style={{marginBottom:20}}>
+                <div style={{fontSize:11,color:C.muted,fontWeight:700,textTransform:"uppercase",letterSpacing:0.5,marginBottom:10}}>🔧 Appliances ({job.appliances.length})</div>
+                {job.appliances.map(a=>(
+                  <div key={a.id} style={{display:"flex",gap:10,alignItems:"center",padding:"8px 12px",background:"#fff",border:`1px solid ${C.border}`,borderRadius:9,marginBottom:6}}>
+                    <span style={{fontSize:20}}>{appIcon(a.appType)}</span>
+                    <div>
+                      <div style={{fontWeight:700,fontSize:12,color:C.text}}>{a.brand} {a.model}</div>
+                      {a.condition&&<div style={{fontSize:11,color:C.orange,marginTop:1}}>⚠️ {a.condition}</div>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Sticky CTA */}
+          <div style={{padding:"14px 24px",borderTop:`1px solid ${C.border}`,flexShrink:0,background:"#fff"}}>
             <button onClick={e=>{e.stopPropagation();onOpen();}}
-              style={{width:"100%",marginTop:14,padding:"9px",background:`${col}12`,
-                color:col,border:`1.5px solid ${col}30`,borderRadius:9,
-                fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
-              Open Job →
+              style={{width:"100%",padding:"12px",background:col,
+                color:"#fff",border:"none",borderRadius:10,
+                fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit",
+                boxShadow:`0 2px 8px ${col}44`}}>
+              Open Full Job →
             </button>
           </div>
         </div>
@@ -5093,77 +5130,115 @@ function HistoryJobRow({job, js, onOpen}) {
 
       {hovered&&cardPos&&(
         <div onMouseEnter={()=>setHovered(true)} onMouseLeave={()=>setHovered(false)}
-          style={{position:"fixed",right:24,top:previewTop,width:300,
+          style={{position:"fixed",left:972,right:16,top:82,bottom:16,
             background:"#fff",borderRadius:14,
             boxShadow:"0 8px 32px rgba(0,0,0,0.14)",
-            border:`1px solid ${C.border}`,zIndex:999,overflow:"hidden",
+            border:`1px solid ${C.border}`,zIndex:999,
+            overflow:"hidden",display:"flex",flexDirection:"column",
             animation:"fadeSlideIn 0.15s ease"}}>
 
           {/* Status bar */}
-          <div style={{height:4,background:js==="Open"?"#3b82f6":js==="Recently Closed"?C.green:C.muted}}/>
+          <div style={{height:5,background:js==="Open"?"#3b82f6":js==="Recently Closed"?C.green:C.muted,flexShrink:0}}/>
 
-          <div style={{padding:"14px 16px"}}>
+          <div style={{flex:1,overflowY:"auto",padding:"20px 24px"}}>
             {/* Header */}
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:10}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:16,paddingBottom:16,borderBottom:`1px solid ${C.border}`}}>
               <div>
-                <span style={{color:C.accent,fontWeight:800,fontSize:12}}>{job.ref}</span>
-                <div style={{color:C.text,fontWeight:800,fontSize:14,marginTop:2,lineHeight:1.3}}>{job.address}</div>
+                <span style={{color:C.accent,fontWeight:800,fontSize:13,letterSpacing:0.3}}>{job.ref}</span>
+                <div style={{color:C.text,fontWeight:800,fontSize:20,marginTop:4,lineHeight:1.3}}>{job.address}</div>
+                {job.description&&<div style={{color:C.sub,fontSize:13,marginTop:6,lineHeight:1.5}}>{job.description}</div>}
               </div>
               <Badge label={js} color={statusColor(js)}/>
             </div>
 
-            {/* Key stats row */}
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:6,marginBottom:12}}>
+            {/* Key stats */}
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10,marginBottom:20}}>
               {[
-                {label:"Diary", value:diary.length, icon:"📒"},
-                {label:"Visits", value:visits.length, icon:"🔧"},
-                {label:"Works", value:works.length, icon:"⚙️"},
+                {icon:"📒",label:"Diary",value:diary.length},
+                {icon:"🔧",label:"Visits",value:visits.length},
+                {icon:"⚙️",label:"Works",value:works.length},
               ].map(s=>(
-                <div key={s.label} style={{background:C.bg,borderRadius:8,padding:"8px",textAlign:"center",border:`1px solid ${C.border}`}}>
-                  <div style={{fontSize:16,marginBottom:2}}>{s.icon}</div>
-                  <div style={{fontSize:16,fontWeight:800,color:C.text}}>{s.value}</div>
-                  <div style={{fontSize:10,color:C.muted,textTransform:"uppercase",letterSpacing:0.4}}>{s.label}</div>
+                <div key={s.label} style={{background:C.bg,borderRadius:10,padding:"14px",textAlign:"center",border:`1px solid ${C.border}`}}>
+                  <div style={{fontSize:22,marginBottom:4}}>{s.icon}</div>
+                  <div style={{fontSize:22,fontWeight:800,color:C.text}}>{s.value}</div>
+                  <div style={{fontSize:10,color:C.muted,textTransform:"uppercase",letterSpacing:0.5,marginTop:2}}>{s.label}</div>
                 </div>
               ))}
             </div>
 
-            {/* Details */}
-            <div style={{display:"flex",flexDirection:"column",gap:6,fontSize:12}}>
-              <div style={{display:"flex",gap:8,alignItems:"center"}}>
-                <span style={{fontSize:13}}>👷</span>
-                <span style={{color:C.text,fontWeight:600}}>{job.tech||"Unassigned"}</span>
-              </div>
-              <div style={{display:"flex",gap:8,alignItems:"center"}}>
-                <span style={{fontSize:13}}>🏢</span>
-                <span style={{color:C.sub}}>{job.companyName}{job.agentName?` · ${job.agentName}`:""}</span>
-              </div>
-              {daysOpen!==null&&(
-                <div style={{display:"flex",gap:8,alignItems:"center"}}>
-                  <span style={{fontSize:13}}>⏱️</span>
-                  <span style={{color:C.sub}}>Open for <strong style={{color:C.text}}>{daysOpen} day{daysOpen!==1?"s":""}</strong></span>
+            {/* Detail grid */}
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:20}}>
+              {[
+                {icon:"👷",label:"Technician",value:job.tech||"Unassigned"},
+                {icon:"🏢",label:"Company",value:job.companyName||"—"},
+                {icon:"👤",label:"Agent",value:job.agentName||"—"},
+                {icon:"⏱️",label:"Duration",value:daysOpen!==null?`${daysOpen} day${daysOpen!==1?"s":""}`:job.createdDate?`Created ${fmtDate(job.createdDate)}`:"—"},
+                {icon:"📅",label:"Created",value:fmtDate(job.createdDate)||"—"},
+                {icon:"✅",label:"Closed",value:job.closedDate?fmtDate(job.closedDate):"Still open"},
+              ].map(item=>(
+                <div key={item.label} style={{background:C.bg,borderRadius:10,padding:"12px 14px",border:`1px solid ${C.border}`}}>
+                  <div style={{fontSize:10,color:C.muted,fontWeight:700,textTransform:"uppercase",letterSpacing:0.5,marginBottom:5}}>{item.icon} {item.label}</div>
+                  <div style={{color:C.text,fontWeight:700,fontSize:13}}>{item.value}</div>
                 </div>
-              )}
-              {job.tenants&&job.tenants.length>0&&(
-                <div style={{display:"flex",gap:8,alignItems:"center"}}>
-                  <span style={{fontSize:13}}>👥</span>
-                  <span style={{color:C.sub}}>{job.tenants.map(t=>t.name).join(", ")}</span>
-                </div>
-              )}
-              {lastEntry&&(
-                <div style={{marginTop:4,background:C.bg,borderRadius:8,padding:"8px 10px",border:`1px solid ${C.border}`}}>
-                  <div style={{fontSize:10,color:C.muted,fontWeight:700,textTransform:"uppercase",letterSpacing:0.4,marginBottom:3}}>Last diary entry</div>
-                  <div style={{color:C.text,fontSize:12,fontWeight:600}}>{lastEntry.subject||lastEntry.type}</div>
-                  {lastEntry.notes&&<div style={{color:C.sub,fontSize:11,marginTop:2,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{lastEntry.notes}</div>}
-                  <div style={{color:C.muted,fontSize:10,marginTop:3}}>{fmtTs(lastEntry.ts)}</div>
-                </div>
-              )}
+              ))}
             </div>
 
+            {/* Tenants */}
+            {(job.tenants||[]).length>0&&(
+              <div style={{marginBottom:20}}>
+                <div style={{fontSize:11,color:C.muted,fontWeight:700,textTransform:"uppercase",letterSpacing:0.5,marginBottom:10}}>👥 Tenants</div>
+                <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                  {(job.tenants||[]).map(t=>(
+                    <div key={t.id} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px",background:"#fff",border:`1px solid ${C.border}`,borderRadius:10}}>
+                      <div style={{width:32,height:32,borderRadius:"50%",background:"#dcfce7",display:"flex",alignItems:"center",justifyContent:"center",color:"#15803d",fontWeight:800,fontSize:11,flexShrink:0}}>
+                        {t.name.split(" ").map(w=>w[0]).join("").slice(0,2)}
+                      </div>
+                      <div>
+                        <div style={{fontWeight:700,fontSize:13,color:C.text}}>{t.name}</div>
+                        {t.phone&&<div style={{fontSize:11,color:C.sub,marginTop:1}}>{t.phone}</div>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Last diary entry */}
+            {lastEntry&&(
+              <div style={{marginBottom:20}}>
+                <div style={{fontSize:11,color:C.muted,fontWeight:700,textTransform:"uppercase",letterSpacing:0.5,marginBottom:10}}>📒 Last Diary Entry</div>
+                <div style={{background:"#fff",border:`1px solid ${C.border}`,borderRadius:10,padding:"14px"}}>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:6}}>
+                    <div style={{color:C.text,fontSize:13,fontWeight:700}}>{lastEntry.subject||lastEntry.type}</div>
+                    <div style={{color:C.muted,fontSize:11,flexShrink:0,marginLeft:8}}>{fmtTs(lastEntry.ts)}</div>
+                  </div>
+                  {lastEntry.notes&&<div style={{color:C.sub,fontSize:12,lineHeight:1.5}}>{lastEntry.notes}</div>}
+                </div>
+              </div>
+            )}
+
+            {/* Additional works */}
+            {works.length>0&&(
+              <div>
+                <div style={{fontSize:11,color:C.muted,fontWeight:700,textTransform:"uppercase",letterSpacing:0.5,marginBottom:10}}>⚙️ Additional Works</div>
+                {works.map(w=>(
+                  <div key={w.id} style={{display:"flex",gap:10,alignItems:"center",padding:"9px 12px",background:"#fff",border:`1px solid ${C.border}`,borderRadius:9,marginBottom:6}}>
+                    <span style={{fontSize:18}}>{workIcon(w.description)}</span>
+                    <div style={{fontWeight:600,fontSize:13,color:C.text}}>{w.description}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Sticky CTA */}
+          <div style={{padding:"14px 24px",borderTop:`1px solid ${C.border}`,flexShrink:0,background:"#fff"}}>
             <button onClick={e=>{e.stopPropagation();onOpen();}}
-              style={{width:"100%",marginTop:12,padding:"9px",background:`${C.accent}12`,
-                color:C.accent,border:`1.5px solid ${C.accent}30`,borderRadius:9,
-                fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
-              Open Job →
+              style={{width:"100%",padding:"12px",background:C.accent,
+                color:"#fff",border:"none",borderRadius:10,
+                fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit",
+                boxShadow:`0 2px 8px ${C.accent}44`}}>
+              Open Full Job →
             </button>
           </div>
         </div>
@@ -7087,6 +7162,481 @@ function ReportsTab({companies}) {
    NAV + ROOT
 ═══════════════════════════════════════════ */
 /* ─── NAV ICONS (inline SVG paths, Lucide-style) ─── */
+/* ═══════════════════════════════════════════
+   TECHNICIAN VIEW — mobile phone frame
+═══════════════════════════════════════════ */
+function TechnicianView({settings, companies, currentUser}) {
+  const {fieldStaff=[],invItems=[],stockBatches=[],setStockBatches,setStockMovements,stockMovements=[]} = settings;
+  const activeTechs = fieldStaff.filter(f=>f.status==="Active");
+
+  // Admin/topboss can pick any tech; tech sees own
+  const defaultTech = currentUser.role==="tech"
+    ? (activeTechs.find(f=>f.id===currentUser.staffId)||activeTechs[0])
+    : activeTechs[0];
+  const [selectedTech, setSelectedTech] = useState(defaultTech?.id||"");
+  const [invTab, setInvTab] = useState("jobs"); // jobs | collect | transfer | return
+  const [modal, setModal] = useState(null);
+
+  const tech = activeTechs.find(f=>f.id===selectedTech)||activeTechs[0];
+  const allJobsList = allJobs(companies);
+  const techJobs = allJobsList.filter(j=>j.tech===tech?.name && j.status==="Open")
+    .sort((a,b)=>{
+      const toMin = t=>{if(!t)return 9999;const[h,m]=(t||"0:0").split(":").map(Number);return h*60+m;};
+      return toMin(a.scheduledTime)-toMin(b.scheduledTime);
+    });
+
+  // Van items for this tech
+  const vanKey = `van_${tech?.id||""}`;
+  const vanItems = (invItems||[]).map(item=>{
+    const qty = item.qtyOnHand?.[vanKey]||0;
+    const batches = (stockBatches||[]).filter(b=>b.itemId===item.id&&b.location===vanKey&&b.qtyRemaining>0);
+    return {...item, vanQty:qty, batches};
+  }).filter(i=>i.vanQty>0);
+
+  const stageColor2 = s=>s==="In Progress"?"#f97316":s==="Scheduled"?"#3b82f6":s==="Completed"?"#16a34a":s==="New"?"#6366f1":"#94a3b8";
+
+  // Quick collect from van for a job
+  const [collectJob, setCollectJob] = useState(null);
+  const [collectItems, setCollectItems] = useState([]);
+
+  const submitCollect = () => {
+    if(!collectJob||!collectItems.length) return;
+    const now = new Date().toISOString().slice(0,10);
+    let newBatches = [...(stockBatches||[])];
+    const newMovements = [...(stockMovements||[])];
+    collectItems.forEach(({itemId,qty,batchId})=>{
+      newBatches = newBatches.map(b=>{
+        if(b.id===batchId) return {...b, qtyRemaining:Math.max(0,b.qtyRemaining-qty)};
+        return b;
+      });
+      newMovements.push({id:`mv${Date.now()}_${itemId}`,type:"collect",itemId,qty,fromLocation:vanKey,toLocation:"job",jobId:collectJob.id,techId:tech.id,poId:null,batchId,date:now,note:`Collected for job ${collectJob.ref}`});
+    });
+    if(settings.setStockBatches) settings.setStockBatches(newBatches);
+    if(settings.setStockMovements) settings.setStockMovements(newMovements);
+    setCollectJob(null); setCollectItems([]); setInvTab("jobs");
+  };
+
+  const phoneW = 390;
+
+  return (
+    <div style={{display:"flex",gap:32,alignItems:"flex-start"}}>
+      {/* Left: controls */}
+      <div style={{width:280,flexShrink:0}}>
+        <div style={{marginBottom:20}}>
+          <div style={{fontSize:11,color:C.muted,fontWeight:700,textTransform:"uppercase",letterSpacing:0.5,marginBottom:8}}>Viewing as</div>
+          {currentUser.role==="tech" ? (
+            <div style={{background:C.bg,border:`1px solid ${C.border}`,borderRadius:10,padding:"12px 14px",display:"flex",gap:10,alignItems:"center"}}>
+              <div style={{width:36,height:36,borderRadius:"50%",background:C.accent,color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:800,fontSize:13}}>{tech?.name?.split(" ").map(w=>w[0]).join("").slice(0,2)}</div>
+              <div><div style={{fontWeight:700,fontSize:14,color:C.text}}>{tech?.name}</div><div style={{fontSize:12,color:C.sub}}>{tech?.role}</div></div>
+            </div>
+          ):(
+            <select value={selectedTech} onChange={e=>setSelectedTech(e.target.value)}
+              style={{width:"100%",background:"#fff",border:`1px solid ${C.border}`,borderRadius:10,padding:"10px 14px",color:C.text,fontSize:14,fontFamily:"inherit",fontWeight:600}}>
+              {activeTechs.map(f=><option key={f.id} value={f.id}>{f.name} — {f.role}</option>)}
+            </select>
+          )}
+        </div>
+
+        {/* Tab switcher */}
+        <div style={{background:C.bg,borderRadius:12,padding:3,marginBottom:16,display:"flex",gap:0}}>
+          {[{id:"jobs",label:"📋 Jobs"},{id:"collect",label:"📤 Collect"},{id:"transfer",label:"↔️ Transfer"},{id:"return",label:"↩️ Return"}].map(t=>(
+            <button key={t.id} onClick={()=>setInvTab(t.id)}
+              style={{flex:1,padding:"7px 4px",borderRadius:9,border:"none",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit",
+                background:invTab===t.id?"#fff":"transparent",
+                color:invTab===t.id?C.text:C.sub,
+                boxShadow:invTab===t.id?"0 1px 3px rgba(0,0,0,0.08)":"none"}}>
+              {t.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Stats */}
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:20}}>
+          {[
+            {label:"Today's Jobs",value:techJobs.length,icon:"📋",color:C.accent},
+            {label:"Van Items",value:vanItems.length,icon:"📦",color:C.purple},
+          ].map(s=>(
+            <div key={s.label} style={{background:"#fff",border:`1px solid ${C.border}`,borderRadius:12,padding:"14px",textAlign:"center"}}>
+              <div style={{fontSize:22,marginBottom:4}}>{s.icon}</div>
+              <div style={{fontSize:22,fontWeight:800,color:s.color}}>{s.value}</div>
+              <div style={{fontSize:11,color:C.muted,textTransform:"uppercase",letterSpacing:0.4}}>{s.label}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Van inventory quick view */}
+        {vanItems.length>0&&(
+          <div>
+            <div style={{fontSize:11,color:C.muted,fontWeight:700,textTransform:"uppercase",letterSpacing:0.5,marginBottom:8}}>📦 Van Inventory</div>
+            <div style={{background:"#fff",border:`1px solid ${C.border}`,borderRadius:12,overflow:"hidden"}}>
+              {vanItems.slice(0,5).map((item,i)=>(
+                <div key={item.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"10px 14px",borderBottom:i<Math.min(vanItems.length,5)-1?`1px solid ${C.border}`:""}} >
+                  <div style={{fontSize:13,color:C.text,fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:160}}>{item.name}</div>
+                  <div style={{background:`${C.accent}15`,color:C.accent,borderRadius:99,padding:"2px 10px",fontSize:12,fontWeight:800,flexShrink:0}}>{item.vanQty}</div>
+                </div>
+              ))}
+              {vanItems.length>5&&<div style={{padding:"8px 14px",fontSize:12,color:C.muted,textAlign:"center"}}>+{vanItems.length-5} more items</div>}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Phone frame */}
+      <div style={{flexShrink:0,width:phoneW,background:"#1a1a2e",borderRadius:44,padding:"12px 10px",boxShadow:"0 24px 60px rgba(0,0,0,0.35)",position:"relative"}}>
+        {/* Notch */}
+        <div style={{width:120,height:30,background:"#1a1a2e",borderRadius:"0 0 20px 20px",margin:"0 auto 4px",zIndex:10,position:"relative",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
+          <div style={{width:10,height:10,borderRadius:"50%",background:"#2a2a3e",border:"1px solid #333"}}/>
+          <div style={{width:50,height:6,borderRadius:3,background:"#2a2a3e"}}/>
+        </div>
+
+        {/* Screen */}
+        <div style={{background:"#f8f9fa",borderRadius:32,overflow:"hidden",height:700,display:"flex",flexDirection:"column"}}>
+
+          {/* App header */}
+          <div style={{background:"#fff",padding:"14px 18px 10px",borderBottom:`1px solid ${C.border}`,flexShrink:0}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+              <div style={{display:"flex",alignItems:"center",gap:8}}>
+                <div style={{width:28,height:28,borderRadius:8,background:C.accent,display:"flex",alignItems:"center",justifyContent:"center"}}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+                </div>
+                <div>
+                  <div style={{fontSize:13,fontWeight:800,color:C.text}}>FieldPro</div>
+                  <div style={{fontSize:10,color:C.sub}}>Technician · {tech?.name}</div>
+                </div>
+              </div>
+              <div style={{width:32,height:32,borderRadius:"50%",background:C.accent,display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontWeight:800,fontSize:12}}>
+                {tech?.name?.split(" ").map(w=>w[0]).join("").slice(0,2)}
+              </div>
+            </div>
+          </div>
+
+          {/* Screen content */}
+          <div style={{flex:1,overflowY:"auto",padding:"16px 14px"}}>
+
+            {invTab==="jobs"&&(
+              <div>
+                <div style={{fontWeight:800,fontSize:16,color:C.text,marginBottom:2}}>Today's Jobs</div>
+                <div style={{fontSize:12,color:C.sub,marginBottom:14}}>{techJobs.length} job{techJobs.length!==1?"s":""} assigned</div>
+                {techJobs.length===0&&(
+                  <div style={{textAlign:"center",padding:"40px 0",color:C.muted}}>
+                    <div style={{fontSize:32,marginBottom:8}}>☀️</div>
+                    <div style={{fontWeight:700,fontSize:14}}>No jobs today</div>
+                  </div>
+                )}
+                {techJobs.map(job=>(
+                  <div key={job.id} style={{background:"#fff",borderRadius:14,padding:"14px",marginBottom:10,boxShadow:"0 1px 4px rgba(0,0,0,0.06)"}}>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}}>
+                      <div>
+                        <span style={{color:C.accent,fontWeight:800,fontSize:12}}>#{job.ref}</span>
+                        <span style={{marginLeft:8,background:stageColor2(job.stage)+"22",color:stageColor2(job.stage),borderRadius:99,padding:"2px 8px",fontSize:11,fontWeight:700}}>{job.stage||"New"}</span>
+                      </div>
+                    </div>
+                    <div style={{fontWeight:700,fontSize:14,color:C.text,marginBottom:4}}>{job.description||job.address}</div>
+                    <div style={{fontSize:12,color:C.sub,marginBottom:8}}>{job.companyName} · {job.agentName}</div>
+                    <div style={{display:"flex",gap:8,fontSize:11,color:C.sub,flexWrap:"wrap",marginBottom:10}}>
+                      <span>📍 {job.address?.split(",")[0]}</span>
+                      {job.scheduledTime&&<span>🕐 {job.scheduledTime}{job.durationHrs?` (${job.durationHrs}hr)`:""}</span>}
+                      {(job.appliances||[]).length>0&&<span>🔧 {job.appliances.length} appliance{job.appliances.length!==1?"s":""}</span>}
+                    </div>
+                    {/* Quick collect button */}
+                    {vanItems.length>0&&(
+                      <button onClick={()=>{setCollectJob(job);setCollectItems([]);setInvTab("collect");}}
+                        style={{width:"100%",padding:"9px",background:`${C.accent}12`,color:C.accent,border:`1.5px solid ${C.accent}30`,borderRadius:9,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
+                        📤 Collect Parts for this Job
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {invTab==="collect"&&(
+              <div>
+                <div style={{fontWeight:800,fontSize:16,color:C.text,marginBottom:2}}>Collect Parts</div>
+                <div style={{fontSize:12,color:C.sub,marginBottom:14}}>Record items used from your van</div>
+                {collectJob&&(
+                  <div style={{background:`${C.accent}12`,border:`1.5px solid ${C.accent}30`,borderRadius:12,padding:"10px 14px",marginBottom:14,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                    <div><div style={{fontSize:11,color:C.accent,fontWeight:700}}>FOR JOB</div><div style={{fontWeight:700,color:C.text,fontSize:13}}>{collectJob.ref} · {collectJob.address?.split(",")[0]}</div></div>
+                    <button onClick={()=>setCollectJob(null)} style={{background:"none",border:"none",color:C.muted,fontSize:16,cursor:"pointer"}}>✕</button>
+                  </div>
+                )}
+                {!collectJob&&(
+                  <div style={{marginBottom:14}}>
+                    <div style={{fontSize:11,color:C.muted,fontWeight:700,marginBottom:6}}>SELECT JOB</div>
+                    <select value={collectJob?.id||""} onChange={e=>setCollectJob(techJobs.find(j=>j.id===e.target.value)||null)}
+                      style={{width:"100%",background:"#fff",border:`1px solid ${C.border}`,borderRadius:9,padding:"9px 12px",fontSize:13,color:C.text,fontFamily:"inherit"}}>
+                      <option value="">— Pick a job —</option>
+                      {techJobs.map(j=><option key={j.id} value={j.id}>{j.ref} · {j.address?.split(",")[0]}</option>)}
+                    </select>
+                  </div>
+                )}
+                {vanItems.length===0&&<div style={{textAlign:"center",padding:"30px 0",color:C.muted,fontSize:13}}>No items in your van</div>}
+                {vanItems.map(item=>{
+                  const ci = collectItems.find(c=>c.itemId===item.id);
+                  return(
+                    <div key={item.id} style={{background:"#fff",borderRadius:12,padding:"12px",marginBottom:8,boxShadow:"0 1px 3px rgba(0,0,0,0.05)"}}>
+                      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:ci?8:0}}>
+                        <div style={{flex:1,minWidth:0}}>
+                          <div style={{fontWeight:700,fontSize:13,color:C.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{item.name}</div>
+                          <div style={{fontSize:11,color:C.sub}}>{item.vanQty} in van · {item.code}</div>
+                        </div>
+                        <button onClick={()=>setCollectItems(prev=>ci?prev.filter(c=>c.itemId!==item.id):[...prev,{itemId:item.id,qty:1,batchId:item.batches[0]?.id}])}
+                          style={{background:ci?C.accent:"none",color:ci?"#fff":C.muted,border:`1.5px solid ${ci?C.accent:C.border}`,borderRadius:8,padding:"5px 10px",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",flexShrink:0,marginLeft:8}}>
+                          {ci?"✓ Added":"+ Add"}
+                        </button>
+                      </div>
+                      {ci&&(
+                        <div style={{display:"flex",alignItems:"center",gap:8}}>
+                          <span style={{fontSize:12,color:C.sub,flex:1}}>Qty:</span>
+                          <button onClick={()=>setCollectItems(prev=>prev.map(c=>c.itemId===item.id?{...c,qty:Math.max(1,c.qty-1)}:c))} style={{width:28,height:28,borderRadius:6,border:`1px solid ${C.border}`,background:"#fff",cursor:"pointer",fontSize:14}}>−</button>
+                          <span style={{fontWeight:800,fontSize:14,color:C.text,minWidth:24,textAlign:"center"}}>{ci.qty}</span>
+                          <button onClick={()=>setCollectItems(prev=>prev.map(c=>c.itemId===item.id?{...c,qty:Math.min(item.vanQty,c.qty+1)}:c))} style={{width:28,height:28,borderRadius:6,border:`1px solid ${C.border}`,background:"#fff",cursor:"pointer",fontSize:14}}>+</button>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+                {collectItems.length>0&&collectJob&&(
+                  <button onClick={submitCollect} style={{width:"100%",marginTop:8,padding:"13px",background:C.green,color:"#fff",border:"none",borderRadius:12,fontWeight:800,fontSize:14,cursor:"pointer",fontFamily:"inherit"}}>
+                    ✅ Confirm Collection ({collectItems.length} item{collectItems.length!==1?"s":""})
+                  </button>
+                )}
+              </div>
+            )}
+
+            {invTab==="transfer"&&(
+              <div>
+                <div style={{fontWeight:800,fontSize:16,color:C.text,marginBottom:2}}>Transfer Stock</div>
+                <div style={{fontSize:12,color:C.sub,marginBottom:16}}>Move items between vans or warehouse</div>
+                {vanItems.length===0?(
+                  <div style={{textAlign:"center",padding:"30px 0",color:C.muted,fontSize:13}}>No items to transfer</div>
+                ):(
+                  <div style={{background:"#fff",borderRadius:14,padding:"16px",boxShadow:"0 1px 4px rgba(0,0,0,0.06)"}}>
+                    <div style={{fontSize:12,color:C.sub,marginBottom:12}}>Select an item to transfer from your van to another location:</div>
+                    {vanItems.slice(0,5).map(item=>(
+                      <div key={item.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"10px 0",borderBottom:`1px solid ${C.border}`}}>
+                        <div>
+                          <div style={{fontWeight:600,fontSize:13,color:C.text}}>{item.name}</div>
+                          <div style={{fontSize:11,color:C.sub}}>{item.vanQty} available</div>
+                        </div>
+                        <button style={{background:C.accent,color:"#fff",border:"none",borderRadius:8,padding:"6px 12px",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>Transfer →</button>
+                      </div>
+                    ))}
+                    <div style={{marginTop:14,padding:"12px",background:"#eff6ff",borderRadius:10,fontSize:12,color:"#1d4ed8"}}>
+                      💡 Full transfer controls available in the Inventory module
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {invTab==="return"&&(
+              <div>
+                <div style={{fontWeight:800,fontSize:16,color:C.text,marginBottom:2}}>Return to Warehouse</div>
+                <div style={{fontSize:12,color:C.sub,marginBottom:16}}>Send unused items back</div>
+                {vanItems.length===0?(
+                  <div style={{textAlign:"center",padding:"30px 0",color:C.muted,fontSize:13}}>Nothing to return</div>
+                ):(
+                  <div style={{background:"#fff",borderRadius:14,padding:"16px",boxShadow:"0 1px 4px rgba(0,0,0,0.06)"}}>
+                    {vanItems.slice(0,5).map(item=>(
+                      <div key={item.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"10px 0",borderBottom:`1px solid ${C.border}`}}>
+                        <div>
+                          <div style={{fontWeight:600,fontSize:13,color:C.text}}>{item.name}</div>
+                          <div style={{fontSize:11,color:C.sub}}>{item.vanQty} in van</div>
+                        </div>
+                        <button style={{background:"#f0fdf4",color:C.green,border:`1px solid #bbf7d0`,borderRadius:8,padding:"6px 12px",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>↩ Return</button>
+                      </div>
+                    ))}
+                    <div style={{marginTop:14,padding:"12px",background:"#f0fdf4",borderRadius:10,fontSize:12,color:C.green}}>
+                      💡 Full return controls available in the Inventory module
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+          </div>
+
+          {/* Bottom nav bar */}
+          <div style={{background:"#fff",borderTop:`1px solid ${C.border}`,padding:"8px 0 12px",display:"flex",flexShrink:0}}>
+            {[
+              {id:"jobs",icon:"📋",label:"Jobs"},
+              {id:"collect",icon:"📤",label:"Collect"},
+              {id:"transfer",icon:"↔️",label:"Transfer"},
+              {id:"return",icon:"↩️",label:"Return"},
+            ].map(n=>(
+              <button key={n.id} onClick={()=>setInvTab(n.id)}
+                style={{flex:1,background:"none",border:"none",cursor:"pointer",fontFamily:"inherit",
+                  display:"flex",flexDirection:"column",alignItems:"center",gap:3,
+                  borderTop:`2px solid ${invTab===n.id?C.accent:"transparent"}`,paddingTop:4}}>
+                <span style={{fontSize:18}}>{n.icon}</span>
+                <span style={{fontSize:10,fontWeight:700,color:invTab===n.id?C.accent:C.muted}}>{n.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Home bar */}
+        <div style={{height:4,width:100,background:"rgba(255,255,255,0.3)",borderRadius:2,margin:"10px auto 2px"}}/>
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════
+   USER MANAGEMENT — topboss only
+═══════════════════════════════════════════ */
+function UserManagement({users, setUsers, fieldStaff, currentUser}) {
+  const [editUser, setEditUser] = useState(null);
+  const [showAdd, setShowAdd] = useState(false);
+  const [form, setForm] = useState({});
+
+  const PERMS = [
+    {key:"dispatch",label:"Dispatch Board"},
+    {key:"history",label:"Job History"},
+    {key:"customers",label:"Companies"},
+    {key:"quotes",label:"Quotes"},
+    {key:"invoices",label:"Invoices"},
+    {key:"inventory",label:"Inventory"},
+    {key:"reports",label:"Reports"},
+    {key:"settings",label:"Settings"},
+    {key:"techView",label:"Technician View"},
+    {key:"userMgmt",label:"User Management"},
+  ];
+
+  const saveEdit = () => {
+    setUsers(prev=>prev.map(u=>u.id===editUser.id?editUser:u));
+    setEditUser(null);
+  };
+
+  const addUser = () => {
+    if(!form.name||!form.role) return;
+    const allPerms = PERMS.reduce((acc,p)=>({...acc,[p.key]:form.role==="admin"}),{});
+    if(form.role==="topboss") PERMS.forEach(p=>allPerms[p.key]=true);
+    setUsers(prev=>[...prev,{id:`u${Date.now()}`,name:form.name,initials:(form.name.split(" ").map(w=>w[0]).join("").slice(0,2)).toUpperCase(),role:form.role,email:form.email||"",active:true,staffId:form.staffId||null,permissions:allPerms}]);
+    setForm({}); setShowAdd(false);
+  };
+
+  return(
+    <div style={{maxWidth:800}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:24}}>
+        <div>
+          <h2 style={{fontSize:20,fontWeight:800,color:C.text,margin:0}}>User Management</h2>
+          <p style={{color:C.sub,fontSize:13,marginTop:3}}>{users.length} users · manage roles and permissions</p>
+        </div>
+        <button onClick={()=>setShowAdd(true)} style={{background:C.accent,color:"#fff",border:"none",borderRadius:9,padding:"9px 18px",fontWeight:700,fontSize:13,cursor:"pointer",fontFamily:"inherit"}}>+ Add User</button>
+      </div>
+
+      {showAdd&&(
+        <div style={{background:"#fff",border:`1px solid ${C.border}`,borderRadius:14,padding:"20px",marginBottom:20}}>
+          <div style={{fontWeight:700,fontSize:15,color:C.text,marginBottom:16}}>New User</div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:12}}>
+            <div>
+              <label style={{display:"block",fontSize:11,color:C.sub,fontWeight:700,textTransform:"uppercase",letterSpacing:0.5,marginBottom:5}}>Full Name *</label>
+              <input value={form.name||""} onChange={e=>setForm(f=>({...f,name:e.target.value}))} style={{width:"100%",background:C.bg,border:`1px solid ${C.border}`,borderRadius:8,padding:"9px 12px",fontSize:13,color:C.text,fontFamily:"inherit",boxSizing:"border-box"}} placeholder="e.g. Sarah Connor"/>
+            </div>
+            <div>
+              <label style={{display:"block",fontSize:11,color:C.sub,fontWeight:700,textTransform:"uppercase",letterSpacing:0.5,marginBottom:5}}>Email</label>
+              <input value={form.email||""} onChange={e=>setForm(f=>({...f,email:e.target.value}))} style={{width:"100%",background:C.bg,border:`1px solid ${C.border}`,borderRadius:8,padding:"9px 12px",fontSize:13,color:C.text,fontFamily:"inherit",boxSizing:"border-box"}} placeholder="sarah@fieldpro.com"/>
+            </div>
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:16}}>
+            <div>
+              <label style={{display:"block",fontSize:11,color:C.sub,fontWeight:700,textTransform:"uppercase",letterSpacing:0.5,marginBottom:5}}>Role *</label>
+              <select value={form.role||""} onChange={e=>setForm(f=>({...f,role:e.target.value}))} style={{width:"100%",background:C.bg,border:`1px solid ${C.border}`,borderRadius:8,padding:"9px 12px",fontSize:13,color:C.text,fontFamily:"inherit",boxSizing:"border-box"}}>
+                <option value="">— Select role —</option>
+                <option value="topboss">Top Boss</option>
+                <option value="admin">Admin</option>
+                <option value="tech">Technician</option>
+              </select>
+            </div>
+            {form.role==="tech"&&(
+              <div>
+                <label style={{display:"block",fontSize:11,color:C.sub,fontWeight:700,textTransform:"uppercase",letterSpacing:0.5,marginBottom:5}}>Link to Field Staff</label>
+                <select value={form.staffId||""} onChange={e=>setForm(f=>({...f,staffId:e.target.value}))} style={{width:"100%",background:C.bg,border:`1px solid ${C.border}`,borderRadius:8,padding:"9px 12px",fontSize:13,color:C.text,fontFamily:"inherit",boxSizing:"border-box"}}>
+                  <option value="">— Not linked —</option>
+                  {fieldStaff.filter(f=>f.status==="Active").map(f=><option key={f.id} value={f.id}>{f.name}</option>)}
+                </select>
+              </div>
+            )}
+          </div>
+          <div style={{display:"flex",gap:10}}>
+            <button onClick={addUser} style={{background:C.accent,color:"#fff",border:"none",borderRadius:9,padding:"9px 20px",fontWeight:700,fontSize:13,cursor:"pointer",fontFamily:"inherit"}}>Create User</button>
+            <button onClick={()=>{setShowAdd(false);setForm({});}} style={{background:"none",border:`1px solid ${C.border}`,borderRadius:9,padding:"9px 20px",fontWeight:600,fontSize:13,cursor:"pointer",fontFamily:"inherit",color:C.sub}}>Cancel</button>
+          </div>
+        </div>
+      )}
+
+      {/* User list */}
+      <div style={{background:"#fff",border:`1px solid ${C.border}`,borderRadius:14,overflow:"hidden"}}>
+        {users.map((user,i)=>(
+          <div key={user.id} style={{padding:"16px 20px",borderBottom:i<users.length-1?`1px solid ${C.border}`:"",display:"flex",alignItems:"center",gap:14}}>
+            <div style={{width:40,height:40,borderRadius:"50%",background:ROLE_COLORS[user.role]+"22",display:"flex",alignItems:"center",justifyContent:"center",color:ROLE_COLORS[user.role],fontWeight:800,fontSize:13,flexShrink:0}}>
+              {user.initials}
+            </div>
+            <div style={{flex:1,minWidth:0}}>
+              <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:2}}>
+                <span style={{fontWeight:700,fontSize:14,color:C.text}}>{user.name}</span>
+                <span style={{background:ROLE_COLORS[user.role]+"22",color:ROLE_COLORS[user.role],borderRadius:99,padding:"2px 9px",fontSize:11,fontWeight:700}}>{ROLE_LABELS[user.role]}</span>
+                {!user.active&&<span style={{background:"#fee2e2",color:"#b91c1c",borderRadius:99,padding:"2px 9px",fontSize:11,fontWeight:700}}>Inactive</span>}
+              </div>
+              <div style={{fontSize:12,color:C.sub}}>{user.email}</div>
+            </div>
+            {currentUser.role==="topboss"&&user.id!==currentUser.id&&(
+              <div style={{display:"flex",gap:8}}>
+                <button onClick={()=>setEditUser({...user})}
+                  style={{background:C.bg,border:`1px solid ${C.border}`,borderRadius:8,padding:"6px 14px",fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"inherit",color:C.text}}>
+                  Edit
+                </button>
+                <button onClick={()=>setUsers(prev=>prev.map(u=>u.id===user.id?{...u,active:!u.active}:u))}
+                  style={{background:user.active?"#fff7f7":"#f0fdf4",border:`1px solid ${user.active?"#fecaca":"#bbf7d0"}`,borderRadius:8,padding:"6px 14px",fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"inherit",color:user.active?C.red:C.green}}>
+                  {user.active?"Deactivate":"Activate"}
+                </button>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {/* Edit permissions modal */}
+      {editUser&&(
+        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.4)",zIndex:500,display:"flex",alignItems:"center",justifyContent:"center"}} onClick={()=>setEditUser(null)}>
+          <div onClick={e=>e.stopPropagation()} style={{background:"#fff",borderRadius:16,padding:"24px",width:480,maxHeight:"80vh",overflowY:"auto",boxShadow:"0 20px 60px rgba(0,0,0,0.2)"}}>
+            <div style={{fontWeight:800,fontSize:17,color:C.text,marginBottom:4}}>{editUser.name}</div>
+            <div style={{fontSize:13,color:C.sub,marginBottom:20}}>Edit role and permissions</div>
+
+            <div style={{marginBottom:16}}>
+              <label style={{display:"block",fontSize:11,color:C.sub,fontWeight:700,textTransform:"uppercase",letterSpacing:0.5,marginBottom:6}}>Role</label>
+              <select value={editUser.role} onChange={e=>setEditUser(u=>({...u,role:e.target.value}))} style={{width:"100%",background:C.bg,border:`1px solid ${C.border}`,borderRadius:8,padding:"9px 12px",fontSize:13,color:C.text,fontFamily:"inherit"}}>
+                <option value="topboss">Top Boss</option>
+                <option value="admin">Admin</option>
+                <option value="tech">Technician</option>
+              </select>
+            </div>
+
+            <div style={{marginBottom:20}}>
+              <div style={{fontSize:11,color:C.sub,fontWeight:700,textTransform:"uppercase",letterSpacing:0.5,marginBottom:10}}>Module Access</div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+                {PERMS.map(p=>(
+                  <label key={p.key} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px",background:editUser.permissions[p.key]?`${C.accent}08`:C.bg,border:`1.5px solid ${editUser.permissions[p.key]?C.accent:C.border}`,borderRadius:9,cursor:"pointer"}}>
+                    <input type="checkbox" checked={!!editUser.permissions[p.key]} onChange={e=>setEditUser(u=>({...u,permissions:{...u.permissions,[p.key]:e.target.checked}}))} style={{accentColor:C.accent,width:15,height:15,flexShrink:0}}/>
+                    <span style={{fontSize:12,fontWeight:editUser.permissions[p.key]?700:500,color:C.text}}>{p.label}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <div style={{display:"flex",gap:10}}>
+              <button onClick={saveEdit} style={{flex:1,background:C.accent,color:"#fff",border:"none",borderRadius:9,padding:"11px",fontWeight:700,fontSize:13,cursor:"pointer",fontFamily:"inherit"}}>Save Changes</button>
+              <button onClick={()=>setEditUser(null)} style={{flex:1,background:"none",border:`1px solid ${C.border}`,borderRadius:9,padding:"11px",fontWeight:600,fontSize:13,cursor:"pointer",fontFamily:"inherit",color:C.sub}}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ─── NAV ICONS — exact Lucide SVG inner HTML ─── */
 const NAV_ICONS = {
   customers: `<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path>`,
@@ -7098,6 +7648,8 @@ const NAV_ICONS = {
   inventory: `<path d="M16.5 9.4l-9-5.19"></path><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line>`,
   products:  `<polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline>`,
   reports:   `<line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line>`,
+  technician:`<rect width="14" height="20" x="5" y="2" rx="2" ry="2"></rect><path d="M12 18h.01"></path><path d="M8 6h8"></path><path d="M8 10h8"></path><path d="M8 14h4"></path>`,
+  users:     `<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path><line x1="19" y1="8" x2="19" y2="14"></line><line x1="22" y1="11" x2="16" y2="11"></line>`,
   settings:  `<path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path><circle cx="12" cy="12" r="3"></circle>`,
 };
 const NavIcon = ({id, size=18, color="currentColor"}) => {
@@ -7126,6 +7678,10 @@ const NAV_GROUPS = [
   {group:"Reports", items:[
     {id:"reports",label:"Reports"},
   ]},
+  {group:"Field", items:[
+    {id:"technician",label:"Technician View"},
+    {id:"users",label:"Users"},
+  ]},
 ];
 const ALL_NAV = NAV_GROUPS.flatMap(g=>g.items);
 const MOBILE_NAV = [
@@ -7143,7 +7699,9 @@ function App() {
   const [companies,setCompanies]=useState(SEED_COMPANIES);
   const [vendors,setVendors]=useState(SEED_VENDORS);
   const [quotes,setQuotes]=useState(SEED_QUOTES);
-  const [fieldMode,setFieldMode]=useState(null); // job being worked on in field
+  const [fieldMode,setFieldMode]=useState(null);
+  const [users,setUsers]=useState(SEED_USERS);
+  const [currentUser,setCurrentUser]=useState(SEED_USERS[0]); // default: topboss JD
   const [accentColor,setAccentColor]=useState(()=>localStorage.getItem("fp_accent")||"#f2a09a");
   const [showColorPicker,setShowColorPicker]=useState(false);
   C.accent = accentColor;
@@ -7236,15 +7794,21 @@ function App() {
 
           {/* User card */}
           <div style={{padding:"8px 12px 16px"}}>
-            <div style={{background:C.bg,borderRadius:11,padding:"10px 12px",display:"flex",gap:10,alignItems:"center",border:`1px solid ${C.border}`}}>
-              <div style={{width:32,height:32,borderRadius:"50%",background:accentColor,display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontWeight:800,fontSize:12,flexShrink:0}}>JD</div>
-              <div style={{flex:1,minWidth:0}}>
-                <div style={{color:C.text,fontSize:12,fontWeight:700}}>Admin User</div>
-                <div style={{color:C.muted,fontSize:11}}>Manager</div>
+            <div style={{background:C.bg,borderRadius:11,padding:"10px 12px",border:`1px solid ${C.border}`}}>
+              <div style={{display:"flex",gap:10,alignItems:"center",marginBottom:8}}>
+                <div style={{width:32,height:32,borderRadius:"50%",background:ROLE_COLORS[currentUser.role]||accentColor,display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontWeight:800,fontSize:12,flexShrink:0}}>{currentUser.initials}</div>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{color:C.text,fontSize:12,fontWeight:700,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{currentUser.name}</div>
+                  <div style={{color:ROLE_COLORS[currentUser.role]||C.muted,fontSize:10,fontWeight:700}}>{ROLE_LABELS[currentUser.role]}</div>
+                </div>
+                <button onClick={()=>setShowColorPicker(p=>!p)} title="Change theme colour"
+                  style={{background:"none",border:"none",cursor:"pointer",fontSize:15,padding:"2px",borderRadius:6,opacity:showColorPicker?1:0.5}}>🎨</button>
               </div>
-              <button onClick={()=>setShowColorPicker(p=>!p)} title="Change theme colour"
-                style={{background:"none",border:"none",cursor:"pointer",fontSize:15,padding:"2px",borderRadius:6,
-                  opacity:showColorPicker?1:0.5,transition:"opacity 0.15s"}}>🎨</button>
+              {/* Switch user (demo) */}
+              <select value={currentUser.id} onChange={e=>setCurrentUser(users.find(u=>u.id===e.target.value)||currentUser)}
+                style={{width:"100%",background:"#fff",border:`1px solid ${C.border}`,borderRadius:7,padding:"5px 8px",fontSize:11,color:C.sub,fontFamily:"inherit",cursor:"pointer"}}>
+                {users.filter(u=>u.active).map(u=><option key={u.id} value={u.id}>{u.name} ({ROLE_LABELS[u.role]})</option>)}
+              </select>
             </div>
           </div>
 
@@ -7269,6 +7833,8 @@ function App() {
                  tab==="invoices"?"Invoicing and payments":
                  tab==="inventory"?"Stock, parts and inventory":
                  tab==="reports"?"Business overview and analytics":
+                 tab==="technician"?`Field mobile view — ${currentUser.role==="tech"?"your jobs":"select a technician"}`:
+                 tab==="users"?"User accounts, roles and permissions":
                  tab==="settings"?"Configure FieldPro to your workflow":
                  "FieldPro Field Service CRM"}
               </div>
@@ -7284,7 +7850,7 @@ function App() {
                 </div>
                 <span style={{position:"absolute",top:-3,right:-3,width:8,height:8,borderRadius:"50%",background:accentColor,border:"2px solid #fff"}}/>
               </div>
-              <div style={{width:36,height:36,borderRadius:"50%",background:accentColor,display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontWeight:800,fontSize:13,cursor:"pointer",flexShrink:0}}>JD</div>
+              <div style={{width:36,height:36,borderRadius:"50%",background:ROLE_COLORS[currentUser.role]||accentColor,display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontWeight:800,fontSize:13,cursor:"pointer",flexShrink:0}}>{currentUser.initials}</div>
             </div>
           </div>
         )}
@@ -7309,6 +7875,11 @@ function App() {
         {tab==="invoices"&&<InvoicesTab/>}
         {tab==="inventory"&&<InventoryTab settings={settings} companies={companies} setCompanies={setCompanies} quotes={quotes}/>}
         {tab==="reports"&&<ReportsTab companies={companies}/>}
+        {tab==="technician"&&<TechnicianView settings={settings} companies={companies} currentUser={currentUser}/>}
+        {tab==="users"&&(currentUser.role==="topboss"
+          ? <UserManagement users={users} setUsers={setUsers} fieldStaff={settings.fieldStaff||[]} currentUser={currentUser}/>
+          : <div style={{textAlign:"center",padding:"60px 0",color:C.muted}}><div style={{fontSize:40,marginBottom:12}}>🔒</div><div style={{fontWeight:700,fontSize:16,color:C.text}}>Access Restricted</div><div style={{fontSize:13,marginTop:6}}>Only Top Boss can manage users</div></div>
+        )}
         {tab==="settings"&&<SettingsTab settings={settings}/>}
         </div>{/* end page content */}
       </div>{/* end main flex column */}
