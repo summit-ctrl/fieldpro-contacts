@@ -6281,7 +6281,7 @@ function ItemDetail({item, suppliers, fieldStaff, invItems, quotes=[], purchaseO
 
             {/* Location pills — centred, rounded, matching screenshot */}
             <div style={{display:"flex",flexWrap:"wrap",gap:8,justifyContent:"center",paddingTop:16,borderTop:`1px solid ${C.border}`}}>
-              {locs.filter(([,v])=>v>0).map(([loc,label])=>(
+              {locs.filter(([loc])=>(item.qtyOnHand?.[loc]||0)>0).map(([loc,label])=>(
                 <span key={loc} style={{
                   background:C.bg,border:`1px solid ${C.border}`,
                   borderRadius:99,padding:"7px 16px",
