@@ -17,7 +17,7 @@ class ErrorBoundary extends Component {
 
 let C = {
   bg:"#f8f9fa", card:"#ffffff", raised:"#f8fafc",
-  border:"#e9ecef", sidebar:"#ffffff", accent:"#e3291c", orange:"#f97316",
+  border:"#e9ecef", sidebar:"#ffffff", accent:"#f2a09a", orange:"#f97316",
   green:"#16a34a", red:"#dc2626", purple:"#7c3aed", yellow:"#d97706",
   text:"#1a1f2e", sub:"#64748b", muted:"#9ca3af",
 };
@@ -6884,25 +6884,24 @@ function ReportsTab({companies}) {
    NAV + ROOT
 ═══════════════════════════════════════════ */
 /* ─── NAV ICONS (inline SVG paths, Lucide-style) ─── */
+/* ─── NAV ICONS — exact Lucide SVG inner HTML ─── */
 const NAV_ICONS = {
-  customers: "M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 7a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75",
-  vendors:   "M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0zM12 7v6M9 10h6",
-  dispatch:  "M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 1 4 0M9 12h6M9 16h4",
-  history:   "M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2zM12 6v6l4 2",
-  quotes:    "M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M16 13H8M16 17H8M10 9H8",
-  invoices:  "M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2zM9 7h6M9 11h6M9 15h4",
-  inventory: "M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16zM3.27 6.96L12 12.01l8.73-5.05M12 22.08V12",
-  products:  "M11 4a7 7 0 1 0 0 14A7 7 0 0 0 11 4zM21 21l-4.35-4.35",
-  reports:   "M18 20V10M12 20V4M6 20v-6",
-  settings:  "M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z",
+  customers: `<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path>`,
+  vendors:   `<path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"></path><path d="M15 18H9"></path><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"></path><circle cx="17" cy="18" r="2"></circle><circle cx="7" cy="18" r="2"></circle>`,
+  dispatch:  `<rect width="8" height="4" x="8" y="2" rx="1" ry="1"></rect><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><path d="M12 11h4"></path><path d="M12 16h4"></path><path d="M8 11h.01"></path><path d="M8 16h.01"></path>`,
+  history:   `<circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline>`,
+  quotes:    `<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"></path><path d="M14 2v4a2 2 0 0 0 2 2h4"></path><path d="M10 9H8"></path><path d="M16 13H8"></path><path d="M16 17H8"></path>`,
+  invoices:  `<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"></path><path d="M14 2v4a2 2 0 0 0 2 2h4"></path><path d="m9 15 2 2 4-4"></path>`,
+  inventory: `<path d="M16.5 9.4l-9-5.19"></path><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line>`,
+  products:  `<polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline>`,
+  reports:   `<line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line>`,
+  settings:  `<path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path><circle cx="12" cy="12" r="3"></circle>`,
 };
 const NavIcon = ({id, size=18, color="currentColor"}) => {
-  const d = NAV_ICONS[id];
-  if(!d) return <span style={{width:size,height:size,display:"inline-block"}}/>;
+  const inner = NAV_ICONS[id];
+  if(!inner) return <span style={{width:size,height:size,display:"inline-block"}}/>;
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0}}>
-      {d.split("M").filter(Boolean).map((seg,i)=><path key={i} d={"M"+seg}/>)}
-    </svg>
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0}} dangerouslySetInnerHTML={{__html:inner}}/>
   );
 };
 
@@ -6942,7 +6941,7 @@ function App() {
   const [vendors,setVendors]=useState(SEED_VENDORS);
   const [quotes,setQuotes]=useState(SEED_QUOTES);
   const [fieldMode,setFieldMode]=useState(null); // job being worked on in field
-  const [accentColor,setAccentColor]=useState(()=>localStorage.getItem("fp_accent")||"#e3291c");
+  const [accentColor,setAccentColor]=useState(()=>localStorage.getItem("fp_accent")||"#f2a09a");
   const [showColorPicker,setShowColorPicker]=useState(false);
   C.accent = accentColor;
   const setAccent = col => { setAccentColor(col); localStorage.setItem("fp_accent",col); };
@@ -6989,7 +6988,7 @@ function App() {
                   return(
                     <button key={n.id} onClick={()=>setTab(n.id)}
                       style={{display:"flex",alignItems:"center",gap:10,width:"100%",padding:"9px 12px",borderRadius:10,border:"none",
-                        background:active?"#fdeeec":"transparent",
+                        background:active?"#fef4f3":"transparent",
                         color:active?accentColor:"#64748b",
                         fontWeight:active?700:500,fontSize:13,cursor:"pointer",fontFamily:"inherit",textAlign:"left",marginBottom:2,transition:"all 0.15s"}}>
                       <NavIcon id={n.id} size={17} color={active?accentColor:"#94a3b8"}/>
@@ -7006,7 +7005,7 @@ function App() {
             {(()=>{const active=tab==="settings";return(
               <button onClick={()=>setTab("settings")}
                 style={{display:"flex",alignItems:"center",gap:10,width:"100%",padding:"9px 12px",borderRadius:10,border:"none",
-                  background:active?"#fdeeec":"transparent",
+                  background:active?"#fef4f3":"transparent",
                   color:active?accentColor:"#64748b",
                   fontWeight:active?700:500,fontSize:13,cursor:"pointer",fontFamily:"inherit",textAlign:"left",marginBottom:4,transition:"all 0.15s"}}>
                 <NavIcon id="settings" size={17} color={active?accentColor:"#94a3b8"}/>
@@ -7020,7 +7019,7 @@ function App() {
             <div style={{margin:"0 12px 8px",background:C.bg,borderRadius:12,padding:"12px",border:`1px solid ${C.border}`}}>
               <div style={{fontSize:10,color:C.muted,fontWeight:700,textTransform:"uppercase",letterSpacing:0.5,marginBottom:10}}>Theme Colour</div>
               <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:6,marginBottom:10}}>
-                {["#e3291c","#0ea5e9","#7c3aed","#16a34a","#f97316","#0d9488","#db2777","#4f46e5","#d97706","#64748b"].map(col=>(
+                {["#f2a09a","#0ea5e9","#7c3aed","#16a34a","#f97316","#0d9488","#db2777","#4f46e5","#d97706","#64748b"].map(col=>(
                   <button key={col} onClick={()=>setAccent(col)}
                     style={{width:"100%",aspectRatio:"1",borderRadius:7,border:accentColor===col?`2.5px solid ${C.text}`:"2.5px solid transparent",
                       background:col,cursor:"pointer",transition:"transform 0.1s",transform:accentColor===col?"scale(1.15)":"scale(1)"}}>
