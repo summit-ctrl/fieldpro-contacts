@@ -82,6 +82,21 @@ let _poNum=8;     const nextPORef=()=>`PO-${String(++_poNum).padStart(3,"0")}`;
 let _mvNum=10;    const nextMvId=()=>`mv${++_mvNum}`;
 let _btNum=10;    const nextBtId=()=>`bt${++_btNum}`;
 
+/* ─── HELPERS ─── */
+const daysDiff = d => Math.floor((new Date() - new Date(d)) / 86400000);
+const jobStatus = job => { if (job.status==="Open") return "Open"; return daysDiff(job.closedDate)<=30?"Recently Closed":"Old"; };
+const statusColor = s => s==="Open"?"blue":s==="Recently Closed"?"orange":"gray";
+const fmtDate = d => d ? new Date(d).toLocaleDateString("en-AU",{day:"2-digit",month:"short",year:"numeric"}) : "—";
+const fmtMoney = n => "$"+Number(n||0).toLocaleString("en-AU",{minimumFractionDigits:2,maximumFractionDigits:2});
+const fileSizeFmt = b => b > 1048576 ? `${(b/1048576).toFixed(1)} MB` : `${Math.round(b/1024)} KB`;
+const fmtTs = ts => { const d = new Date(ts); return d.toLocaleDateString("en-AU",{day:"2-digit",month:"short",year:"numeric"}) + " " + d.toLocaleTimeString("en-AU",{hour:"2-digit",minute:"2-digit"}); };
+const appIcon = t=>({"Oven":"🍳","Dishwasher":"🍽️","Cooktop – Gas":"🔥","Cooktop – Electric":"⚡","Upright Cooker":"🍲","Washing Machine":"🫧","Dryer":"💨","Fridge":"🧊","Microwave":"📡"}[t]||"🔧");
+const workIcon = d=>{const l=d.toLowerCase();if(l.includes("gas"))return"⛽";if(l.includes("power point")||l.includes("circuit")||l.includes("cable"))return"⚡";if(l.includes("cabinet")||l.includes("benchtop"))return"🪚";if(l.includes("alarm"))return"🔔";if(l.includes("water"))return"💧";return"🔧";};
+const stageColor = s => {
+  const m={"New":"gray","Scheduled":"blue","In Progress":"orange","On Hold":"yellow","Completed":"green","Invoiced":"purple"};
+  return m[s]||"gray";
+};
+
 /* ─── INVENTORY AVAILABILITY HELPER ───
  * onHand      = total physical stock across all locations
  * onOrder     = qty on open POs (sent or partial) not yet received
